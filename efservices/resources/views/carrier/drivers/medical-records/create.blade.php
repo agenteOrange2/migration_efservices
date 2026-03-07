@@ -1,0 +1,395 @@
+@extends('../themes/' . $activeTheme)
+@section('title', 'Add Medical Record')
+@php
+$breadcrumbLinks = [
+['label' => 'App', 'url' => route('carrier.dashboard')],
+['label' => 'Medical Records', 'url' => route('carrier.medical-records.index')],
+['label' => 'Add', 'active' => true],
+];
+@endphp
+
+@section('subcontent')
+<div>
+    <!-- Mensajes flash -->
+    @if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    @if (session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    <!-- Cabecera -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center justify-between mt-8">
+        <h2 class="text-lg font-medium">
+            Add new Medical Record
+        </h2>
+        <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <x-base.button as="a" href="{{ route('carrier.medical-records.index') }}" class="btn btn-outline-secondary" variant="primary">
+                <x-base.lucide class="w-4 h-4 mr-1" icon="arrow-left" />
+                Back to Medical Records
+            </x-base.button>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="box box--stacked mt-5">
+        <div class="box-body p-5">
+            <form id="medicalRecordForm" action="{{ route('carrier.medical-records.store') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+
+                <!-- Sección 1: Información Básica -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Basic Information</h4>
+                    <div class="grid grid-cols-1 gap-6">
+                        <!-- Driver -->
+                        <div>
+                            <x-base.form-label for="user_driver_detail_id" class="form-label required">Driver</x-base.form-label>
+                            <x-base.form-select id="user_driver_detail_id" name="user_driver_detail_id" class="form-select @error('user_driver_detail_id') is-invalid @enderror" required>
+                                <option value="">Select Driver</option>
+                                @foreach($drivers as $driver)
+                                <option value="{{ $driver->id }}" {{ old('user_driver_detail_id') == $driver->id ? 'selected' : '' }}>
+                                    {{ implode(' ', array_filter([$driver->user->name, $driver->middle_name, $driver->last_name])) }}
+                                </option>
+                                @endforeach
+                            </x-base.form-select>
+                            @error('user_driver_detail_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 2: Driver Information -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Driver Information</h4>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Social Security Number -->
+                        <div>
+                            <x-base.form-label for="social_security_number" class="form-label required">Social Security Number</x-base.form-label>
+                            <x-base.form-input type="text" id="social_security_number" name="social_security_number" class="form-control @error('social_security_number') is-invalid @enderror" value="{{ old('social_security_number') }}" placeholder="XXX-XX-XXXX" pattern="\d{3}-\d{2}-\d{4}" x-mask="999-99-9999" required />
+                            <small class="form-text text-muted">Format: XXX-XX-XXXX</small>
+                            @error('social_security_number')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Social Security Card Document -->
+                        <div>
+                            <x-base.form-label for="social_security_card" class="form-label">Social Security Card Document</x-base.form-label>
+                            <x-base.form-input type="file" id="social_security_card" name="social_security_card"
+                                class="form-control @error('social_security_card') is-invalid @enderror"
+                                accept="image/*,application/pdf" />
+                            <small class="form-text text-muted">Upload the social security card (PDF or image format, max 10MB)</small>
+                            @error('social_security_card')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <!-- Preview -->
+                            <div id="social_security_card_preview" class="mt-2" style="display: none;">
+                                <img id="social_security_card_preview_img" src="" alt="Social Security Card Preview"
+                                    class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
+                            </div>
+                        </div>
+
+                        <!-- Hire Date -->
+                        <div>
+                            <x-base.form-label for="hire_date" class="form-label">Hire Date</x-base.form-label>
+                            <x-base.litepicker id="hire_date" name="hire_date" value="{{ old('hire_date') }}" class="@error('hire_date') @enderror" placeholder="MM/DD/YYYY" />
+                            @error('hire_date')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Location -->
+                        <div>
+                            <x-base.form-label for="location" class="form-label">Location</x-base.form-label>
+                            <x-base.form-input type="text" id="location" name="location" class="form-control @error('location') is-invalid @enderror" value="{{ old('location') }}" placeholder="Work location" />
+                            @error('location')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 3: Status Information -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Status Information</h4>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Suspension Status -->
+                        <div x-data="{ isSuspended: {{ json_encode(old('is_suspended', false)) }} }">
+                            <div class="flex items-center mb-2">
+                                <input type="checkbox" id="is_suspended" name="is_suspended" value="1" x-model="isSuspended" {{ old('is_suspended') ? 'checked' : '' }}
+                                    class="form-checkbox h-4 w-4 text-primary border-gray-300 rounded" />
+                                <label for="is_suspended" class="ml-2 text-sm">Driver is Suspended</label>
+                            </div>
+                            <div x-show="isSuspended" class="mt-3">
+                                <x-base.form-label for="suspension_date" class="form-label">Suspension Date</x-base.form-label>
+                                <x-base.litepicker id="suspension_date" name="suspension_date" value="{{ old('suspension_date') }}" class="@error('suspension_date') @enderror" placeholder="MM/DD/YYYY" />
+                                @error('suspension_date')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- Termination Status -->
+                        <div x-data="{ isTerminated: {{ json_encode(old('is_terminated', false)) }} }">
+                            <div class="flex items-center mb-2">
+                                <input type="checkbox" id="is_terminated" name="is_terminated" value="1" x-model="isTerminated" {{ old('is_terminated') ? 'checked' : '' }}
+                                    class="form-checkbox h-4 w-4 text-primary border-gray-300 rounded" />
+                                <label for="is_terminated" class="ml-2 text-sm">Driver is Terminated</label>
+                            </div>
+                            <div x-show="isTerminated" class="mt-3">
+                                <x-base.form-label for="termination_date" class="form-label">Termination Date</x-base.form-label>
+                                <x-base.litepicker id="termination_date" name="termination_date" value="{{ old('termination_date') }}" class="@error('termination_date') @enderror" placeholder="MM/DD/YYYY" />
+                                @error('termination_date')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 4: Medical Certification Information -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Medical Certification Information</h4>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Medical Examiner Name -->
+                        <div>
+                            <x-base.form-label for="medical_examiner_name" class="form-label required">Medical Examiner Name</x-base.form-label>
+                            <x-base.form-input type="text" id="medical_examiner_name" name="medical_examiner_name" class="form-control @error('medical_examiner_name') is-invalid @enderror" value="{{ old('medical_examiner_name') }}" required />
+                            @error('medical_examiner_name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Medical Examiner Registry Number -->
+                        <div>
+                            <x-base.form-label for="medical_examiner_registry_number" class="form-label required">Medical Examiner Registry Number</x-base.form-label>
+                            <x-base.form-input type="text" id="medical_examiner_registry_number" name="medical_examiner_registry_number" class="form-control @error('medical_examiner_registry_number') is-invalid @enderror" value="{{ old('medical_examiner_registry_number') }}" required />
+                            @error('medical_examiner_registry_number')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Medical Card Expiration Date -->
+                        <div>
+                            <x-base.form-label for="medical_card_expiration_date" class="form-label required">Medical Card Expiration Date</x-base.form-label>
+                            <x-base.litepicker id="medical_card_expiration_date" name="medical_card_expiration_date" value="{{ old('medical_card_expiration_date') }}" class="@error('medical_card_expiration_date') @enderror" placeholder="MM/DD/YYYY" required />
+                            @error('medical_card_expiration_date')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 5: Medical Card Upload -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Medical Card Upload</h4>
+                    <div class="grid grid-cols-1 gap-6">
+                        <!-- Medical Card Image -->
+                        <div>
+                            <x-base.form-label for="medical_card" class="form-label">Medical Card</x-base.form-label>
+                            <x-base.form-input type="file" id="medical_card" name="medical_card" class="form-control @error('medical_card') is-invalid @enderror" accept="image/*,application/pdf" />
+                            <small class="form-text text-muted">Upload the medical card (PDF or image format, max 10MB)</small>
+                            @error('medical_card')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <!-- Preview -->
+                            <div id="medical_card_preview" class="mt-2" style="display: none;">
+                                <img id="medical_card_preview_img" src="" alt="Medical Card Preview" class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones del formulario -->
+                <div class="flex justify-end mt-8 space-x-4">
+                    <x-base.button type="button" class="mr-3" variant="outline-secondary" as="a" href="{{ route('carrier.medical-records.index') }}">
+                        Cancel
+                    </x-base.button>
+                    <x-base.button type="submit" variant="primary">
+                        Save Medical Record
+                    </x-base.button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
+
+
+@push('scripts')
+    <script>
+        // Inicialización del formulario
+        document.addEventListener('DOMContentLoaded', function() {
+            // Manejar preview de imagen de medical card
+            function setupImagePreview(inputId, previewId, imgId) {
+                const input = document.getElementById(inputId);
+                const preview = document.getElementById(previewId);
+                const img = document.getElementById(imgId);
+                
+                if (!input || !preview || !img) return;
+                
+                input.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        // Validar tamaño del archivo (10MB máximo)
+                        const maxSize = 10 * 1024 * 1024; // 10MB en bytes
+                        if (file.size > maxSize) {
+                            alert('File size exceeds 10MB. Please select a smaller file.');
+                            input.value = '';
+                            preview.style.display = 'none';
+                            return;
+                        }
+                        
+                        // Validar tipo de archivo
+                        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+                        if (!allowedTypes.includes(file.type)) {
+                            alert('Invalid file type. Please upload a PDF, JPG, JPEG, or PNG file.');
+                            input.value = '';
+                            preview.style.display = 'none';
+                            return;
+                        }
+                        
+                        // Solo mostrar preview para imágenes, no para PDFs
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                img.src = e.target.result;
+                                preview.style.display = 'block';
+                            };
+                            reader.readAsDataURL(file);
+                        } else {
+                            preview.style.display = 'none';
+                        }
+                    } else {
+                        preview.style.display = 'none';
+                    }
+                });
+            }
+            
+            // Configurar preview para medical card
+            setupImagePreview('medical_card', 'medical_card_preview', 'medical_card_preview_img');
+            
+            // Configurar preview para social security card
+            setupImagePreview('social_security_card', 'social_security_card_preview', 'social_security_card_preview_img');
+            
+            // Validación del formulario antes de enviar
+            const form = document.getElementById('medicalRecordForm');
+            if (form) {
+                form.addEventListener('submit', function(event) {
+                    let isValid = true;
+                    let errorMessage = '';
+                    
+                    // Validar driver seleccionado
+                    const driverSelect = document.getElementById('user_driver_detail_id');
+                    if (!driverSelect.value) {
+                        isValid = false;
+                        errorMessage += 'Please select a driver.\n';
+                    }
+                    
+                    // Validar Social Security Number
+                    const ssnInput = document.getElementById('social_security_number');
+                    if (!ssnInput.value) {
+                        isValid = false;
+                        errorMessage += 'Social Security Number is required.\n';
+                    } else {
+                        // Validar formato SSN (XXX-XX-XXXX)
+                        const ssnPattern = /^\d{3}-\d{2}-\d{4}$/;
+                        if (!ssnPattern.test(ssnInput.value)) {
+                            isValid = false;
+                            errorMessage += 'Social Security Number must be in format XXX-XX-XXXX.\n';
+                        }
+                    }
+                    
+                    // Validar Medical Examiner Name
+                    const examinerNameInput = document.getElementById('medical_examiner_name');
+                    if (!examinerNameInput.value.trim()) {
+                        isValid = false;
+                        errorMessage += 'Medical Examiner Name is required.\n';
+                    }
+                    
+                    // Validar Medical Examiner Registry Number
+                    const examinerRegistryInput = document.getElementById('medical_examiner_registry_number');
+                    if (!examinerRegistryInput.value.trim()) {
+                        isValid = false;
+                        errorMessage += 'Medical Examiner Registry Number is required.\n';
+                    }
+                    
+                    // Validar Medical Card Expiration Date
+                    const expirationDateInput = document.getElementById('medical_card_expiration_date');
+                    if (!expirationDateInput.value) {
+                        isValid = false;
+                        errorMessage += 'Medical Card Expiration Date is required.\n';
+                    } else {
+                        // Verificar que la fecha de expiración no sea en el pasado
+                        const expirationDate = new Date(expirationDateInput.value);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        
+                        if (expirationDate < today) {
+                            isValid = false;
+                            errorMessage += 'Medical card expiration date cannot be in the past.\n';
+                        }
+                    }
+                    
+                    // Validar suspension date si está marcado como suspendido
+                    const isSuspendedCheckbox = document.getElementById('is_suspended');
+                    const suspensionDateInput = document.getElementById('suspension_date');
+                    if (isSuspendedCheckbox && isSuspendedCheckbox.checked && suspensionDateInput && !suspensionDateInput.value) {
+                        isValid = false;
+                        errorMessage += 'Suspension Date is required when driver is marked as suspended.\n';
+                    }
+                    
+                    // Validar termination date si está marcado como terminado
+                    const isTerminatedCheckbox = document.getElementById('is_terminated');
+                    const terminationDateInput = document.getElementById('termination_date');
+                    if (isTerminatedCheckbox && isTerminatedCheckbox.checked && terminationDateInput && !terminationDateInput.value) {
+                        isValid = false;
+                        errorMessage += 'Termination Date is required when driver is marked as terminated.\n';
+                    }
+                    
+                    // Validar archivo de medical card si se seleccionó
+                    const medicalCardInput = document.getElementById('medical_card');
+                    if (medicalCardInput && medicalCardInput.files.length > 0) {
+                        const file = medicalCardInput.files[0];
+                        const maxSize = 10 * 1024 * 1024; // 10MB
+                        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+                        
+                        if (file.size > maxSize) {
+                            isValid = false;
+                            errorMessage += 'Medical card file size exceeds 10MB.\n';
+                        }
+                        
+                        if (!allowedTypes.includes(file.type)) {
+                            isValid = false;
+                            errorMessage += 'Medical card must be a PDF, JPG, JPEG, or PNG file.\n';
+                        }
+                    }
+                    
+                    // Si hay errores, prevenir el envío y mostrar mensaje
+                    if (!isValid) {
+                        event.preventDefault();
+                        alert(errorMessage);
+                        return false;
+                    }
+                    
+                    // Deshabilitar el botón de envío para prevenir doble envío
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Saving...';
+                    }
+                    
+                    return true;
+                });
+            }
+        });
+    </script>
+@endpush

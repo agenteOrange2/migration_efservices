@@ -1,0 +1,1058 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Driver;
+
+use App\Http\Controllers\Controller;
+use App\Models\Admin\Driver\DriverLicense;
+use App\Models\UserDriverDetail;
+use App\Models\Carrier;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use App\Livewire\Admin\Driver\DriverCertificationStep;
+use Illuminate\Support\Facades\App;
+
+class DriverLicensesController extends Controller
+{
+    /**
+     * Muestra la lista de licencias de conductores
+     */
+    public function index(Request $request)
+    {
+        try {
+            $query = DriverLicense::with(['driverDetail.user', 'driverDetail.carrier']);
+            
+            // Aplicar filtros
+            if ($request->filled('search_term')) {
+                $searchTerm = '%' . $request->search_term . '%';
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('license_number', 'like', $searchTerm)
+                      ->orWhere('license_class', 'like', $searchTerm)
+                      ->orWhere('state_of_issue', 'like', $searchTerm);
+                });
+            }
+            
+            if ($request->filled('driver_filter')) {
+                $query->where('user_driver_detail_id', $request->driver_filter);
+            }
+            
+            // Filtro por carrier
+            if ($request->filled('carrier_filter')) {
+                $query->whereHas('driverDetail', function($q) use ($request) {
+                    $q->where('carrier_id', $request->carrier_filter);
+                });
+            }
+            
+            if ($request->filled('date_from')) {
+                $query->whereDate('created_at', '>=', $request->date_from);
+            }
+            
+            if ($request->filled('date_to')) {
+                $query->whereDate('created_at', '<=', $request->date_to);
+            }
+            
+            // Ordenar resultados
+            $sortField = $request->get('sort_field', 'created_at');
+            $sortDirection = $request->get('sort_direction', 'desc');
+            
+            if (in_array($sortField, ['created_at', 'license_number', 'expiration_date'])) {
+                $query->orderBy($sortField, $sortDirection);
+            } else {
+                $query->orderBy('created_at', 'desc');
+            }
+            
+            $licenses = $query->paginate(15);
+            
+            // Obtener datos para filtros
+            $drivers = UserDriverDetail::with('user')->get();
+            $carriers = Carrier::orderBy('name')->get();
+            
+            // Obtener conteos de documentos para cada licencia
+            $licenseIds = $licenses->pluck('id')->toArray();
+            $documentCounts = [];
+            
+            if (!empty($licenseIds)) {
+                $counts = Media::where('model_type', DriverLicense::class)
+                    ->whereIn('model_id', $licenseIds)
+                    ->select('model_id', DB::raw('count(*) as count'))
+                    ->groupBy('model_id')
+                    ->pluck('count', 'model_id')
+                    ->toArray();
+                    
+                $documentCounts = $counts;
+            }
+            
+            return view('admin.drivers.licenses.index', compact('licenses', 'drivers', 'carriers', 'documentCounts'));
+        } catch (\Exception $e) {
+            Log::error('Error loading licenses', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Procesar imágenes de licencia
+            if ($request->hasFile('license_front_image')) {
+                // Eliminar imagen anterior si existe
+                $license->clearMediaCollection('license_front');
+                $license->addMediaFromRequest('license_front_image')
+                    ->usingName('License Front Image')
+                    ->toMediaCollection('license_front');
+            }
+            
+            if ($request->hasFile('license_back_image')) {
+                // Eliminar imagen anterior si existe
+                $license->clearMediaCollection('license_back');
+                $license->addMediaFromRequest('license_back_image')
+                    ->usingName('License Back Image')
+                    ->toMediaCollection('license_back');
+            }
+            return redirect()->back()->with('error', 'Error loading licenses: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Muestra el formulario para crear una nueva licencia
+     */
+    public function create()
+    {
+        $carriers = Carrier::where('status', 1)->orderBy('name')->get();
+        // Solo cargar drivers si hay un carrier seleccionado, sino array vacío
+        $drivers = collect();
+        
+        return view('admin.drivers.licenses.create', compact('carriers', 'drivers'));
+    }
+
+    /**
+     * Almacena una nueva licencia en la base de datos
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'user_driver_detail_id' => 'required|exists:user_driver_details,id',
+            'license_number' => 'required|string|max:255',
+            'license_class' => 'required|string|max:255',
+            'state_of_issue' => 'required|string|max:255',
+            'expiration_date' => 'required|date|after:today',            
+            'is_cdl' => 'nullable|boolean',
+            'endorsements' => 'nullable|array',
+            'endorsements.*' => 'nullable|string|in:N,H,X,T,P,S',
+            'license_front_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'license_back_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        try {
+            DB::beginTransaction();
+            
+            $license = DriverLicense::create([
+                'user_driver_detail_id' => $request->user_driver_detail_id,
+                'license_number' => $request->license_number,
+                'license_class' => $request->license_class,
+                'state_of_issue' => $request->state_of_issue,
+                'expiration_date' => $request->expiration_date,                
+                'is_cdl' => $request->boolean('is_cdl')
+            ]);
+            
+            // Manejar endorsements a través de la relación many-to-many
+            if ($request->boolean('is_cdl')) {
+                $endorsementCodes = $request->input('endorsements', []);
+                
+                if (!empty($endorsementCodes)) {
+                    $endorsementIds = \App\Models\Admin\Driver\LicenseEndorsement::whereIn('code', $endorsementCodes)->pluck('id');
+                    $license->endorsements()->sync($endorsementIds);
+                }
+            }
+            
+            // Procesar imágenes de licencia
+            if ($request->hasFile('license_front_image')) {
+                $license->addMediaFromRequest('license_front_image')
+                    ->usingName('License Front Image')
+                    ->toMediaCollection('license_front');
+            }
+            
+            if ($request->hasFile('license_back_image')) {
+                $license->addMediaFromRequest('license_back_image')
+                    ->usingName('License Back Image')
+                    ->toMediaCollection('license_back');
+            }
+            
+            // Procesar archivos subidos usando Spatie Media Library
+            if ($request->has('uploaded_files') && !empty($request->uploaded_files)) {
+                foreach ($request->uploaded_files as $fileData) {
+                    if (isset($fileData['path']) && Storage::disk('temp')->exists($fileData['path'])) {
+                        $tempPath = Storage::disk('temp')->path($fileData['path']);
+                        
+                        $license->addMedia($tempPath)
+                            ->usingName($fileData['name'] ?? 'Document')
+                            ->usingFileName($fileData['name'] ?? 'document.pdf')
+                            ->toMediaCollection('licenses');
+                        
+                        // Limpiar archivo temporal
+                        Storage::disk('temp')->delete($fileData['path']);
+                    }
+                }
+            }
+            
+            DB::commit();
+            
+            // Regenerar el PDF de drivers_licenses.pdf después de crear la licencia
+            $this->regenerateDriverLicensesPDF($license->user_driver_detail_id);
+            
+            return redirect()->route('admin.licenses.index')
+                ->with('success', 'License created successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating license', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error creating license: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Muestra los detalles de una licencia específica
+     */
+    public function show(DriverLicense $license)
+    {
+        $license->load(['driverDetail.user', 'driverDetail.carrier']);
+        
+        // Obtener documentos asociados usando Spatie Media Library
+        $documents = $license->getMedia('licenses');
+        
+        return view('admin.drivers.licenses.show', compact('license', 'documents'));
+    }
+
+    /**
+     * Método temporal de depuración para verificar valores de endorsements
+     */
+    public function debugEndorsements(DriverLicense $license)
+    {
+        $license->load(['driverDetail.user', 'driverDetail.carrier']);
+        
+        $debugData = [
+            'license_id' => $license->id,
+            'license_number' => $license->license_number,
+            'is_cdl' => $license->is_cdl,
+            'is_cdl_raw' => $license->getRawOriginal('is_cdl'),
+            'endorsements' => [
+                'endorsement_n' => [
+                    'value' => $license->endorsement_n,
+                    'raw' => $license->getRawOriginal('endorsement_n'),
+                    'type' => gettype($license->endorsement_n)
+                ],
+                'endorsement_h' => [
+                    'value' => $license->endorsement_h,
+                    'raw' => $license->getRawOriginal('endorsement_h'),
+                    'type' => gettype($license->endorsement_h)
+                ],
+                'endorsement_x' => [
+                    'value' => $license->endorsement_x,
+                    'raw' => $license->getRawOriginal('endorsement_x'),
+                    'type' => gettype($license->endorsement_x)
+                ],
+                'endorsement_t' => [
+                    'value' => $license->endorsement_t,
+                    'raw' => $license->getRawOriginal('endorsement_t'),
+                    'type' => gettype($license->endorsement_t)
+                ],
+                'endorsement_p' => [
+                    'value' => $license->endorsement_p,
+                    'raw' => $license->getRawOriginal('endorsement_p'),
+                    'type' => gettype($license->endorsement_p)
+                ],
+                'endorsement_s' => [
+                    'value' => $license->endorsement_s,
+                    'raw' => $license->getRawOriginal('endorsement_s'),
+                    'type' => gettype($license->endorsement_s)
+                ]
+            ],
+            'old_values_simulation' => [
+                'is_cdl' => old('is_cdl', $license->is_cdl),
+                'endorsement_n' => old('endorsement_n', $license->endorsement_n),
+                'endorsement_h' => old('endorsement_h', $license->endorsement_h),
+                'endorsement_x' => old('endorsement_x', $license->endorsement_x),
+                'endorsement_t' => old('endorsement_t', $license->endorsement_t),
+                'endorsement_p' => old('endorsement_p', $license->endorsement_p),
+                'endorsement_s' => old('endorsement_s', $license->endorsement_s)
+            ],
+            'driver_info' => [
+                'driver_name' => $license->driverDetail->user->name ?? 'N/A',
+                'carrier_name' => $license->driverDetail->carrier->name ?? 'N/A'
+            ]
+        ];
+        
+        return response()->json($debugData, 200, [], JSON_PRETTY_PRINT);
+    }
+
+    /**
+     * Muestra el formulario para editar una licencia
+     */
+    public function edit(DriverLicense $license)
+    {        
+        
+        $license->load(['driverDetail.user', 'driverDetail.carrier']);
+        
+        $carriers = Carrier::where('status', 1)->orderBy('name')->get();
+        
+        // Cargar drivers del carrier actual de la licencia, incluyendo el driver actual aunque esté inactivo
+        $currentCarrierId = $license->driverDetail->carrier_id;
+        $drivers = UserDriverDetail::with('user')
+            ->where('carrier_id', $currentCarrierId)
+            ->get();
+        
+        // Asegurar que el driver actual esté incluido aunque esté inactivo
+        $currentDriver = $license->driverDetail;
+        if (!$drivers->contains('id', $currentDriver->id)) {
+            $drivers->push($currentDriver);
+        }
+        
+        // Obtener documentos existentes y convertirlos al formato esperado por FileUploader
+        $existingDocuments = $license->getMedia('licenses')->map(function ($media) {
+            return [
+                'id' => $media->id,
+                'name' => $media->name,
+                'file_name' => $media->file_name,
+                'size' => $media->size,
+                'mime_type' => $media->mime_type,
+                'created_at' => $media->created_at->format('Y-m-d H:i:s'),
+                'preview_url' => route('admin.licenses.doc.preview', $media->id),
+                'download_url' => route('admin.licenses.doc.preview', [$media->id, 'download' => true]),
+            ];
+        })->toArray();
+        
+        return view('admin.drivers.licenses.edit', compact('license', 'carriers', 'drivers', 'existingDocuments'));
+    }
+
+    /**
+     * Actualiza una licencia en la base de datos
+     */
+    public function update(Request $request, DriverLicense $license)
+    {
+        $request->validate([
+            'user_driver_detail_id' => 'required|exists:user_driver_details,id',
+            'license_number' => 'required|string|max:255',
+            'license_class' => 'required|string|max:255',
+            'state_of_issue' => 'required|string|max:255',
+            'expiration_date' => 'required|date|after:today',            
+            'is_cdl' => 'nullable|boolean',
+            'endorsement_n' => 'nullable|boolean',
+            'endorsement_h' => 'nullable|boolean',
+            'endorsement_x' => 'nullable|boolean',
+            'endorsement_t' => 'nullable|boolean',
+            'endorsement_p' => 'nullable|boolean',
+            'endorsement_s' => 'nullable|boolean',
+            'license_front_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'license_back_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        try {
+            DB::beginTransaction();
+            
+            $license->update([
+                'user_driver_detail_id' => $request->user_driver_detail_id,
+                'license_number' => $request->license_number,
+                'license_class' => $request->license_class,
+                'state_of_issue' => $request->state_of_issue,
+                'expiration_date' => $request->expiration_date,                
+                'is_cdl' => $request->boolean('is_cdl')
+            ]);
+            
+            // Manejar endorsements a través de la relación many-to-many
+            if ($request->boolean('is_cdl')) {
+                $endorsementCodes = [];
+                if ($request->boolean('endorsement_n')) $endorsementCodes[] = 'N';
+                if ($request->boolean('endorsement_h')) $endorsementCodes[] = 'H';
+                if ($request->boolean('endorsement_x')) $endorsementCodes[] = 'X';
+                if ($request->boolean('endorsement_t')) $endorsementCodes[] = 'T';
+                if ($request->boolean('endorsement_p')) $endorsementCodes[] = 'P';
+                if ($request->boolean('endorsement_s')) $endorsementCodes[] = 'S';
+                
+                if (!empty($endorsementCodes)) {
+                    $endorsementIds = \App\Models\Admin\Driver\LicenseEndorsement::whereIn('code', $endorsementCodes)->pluck('id');
+                    $license->endorsements()->sync($endorsementIds);
+                } else {
+                    $license->endorsements()->detach();
+                }
+            } else {
+                $license->endorsements()->detach();
+            }
+            
+            // Procesar imágenes de licencia
+            if ($request->hasFile('license_front_image')) {
+                // Eliminar imagen anterior si existe
+                $license->clearMediaCollection('license_front');
+                $license->addMediaFromRequest('license_front_image')
+                    ->usingName('License Front Image')
+                    ->toMediaCollection('license_front');
+            }
+            
+            if ($request->hasFile('license_back_image')) {
+                // Eliminar imagen anterior si existe
+                $license->clearMediaCollection('license_back');
+                $license->addMediaFromRequest('license_back_image')
+                    ->usingName('License Back Image')
+                    ->toMediaCollection('license_back');
+            }
+            
+            // Procesar nuevos archivos subidos usando Spatie Media Library
+            if ($request->has('uploaded_files') && !empty($request->uploaded_files)) {
+                foreach ($request->uploaded_files as $fileData) {
+                    if (isset($fileData['path']) && Storage::disk('temp')->exists($fileData['path'])) {
+                        $tempPath = Storage::disk('temp')->path($fileData['path']);
+                        
+                        $license->addMedia($tempPath)
+                            ->usingName($fileData['name'] ?? 'Document')
+                            ->usingFileName($fileData['name'] ?? 'document.pdf')
+                            ->toMediaCollection('licenses');
+                        
+                        // Limpiar archivo temporal
+                        Storage::disk('temp')->delete($fileData['path']);
+                    }
+                }
+            }
+            
+            DB::commit();
+            
+            // Regenerar el PDF de drivers_licenses.pdf después de actualizar la licencia
+            $this->regenerateDriverLicensesPDF($license->user_driver_detail_id);
+            
+            return redirect()->route('admin.licenses.index')
+                ->with('success', 'License updated successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating license', [
+                'id' => $license->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error updating license: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Elimina una licencia de la base de datos
+     */
+    public function destroy(DriverLicense $license)
+    {
+        try {
+            DB::beginTransaction();
+            
+            // Eliminar documentos asociados usando Spatie Media Library
+            $license->clearMediaCollection('licenses');
+            
+            // Eliminar la licencia
+            $license->delete();
+            
+            DB::commit();
+            
+            return redirect()->route('admin.licenses.index')
+                ->with('success', 'License deleted successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting license', [
+                'id' => $license->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->route('admin.licenses.index')
+                ->with('error', 'Error deleting license: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Muestra los documentos de una licencia específica
+     * Utilizando Spatie Media Library
+     */
+    public function showDocuments(DriverLicense $license, Request $request)
+    {
+        $license->load('driverDetail.user');
+        
+        // Construir la consulta base para los documentos de esta licencia
+        $query = Media::where('model_type', DriverLicense::class)
+            ->where('model_id', $license->id);
+        
+        // Aplicar filtro de collection (para las tarjetas clickeables)
+        if ($request->filled('collection') && $request->collection !== 'all') {
+            if ($request->collection === 'additional') {
+                $query->whereNotIn('collection_name', ['license_front', 'license_back']);
+            } else {
+                $query->where('collection_name', $request->collection);
+            }
+        }
+        
+        // Aplicar filtros de fecha
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        // Aplicar filtro de tipo de documento
+        if ($request->filled('document_type')) {
+            $query->where('collection_name', $request->document_type);
+        }
+        
+        // Obtener documentos paginados
+        $documents = $query->orderBy('created_at', 'desc')->paginate(15);
+        
+        // Calcular estadísticas de documentos para esta licencia
+        $baseConditions = ['model_type' => DriverLicense::class, 'model_id' => $license->id];
+            
+        $totalDocuments = Media::where($baseConditions)->count();
+        $licenseFrontImages = Media::where($baseConditions)->where('collection_name', 'license_front')->count();
+        $licenseBackImages = Media::where($baseConditions)->where('collection_name', 'license_back')->count();
+        $additionalDocuments = Media::where($baseConditions)->whereNotIn('collection_name', ['license_front', 'license_back'])->count();
+        
+        // Determinar la collection actual basada en el filtro
+        $currentCollection = $request->get('collection', 'all');
+        
+        // Tipos de documentos disponibles para el filtro
+        $documentTypes = [
+            'license_front' => 'License Front',
+            'license_back' => 'License Back',
+            'license_documents' => 'Additional Documents'
+        ];
+        
+        return view('admin.drivers.licenses.documents', compact(
+            'license', 
+            'documents', 
+            'totalDocuments',
+            'licenseFrontImages',
+            'licenseBackImages', 
+            'additionalDocuments',
+            'currentCollection',
+            'documentTypes'
+        ));
+    }
+
+    /**
+     * Muestra todos los documentos de licencias en una vista resumida
+     * Utilizando Spatie Media Library
+     */
+    public function documents(Request $request)
+    {
+        try {
+            // Usar Spatie Media Library en lugar del antiguo sistema
+            $query = Media::where('model_type', DriverLicense::class);
+            
+            // Aplicar filtros
+            if ($request->filled('search_term')) {
+                $searchTerm = '%' . $request->search_term . '%';
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('name', 'like', $searchTerm)
+                      ->orWhere('file_name', 'like', $searchTerm);
+                });
+            }
+            
+            // Filtro por carrier
+            if ($request->filled('carrier_filter')) {
+                $carrierId = $request->carrier_filter;
+                // Obtener IDs de licencias asociadas a conductores de este carrier
+                $licenseIds = DriverLicense::whereHas('driverDetail', function($q) use ($carrierId) {
+                    $q->where('carrier_id', $carrierId);
+                })->pluck('id')->toArray();
+                    
+                $query->whereIn('model_id', $licenseIds);
+            }
+            
+            if ($request->filled('license_filter')) {
+                $licenseId = $request->license_filter;
+                $query->where('model_id', $licenseId);
+            }
+            
+            if ($request->filled('date_from')) {
+                $query->whereDate('created_at', '>=', $request->date_from);
+            }
+            
+            if ($request->filled('date_to')) {
+                $query->whereDate('created_at', '<=', $request->date_to);
+            }
+            
+            // Ordenar resultados
+            $sortField = $request->get('sort_field', 'created_at');
+            $sortDirection = $request->get('sort_direction', 'desc');
+            $query->orderBy($sortField, $sortDirection);
+            
+            $documents = $query->orderBy('created_at', 'desc')->paginate(15);
+            
+            // Datos para filtros
+            $carriers = Carrier::orderBy('name')->get();
+            $licenses = DriverLicense::with('driverDetail.carrier')->orderBy('license_number')->get();
+            
+            return view('admin.drivers.licenses.all_documents', compact('documents', 'carriers', 'licenses'));
+        } catch (\Exception $e) {
+            Log::error('Error loading license documents', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->route('admin.licenses.index')
+                ->with('error', 'Error loading documents: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Elimina un documento mediante AJAX
+     * Usa eliminación directa de DB para evitar problemas con Spatie Media Library
+     * 
+     * @param Request $request La solicitud HTTP
+     * @param int $id ID del documento a eliminar
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function ajaxDestroyDocument(Request $request, $id)
+    {
+        try {
+            // Verificar que el documento existe en la tabla media
+            $media = Media::findOrFail($id);
+            
+            // Verificar que el documento pertenece a una licencia
+            if ($media->model_type !== DriverLicense::class) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid document type'
+                ], 400);
+            }
+            
+            $fileName = $media->file_name;
+            $licenseId = $media->model_id;
+            $license = DriverLicense::find($licenseId);
+            
+            if (!$license) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'License not found'
+                ], 404);
+            }
+            
+            // Eliminar el archivo físico si existe
+            $diskName = $media->disk;
+            $filePath = $media->id . '/' . $media->file_name;
+            
+            if (\Illuminate\Support\Facades\Storage::disk($diskName)->exists($filePath)) {
+                \Illuminate\Support\Facades\Storage::disk($diskName)->delete($filePath);
+            }
+            
+            // Eliminar directorio del media si existe
+            $dirPath = $media->id;
+            if (\Illuminate\Support\Facades\Storage::disk($diskName)->exists($dirPath)) {
+                \Illuminate\Support\Facades\Storage::disk($diskName)->deleteDirectory($dirPath);
+            }
+            
+            // Eliminar el registro directamente de la base de datos
+            $result = DB::table('media')->where('id', $id)->delete();
+            
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete document'
+                ], 500);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Document '{$fileName}' deleted successfully"
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error deleting document via AJAX', [
+                'document_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting document: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Elimina un documento usando eliminación directa de DB para evitar problemas con Spatie Media Library
+     * 
+     * @param int $id ID del documento a eliminar
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function destroyDocument($id)
+    {
+        try {
+            // Verificar que el documento existe en la tabla media
+            $media = Media::findOrFail($id);
+
+            // Verificar que el documento pertenece a una licencia
+            if ($media->model_type !== DriverLicense::class) {
+                return redirect()->back()->with('error', 'Invalid document type');
+            }
+
+            $fileName = $media->file_name;
+            $licenseId = $media->model_id;
+            $license = DriverLicense::find($licenseId);
+
+            if (!$license) {
+                return redirect()->route('admin.licenses.index')
+                    ->with('error', 'No se encontró la licencia asociada al documento');
+            }
+
+            // Eliminar el archivo físico si existe
+            $diskName = $media->disk;
+            $filePath = $media->id . '/' . $media->file_name;
+            
+            if (\Illuminate\Support\Facades\Storage::disk($diskName)->exists($filePath)) {
+                \Illuminate\Support\Facades\Storage::disk($diskName)->delete($filePath);
+            }
+            
+            // Eliminar directorio del media si existe
+            $dirPath = $media->id;
+            if (\Illuminate\Support\Facades\Storage::disk($diskName)->exists($dirPath)) {
+                \Illuminate\Support\Facades\Storage::disk($diskName)->deleteDirectory($dirPath);
+            }
+            
+            // Eliminar el registro directamente de la base de datos para evitar problemas de eliminación en cascada
+            $result = DB::table('media')->where('id', $id)->delete();
+
+            if (!$result) {
+                return redirect()->back()->with('error', 'No se pudo eliminar el documento');
+            }
+
+            // Determinar la URL de retorno según el origen de la solicitud
+            $referer = request()->headers->get('referer');
+            
+            // Si la URL contiene 'documents', redirigir a la página de documentos
+            if (strpos($referer, 'documents') !== false) {
+                return redirect()->route('admin.licenses.show.documents', $licenseId)
+                    ->with('success', "Documento '{$fileName}' eliminado correctamente");
+            }
+            
+            // Si no, redirigir a la página de edición
+            return redirect()->route('admin.licenses.edit', $licenseId)
+                ->with('success', "Documento '{$fileName}' eliminado correctamente");
+                
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar documento', [
+                'document_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->with('error', 'Error al eliminar documento: ' . $e->getMessage());
+        }
+    }
+
+    public function getDriversByCarrier($carrier)
+    {
+        $drivers = UserDriverDetail::where('carrier_id', $carrier)
+            ->whereHas('user', function ($query) {
+                $query->where('status', 1);
+            })
+            ->with('user')
+            ->get();
+
+        return response()->json($drivers);
+    }
+
+    /**
+     * Previsualiza o descarga un documento adjunto a una licencia
+     * Utilizando Spatie Media Library
+     * 
+     * @param int $id ID del documento a previsualizar o descargar
+     * @param Request $request La solicitud HTTP con parámetro opcional 'download'
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function previewDocument($id, Request $request = null)
+    {
+        try {
+            // Buscar el documento en la tabla media de Spatie
+            $media = Media::findOrFail($id);
+
+            // Verificar que el documento pertenece a una licencia
+            if ($media->model_type !== DriverLicense::class) {
+                return redirect()->back()->with('error', 'Tipo de documento inválido');
+            }
+
+            // Determinar si es descarga o visualización
+            $isDownload = $request && $request->has('download');
+
+            if ($isDownload) {
+                // Si es descarga, usar el método de descarga de Spatie
+                return response()->download(
+                    $media->getPath(), 
+                    $media->file_name,
+                    ['Content-Type' => $media->mime_type]
+                );
+            } else {
+                // Si es visualización, usar 'inline' para mostrar en el navegador si es posible
+                $headers = [
+                    'Content-Type' => $media->mime_type,
+                    'Content-Disposition' => 'inline; filename="' . $media->file_name . '"',
+                ];
+                
+                return response()->file($media->getPath(), $headers);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error al previsualizar documento', [
+                'document_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->with('error', 'Error al acceder al documento: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Regenera el PDF de drivers_licenses.pdf para un conductor específico
+     * 
+     * @param int $driverId ID del conductor
+     * @return bool True si se regeneró exitosamente, false en caso contrario
+     */
+    private function regenerateDriverLicensesPDF($driverId)
+    {
+        try {
+            Log::info('Iniciando regeneración de drivers_licenses.pdf', ['driver_id' => $driverId]);
+            
+            // Obtener el UserDriverDetail con todas las relaciones necesarias
+            $userDriverDetail = UserDriverDetail::with([
+                'application.addresses',
+                'licenses',
+                'medicalQualification',
+                'criminalHistory',
+                'carrier',
+                'user',
+                'application.details',
+                'certification'
+            ])->find($driverId);
+            
+            if (!$userDriverDetail) {
+                Log::error('UserDriverDetail no encontrado', ['driver_id' => $driverId]);
+                return false;
+            }
+            
+            // Obtener la firma desde la certificación
+            $signaturePath = null;
+            if ($userDriverDetail->certification) {
+                $signatureMedia = $userDriverDetail->certification->getMedia('signature')->first();
+                if ($signatureMedia) {
+                    $signaturePath = $signatureMedia->getPath();
+                    Log::info('Signature found for PDF regeneration', [
+                        'driver_id' => $driverId,
+                        'signature_path' => $signaturePath
+                    ]);
+                } else {
+                    Log::warning('No signature media found for driver', ['driver_id' => $driverId]);
+                }
+            } else {
+                Log::warning('No certification found for driver', ['driver_id' => $driverId]);
+            }
+            
+            // Crear instancia de DriverCertificationStep para acceder a métodos privados
+            $certificationStep = new DriverCertificationStep();
+            
+            // Obtener fechas efectivas usando reflexión para acceder al método privado
+            $reflection = new \ReflectionClass($certificationStep);
+            $getEffectiveDatesMethod = $reflection->getMethod('getEffectiveDates');
+            $getEffectiveDatesMethod->setAccessible(true);
+            $effectiveDates = $getEffectiveDatesMethod->invoke($certificationStep, $driverId);
+            
+            // Preparar la ruta de almacenamiento
+            $driverPath = 'driver/' . $userDriverDetail->id;
+            $appSubPath = $driverPath . '/driver_applications';
+            
+            // Asegurar que los directorios existen
+            Storage::disk('public')->makeDirectory($driverPath);
+            Storage::disk('public')->makeDirectory($appSubPath);
+            
+            // Preparar datos para el PDF
+            $pdfData = [
+                'userDriverDetail' => $userDriverDetail,
+                'signaturePath' => $signaturePath, // Incluir la firma del conductor
+                'title' => 'Drivers Licenses',
+                'date' => now()->format('m/d/Y'),
+                'created_at' => $effectiveDates['created_at'],
+                'updated_at' => $effectiveDates['updated_at'],
+                'custom_created_at' => $effectiveDates['custom_created_at']
+            ];
+            
+            // Preparar formatted_dates con ambas fechas cuando corresponda
+            $formattedDates = [
+                'updated_at' => $effectiveDates['updated_at']->format('m/d/Y'),
+                'updated_at_long' => $effectiveDates['updated_at']->format('F j, Y')
+            ];
+            
+            // Siempre incluir created_at (fecha de registro normal)
+            if ($effectiveDates['show_created_at'] && $effectiveDates['created_at']) {
+                $formattedDates['created_at'] = $effectiveDates['created_at']->format('m/d/Y');
+                $formattedDates['created_at_long'] = $effectiveDates['created_at']->format('F j, Y');
+            }
+            
+            // Incluir custom_created_at solo si está habilitado y tiene valor
+            if ($effectiveDates['show_custom_created_at'] && $effectiveDates['custom_created_at']) {
+                $formattedDates['custom_created_at'] = $effectiveDates['custom_created_at']->format('m/d/Y');
+                $formattedDates['custom_created_at_long'] = $effectiveDates['custom_created_at']->format('F j, Y');
+            }
+            
+            $pdfData['formatted_dates'] = $formattedDates;
+            $pdfData['use_custom_dates'] = $effectiveDates['show_custom_created_at'];
+            
+            // Generar el PDF
+            $pdf = App::make('dompdf.wrapper')->loadView('pdf.driver.licenses', $pdfData);
+            
+            // Guardar PDF
+            $pdfContent = $pdf->output();
+            $filename = 'drivers_licenses.pdf';
+            Storage::disk('public')->put($appSubPath . '/' . $filename, $pdfContent);
+            
+            Log::info('PDF drivers_licenses.pdf regenerado exitosamente con firma', [
+                'driver_id' => $driverId,
+                'filename' => $filename,
+                'path' => $appSubPath . '/' . $filename,
+                'has_signature' => $signaturePath !== null
+            ]);
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error('Error regenerando drivers_licenses.pdf', [
+                'driver_id' => $driverId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Show contact form for license driver.
+     */
+    public function contact(DriverLicense $license)
+    {
+        try {
+            $license->load(['driverDetail.user', 'driverDetail.carrier', 'endorsements']);
+            $driver = $license->driverDetail;
+            
+            return view('admin.drivers.licenses.contact', compact('license', 'driver'));
+        } catch (\Exception $e) {
+            Log::error('Error in DriverLicensesController@contact: ' . $e->getMessage());
+            return redirect()->route('admin.licenses.index')->with('error', 'Error loading contact form: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Send contact email to the driver about license.
+     */
+    public function sendContact(Request $request, DriverLicense $license)
+    {
+        $request->validate([
+            'subject' => 'required|string|max:255',
+            'message' => 'required|string|max:2000',
+            'priority' => 'required|in:low,normal,high'
+        ]);
+
+        try {
+            DB::transaction(function () use ($request, $license) {
+                $driver = $license->driverDetail;
+                
+                // Create admin message record
+                $adminMessage = \App\Models\AdminMessage::create([
+                    'sender_id' => auth()->id(),
+                    'subject' => $request->subject,
+                    'message' => $request->message,
+                    'priority' => $request->priority,
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                    'context_type' => 'driver_license',
+                    'context_id' => $license->id
+                ]);
+
+                // Create message recipient record
+                \App\Models\MessageRecipient::create([
+                    'message_id' => $adminMessage->id,
+                    'recipient_type' => 'driver',
+                    'recipient_id' => $driver->id,
+                    'email' => $driver->user->email,
+                    'name' => $driver->user->name,
+                    'delivery_status' => 'pending'
+                ]);
+
+                // Create status log
+                \App\Models\MessageStatusLog::createLog($adminMessage->id, 'sent', 'Message sent to driver about license');
+
+                // Send actual email using Laravel Mail
+                Mail::to($driver->user->email)->send(new \App\Mail\DriverContactMail(
+                    $request->all(),
+                    auth()->user()->name ?? 'Administrator',
+                    auth()->user()->email ?? config('mail.from.address')
+                ));
+
+                // Update delivery status to delivered
+                $recipient = \App\Models\MessageRecipient::where('message_id', $adminMessage->id)
+                    ->where('recipient_id', $driver->id)
+                    ->first();
+                
+                if ($recipient) {
+                    $recipient->markAsDelivered();
+                }
+
+                // Log for debugging
+                Log::info('License contact email sent to driver', [
+                    'message_id' => $adminMessage->id,
+                    'license_id' => $license->id,
+                    'driver_id' => $driver->id,
+                    'driver_email' => $driver->user->email,
+                    'subject' => $request->subject,
+                    'priority' => $request->priority,
+                    'sent_by' => auth()->user()->name
+                ]);
+            });
+
+            return redirect()->route('admin.licenses.index')
+                ->with('success', 'Message sent successfully to ' . $license->driverDetail->user->name);
+        } catch (\Exception $e) {
+            Log::error('Error in DriverLicensesController@sendContact: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error sending message: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Upload a document to a license
+     */
+    public function uploadDocument(Request $request, DriverLicense $license)
+    {
+        $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:10240', // 10MB max
+        ]);
+
+        try {
+            if ($request->hasFile('document')) {
+                $file = $request->file('document');
+                
+                $license->addMedia($file)
+                    ->usingName($file->getClientOriginalName())
+                    ->toMediaCollection('licenses');
+                
+                Log::info('Document uploaded to license by admin', [
+                    'user_id' => auth()->id(),
+                    'license_id' => $license->id,
+                    'file_name' => $file->getClientOriginalName()
+                ]);
+                
+                return redirect()->back()
+                    ->with('success', 'Document uploaded successfully');
+            }
+            
+            return redirect()->back()
+                ->with('error', 'No document file provided');
+        } catch (\Exception $e) {
+            Log::error('Error uploading document', [
+                'license_id' => $license->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()
+                ->with('error', 'Error uploading document: ' . $e->getMessage());
+        }
+    }
+}

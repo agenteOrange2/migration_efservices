@@ -1,0 +1,389 @@
+@extends('../themes/' . $activeTheme)
+@section('title', 'Add Medical Record')
+@php
+    $breadcrumbLinks = [
+        ['label' => 'App', 'url' => route('admin.dashboard')],
+        ['label' => 'Medical Records', 'url' => route('admin.medical-records.index')],
+        ['label' => 'Add', 'active' => true],
+    ];
+@endphp
+
+@section('subcontent')
+    <div>
+        <!-- Mensajes flash -->
+        @if (session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+        <!-- Professional Header -->
+        <div class="box box--stacked p-8 mb-8">
+            <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div class="flex flex-col w-full md:flex-row text-center md:text-left items-center gap-4">
+                    <div class="p-3 bg-primary/10 rounded-xl border border-primary/20">
+                        <x-base.lucide class="w-8 h-8 text-primary" icon="Heart" />
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-slate-800 mb-2">Add New Medical Record</h1>
+                        <p class="text-slate-600">Enter your driver medical record information</p>
+                    </div>
+                </div>
+                <div class="flex flex-col justify-center md:flex-row md:justify-end gap-3 w-full">
+                    <x-base.button as="a" href="{{ route('admin.medical-records.index') }}" class="w-full sm:w-auto"
+                        variant="primary">
+                        <x-base.lucide class="w-4 h-4 mr-2" icon="arrow-left" />
+                        Back to Medical Records
+                    </x-base.button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido principal -->
+        <div class="box box--stacked mt-5">
+            <div class="box-body p-5">
+                <form id="medicalRecordForm" action="{{ route('admin.medical-records.store') }}" method="POST"
+                    enctype="multipart/form-data">
+                    @csrf
+
+                    <!-- Sección 1: Información Básica -->
+                    <div class="mb-8">
+                        <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Basic Information</h4>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Carrier -->
+                            <div>
+                                <x-base.form-label for="carrier_id" class="form-label required">Carrier</x-base.form-label>
+                                <x-base.form-select id="carrier_id" name="carrier_id"
+                                    class="form-select @error('carrier_id') is-invalid @enderror" required>
+                                    <option value="">Select Carrier</option>
+                                    @foreach ($carriers as $carrier)
+                                        <option value="{{ $carrier->id }}"
+                                            {{ old('carrier_id') == $carrier->id ? 'selected' : '' }}>
+                                            {{ $carrier->name }}
+                                        </option>
+                                    @endforeach
+                                </x-base.form-select>
+                                @error('carrier_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- Driver -->
+                            <div>
+                                <x-base.form-label for="user_driver_detail_id"
+                                    class="form-label required">Driver</x-base.form-label>
+                                <x-base.form-select id="user_driver_detail_id" name="user_driver_detail_id"
+                                    class="form-select @error('user_driver_detail_id') is-invalid @enderror" required>
+                                    <option value="">Select Driver</option>
+                                    @foreach ($drivers as $driver)
+                                        <option value="{{ $driver->id }}"
+                                            {{ old('user_driver_detail_id') == $driver->id ? 'selected' : '' }}>
+                                            {{ implode(' ', array_filter([$driver->user->name, $driver->middle_name, $driver->last_name])) }}
+                                        </option>
+                                    @endforeach
+                                </x-base.form-select>
+                                @error('user_driver_detail_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 2: Driver Information -->
+                    <div class="mb-8">
+                        <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Driver Information</h4>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Social Security Number -->
+                            <div>
+                                <x-base.form-label for="social_security_number" class="form-label required">Social Security
+                                    Number</x-base.form-label>
+                                <x-base.form-input type="text" id="social_security_number" name="social_security_number"
+                                    class="form-control @error('social_security_number') is-invalid @enderror"
+                                    value="{{ old('social_security_number') }}" placeholder="XXX-XX-XXXX"
+                                    pattern="\d{3}-\d{2}-\d{4}" x-mask="999-99-9999" required />
+                                <small class="form-text text-muted">Format: XXX-XX-XXXX</small>
+                                @error('social_security_number')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- Social Security Card Document -->
+                            <div>
+                                <x-base.form-label for="social_security_card" class="form-label">Social Security Card Document</x-base.form-label>
+                                <x-base.form-input type="file" id="social_security_card" name="social_security_card"
+                                    class="form-control @error('social_security_card') is-invalid @enderror"
+                                    accept="image/*,application/pdf" />
+                                <small class="form-text text-muted">Upload the social security card (PDF or image format, max 10MB)</small>
+                                @error('social_security_card')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <!-- Preview -->
+                                <div id="social_security_card_preview" class="mt-2" style="display: none;">
+                                    <img id="social_security_card_preview_img" src="" alt="Social Security Card Preview"
+                                        class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
+                                </div>
+                            </div>
+
+                            <!-- Hire Date -->
+                            <div>
+                                <x-base.form-label for="hire_date" class="form-label">Hire Date</x-base.form-label>
+                                <x-base.litepicker id="hire_date" name="hire_date" value="{{ old('hire_date') }}"
+                                    class="@error('hire_date') @enderror" placeholder="MM/DD/YYYY" />
+                                @error('hire_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- Location -->
+                            <div>
+                                <x-base.form-label for="location" class="form-label">Location</x-base.form-label>
+                                <x-base.form-input type="text" id="location" name="location"
+                                    class="form-control @error('location') is-invalid @enderror"
+                                    value="{{ old('location') }}" placeholder="Work location" />
+                                @error('location')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 3: Status Information -->
+                    <div class="mb-8">
+                        <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Status Information</h4>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Suspension Status -->
+                            <div x-data="{ isSuspended: {{ json_encode(old('is_suspended', false)) }} }">
+                                <div class="flex items-center mb-2">
+                                    <input type="checkbox" id="is_suspended" name="is_suspended" value="1"
+                                        x-model="isSuspended" {{ old('is_suspended') ? 'checked' : '' }}
+                                        class="form-checkbox h-4 w-4 text-primary border-gray-300 rounded" />
+                                    <label for="is_suspended" class="ml-2 text-sm">Driver is Suspended</label>
+                                </div>
+                                <div x-show="isSuspended" class="mt-3">
+                                    <x-base.form-label for="suspension_date" class="form-label">Suspension
+                                        Date</x-base.form-label>
+                                    <x-base.litepicker id="suspension_date" name="suspension_date"
+                                        value="{{ old('suspension_date') }}" class="@error('suspension_date') @enderror"
+                                        placeholder="MM/DD/YYYY" />
+                                    @error('suspension_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <!-- Termination Status -->
+                            <div x-data="{ isTerminated: {{ json_encode(old('is_terminated', false)) }} }">
+                                <div class="flex items-center mb-2">
+                                    <input type="checkbox" id="is_terminated" name="is_terminated" value="1"
+                                        x-model="isTerminated" {{ old('is_terminated') ? 'checked' : '' }}
+                                        class="form-checkbox h-4 w-4 text-primary border-gray-300 rounded" />
+                                    <label for="is_terminated" class="ml-2 text-sm">Driver is Terminated</label>
+                                </div>
+                                <div x-show="isTerminated" class="mt-3">
+                                    <x-base.form-label for="termination_date" class="form-label">Termination
+                                        Date</x-base.form-label>
+                                    <x-base.litepicker id="termination_date" name="termination_date"
+                                        value="{{ old('termination_date') }}"
+                                        class="@error('termination_date') @enderror" placeholder="MM/DD/YYYY" />
+                                    @error('termination_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 4: Medical Certification Information -->
+                    <div class="mb-8">
+                        <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Medical Certification
+                            Information</h4>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Medical Examiner Name -->
+                            <div>
+                                <x-base.form-label for="medical_examiner_name" class="form-label required">Medical
+                                    Examiner Name</x-base.form-label>
+                                <x-base.form-input type="text" id="medical_examiner_name" name="medical_examiner_name"
+                                    class="form-control @error('medical_examiner_name') is-invalid @enderror"
+                                    value="{{ old('medical_examiner_name') }}" required />
+                                @error('medical_examiner_name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- Medical Examiner Registry Number -->
+                            <div>
+                                <x-base.form-label for="medical_examiner_registry_number"
+                                    class="form-label required">Medical Examiner Registry Number</x-base.form-label>
+                                <x-base.form-input type="text" id="medical_examiner_registry_number"
+                                    name="medical_examiner_registry_number"
+                                    class="form-control @error('medical_examiner_registry_number') is-invalid @enderror"
+                                    value="{{ old('medical_examiner_registry_number') }}" required />
+                                @error('medical_examiner_registry_number')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- Medical Card Expiration Date -->
+                            <div>
+                                <x-base.form-label for="medical_card_expiration_date" class="form-label required">Medical
+                                    Card Expiration Date</x-base.form-label>
+                                <x-base.litepicker id="medical_card_expiration_date" name="medical_card_expiration_date"
+                                    value="{{ old('medical_card_expiration_date') }}"
+                                    class="@error('medical_card_expiration_date') @enderror" placeholder="MM/DD/YYYY"
+                                    required />
+                                @error('medical_card_expiration_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 5: Medical Card Upload -->
+                    <div class="mb-8">
+                        <h4 class="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Medical Card Upload</h4>
+                        <div class="grid grid-cols-1 gap-6">
+                            <!-- Medical Card Image -->
+                            <div>
+                                <x-base.form-label for="medical_card" class="form-label">Medical Card</x-base.form-label>
+                                <x-base.form-input type="file" id="medical_card" name="medical_card"
+                                    class="form-control @error('medical_card') is-invalid @enderror"
+                                    accept="image/*,application/pdf" />
+                                <small class="form-text text-muted">Upload the medical card (PDF or image format, max
+                                    10MB)</small>
+                                @error('medical_card')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <!-- Preview -->
+                                <div id="medical_card_preview" class="mt-2" style="display: none;">
+                                    <img id="medical_card_preview_img" src="" alt="Medical Card Preview"
+                                        class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones del formulario -->
+                    <div class="flex justify-end mt-8 space-x-4">
+                        <x-base.button type="button" class="mr-3" variant="outline-secondary" as="a"
+                            href="{{ route('admin.medical-records.index') }}">
+                            Cancel
+                        </x-base.button>
+                        <x-base.button type="submit" variant="primary">
+                            Save Medical Record
+                        </x-base.button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endsection
+
+@push('scripts')
+    <script>
+        // Inicialización del formulario
+        document.addEventListener('DOMContentLoaded', function() {
+            // Manejar preview de imagen de medical card
+            function setupImagePreview(inputId, previewId, imgId) {
+                const input = document.getElementById(inputId);
+                const preview = document.getElementById(previewId);
+                const img = document.getElementById(imgId);
+
+                input.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        // Solo mostrar preview para imágenes, no para PDFs
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                img.src = e.target.result;
+                                preview.style.display = 'block';
+                            };
+                            reader.readAsDataURL(file);
+                        } else {
+                            preview.style.display = 'none';
+                        }
+                    } else {
+                        preview.style.display = 'none';
+                    }
+                });
+            }
+
+            // Configurar preview para medical card
+            setupImagePreview('medical_card', 'medical_card_preview', 'medical_card_preview_img');
+            
+            // Configurar preview para social security card
+            setupImagePreview('social_security_card', 'social_security_card_preview', 'social_security_card_preview_img');
+
+            // Validación de fecha de expiración
+            document.getElementById('medicalRecordForm').addEventListener('submit', function(event) {
+                const expirationDateEl = document.getElementById('medical_card_expiration_date');
+
+                // Verificar que la fecha de expiración no sea en el pasado
+                if (expirationDateEl.value) {
+                    const expirationDate = new Date(expirationDateEl.value);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    if (expirationDate < today) {
+                        event.preventDefault();
+                        alert('Medical card expiration date cannot be in the past');
+                        return;
+                    }
+                }
+            });
+
+            // Manejar cambio de carrier para filtrar conductores
+            document.getElementById('carrier_id').addEventListener('change', function() {
+                const carrierId = this.value;
+
+                // Limpiar el select de conductores usando JavaScript nativo
+                const driverSelect = document.getElementById('user_driver_detail_id');
+                driverSelect.innerHTML = '<option value="">Select Driver</option>';
+
+                if (carrierId) {
+                    // Hacer una petición AJAX para obtener los conductores activos de esta transportista
+                    fetch(`/api/active-drivers-by-carrier/${carrierId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data && data.length > 0) {
+                                // Hay conductores activos, agregarlos al select
+                                data.forEach(function(driver) {
+                                    const option = document.createElement('option');
+                                    option.value = driver.id;
+                                    option.textContent = driver.full_name;
+                                    option.setAttribute('data-email', driver.email);
+                                    driverSelect.appendChild(option);
+                                });
+                            } else {
+                                // No hay conductores activos para este carrier
+                                const option = document.createElement('option');
+                                option.value = '';
+                                option.disabled = true;
+                                option.textContent = 'No active drivers found for this carrier';
+                                driverSelect.appendChild(option);
+                            }
+
+                            // Disparar un evento change para que se actualice la UI
+                            driverSelect.dispatchEvent(new Event('change'));
+                        })
+                        .catch(error => {
+                            console.error('Error loading drivers:', error);
+                            const option = document.createElement('option');
+                            option.value = '';
+                            option.disabled = true;
+                            option.textContent = 'Error loading drivers';
+                            driverSelect.appendChild(option);
+                            driverSelect.dispatchEvent(new Event('change'));
+                        });
+                }
+            });
+        });
+    </script>
+@endpush
