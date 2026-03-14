@@ -189,8 +189,10 @@ class DriverAdminWizardController extends Controller
             'driver_id' => $driver->id,
             'method'    => $request->method(),
             'input_keys'=> array_keys($request->all()),
+            'licenses'  => $request->input('licenses'),
         ]);
 
+        try {
         match ($step) {
             1  => $this->saveStep1($request, $driver),
             2  => $this->saveStep2($request, $driver),
@@ -209,6 +211,20 @@ class DriverAdminWizardController extends Controller
             15 => $this->saveStep15($request, $driver),
             default => null,
         };
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\Log::warning('STEP_VALIDATION_FAILED', [
+                'step'   => $step,
+                'errors' => $e->errors(),
+            ]);
+            throw $e;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('STEP_SAVE_ERROR', [
+                'step'    => $step,
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
 
         // Advance current_step if needed
         if ($step >= $driver->current_step) {
@@ -603,6 +619,12 @@ class DriverAdminWizardController extends Controller
     /** Step 4 – License */
     private function saveStep4(Request $request, UserDriverDetail $driver): void
     {
+        \Illuminate\Support\Facades\Log::info('STEP4_INPUT', [
+            'all' => $request->except(['license_front', 'license_back', '_method']),
+            'has_front' => $request->hasFile('license_front'),
+            'has_back'  => $request->hasFile('license_back'),
+        ]);
+
         $request->validate([
             'licenses'                     => 'required|array|min:1',
             'licenses.*.license_number'    => 'required|string|max:50',
@@ -623,11 +645,17 @@ class DriverAdminWizardController extends Controller
             'experiences.*.requires_cdl'   => 'boolean',
         ]);
 
+        \Illuminate\Support\Facades\Log::info('STEP4_AFTER_VALIDATION', [
+            'licenses_count' => count($request->licenses ?? []),
+            'licenses' => $request->licenses,
+        ]);
+
         // Delete removed licenses
         $incomingIds = collect($request->licenses)->pluck('id')->filter()->values()->toArray();
         $driver->licenses()->whereNotIn('id', $incomingIds)->delete();
 
         foreach ($request->licenses as $index => $licenseData) {
+            \Illuminate\Support\Facades\Log::info('STEP4_LICENSE_ROW', ['index' => $index, 'data' => $licenseData]);
             $isCdl    = isset($licenseData['is_cdl']) && $licenseData['is_cdl'];
             $isPrimary = $index === 0;
 
@@ -695,25 +723,36 @@ class DriverAdminWizardController extends Controller
     private function saveStep5(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
+            'hire_date'                        => 'nullable|date',
+            'location'                         => 'nullable|string|max:255',
+            'is_suspended'                     => 'boolean',
+            'suspension_date'                  => 'nullable|date',
+            'is_terminated'                    => 'boolean',
+            'termination_date'                 => 'nullable|date',
+            'social_security_number'           => 'nullable|string|max:20',
             'medical_examiner_name'            => 'nullable|string|max:255',
             'medical_examiner_registry_number' => 'nullable|string|max:50',
             'medical_card_expiration_date'     => 'nullable|date',
-            'hire_date'                        => 'nullable|date',
-            'location'                         => 'nullable|string|max:255',
-            'social_security_number'           => 'nullable|string|max:20',
             'medical_card'                     => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
             'social_security_card'             => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
+        $isSuspended = $request->boolean('is_suspended');
+        $isTerminated = $request->boolean('is_terminated');
+
         $medical = DriverMedicalQualification::updateOrCreate(
             ['user_driver_detail_id' => $driver->id],
             [
+                'hire_date'                        => $this->toDbDate($request->hire_date),
+                'location'                         => $request->location,
+                'is_suspended'                     => $isSuspended,
+                'suspension_date'                  => $isSuspended ? $this->toDbDate($request->suspension_date) : null,
+                'is_terminated'                    => $isTerminated,
+                'termination_date'                 => $isTerminated ? $this->toDbDate($request->termination_date) : null,
+                'social_security_number'           => $request->social_security_number,
                 'medical_examiner_name'            => $request->medical_examiner_name,
                 'medical_examiner_registry_number' => $request->medical_examiner_registry_number,
                 'medical_card_expiration_date'     => $this->toDbDate($request->medical_card_expiration_date),
-                'hire_date'                        => $this->toDbDate($request->hire_date),
-                'location'                         => $request->location,
-                'social_security_number'           => $request->social_security_number,
             ]
         );
 
@@ -1228,14 +1267,18 @@ class DriverAdminWizardController extends Controller
         if (!$m) return [];
 
         return [
+            'hire_date'                        => $m->hire_date?->format('Y-m-d'),
+            'location'                         => $m->location,
+            'is_suspended'                     => $m->is_suspended,
+            'suspension_date'                  => $m->suspension_date?->format('Y-m-d'),
+            'is_terminated'                    => $m->is_terminated,
+            'termination_date'                 => $m->termination_date?->format('Y-m-d'),
+            'social_security_number'           => $m->social_security_number,
+            'ss_card_url'                      => $m->getFirstMediaUrl('social_security_card') ?: null,
             'medical_examiner_name'            => $m->medical_examiner_name,
             'medical_examiner_registry_number' => $m->medical_examiner_registry_number,
             'medical_card_expiration_date'     => $m->medical_card_expiration_date?->format('Y-m-d'),
-            'hire_date'                        => $m->hire_date?->format('Y-m-d'),
-            'location'                         => $m->location,
-            'social_security_number'           => $m->social_security_number,
             'medical_card_url'                 => $m->getFirstMediaUrl('medical_card') ?: null,
-            'ss_card_url'                      => $m->getFirstMediaUrl('social_security_card') ?: null,
         ];
     }
 

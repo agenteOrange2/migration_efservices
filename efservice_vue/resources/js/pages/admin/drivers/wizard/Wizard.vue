@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3'
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 import Lucide from '@/components/Base/Lucide'
 import Button from '@/components/Base/Button'
@@ -69,6 +69,7 @@ const errors = computed(() => (page.props as any).errors ?? {})
 
 const isEditMode = computed(() => !!props.driver)
 const currentStep = ref(props.initialStep ?? props.driver?.current_step ?? 1)
+watch(() => props.initialStep, (newStep) => { if (newStep != null) currentStep.value = newStep })
 const totalSteps = 15
 
 const steps = [
@@ -288,7 +289,7 @@ function submitStep3() {
 // Step 4 – License
 // ------------------------------------------------------------------
 const step4 = reactive({
-    licenses: ((props.stepData?.step4?.licenses ?? [{ license_number: '', state_of_issue: '', license_class: '', expiration_date: '', is_cdl: true, restrictions: '', is_primary: true, endorsements: [] }]) as any[]).map((l: any) => ({
+    licenses: ((props.stepData?.step4?.licenses ?? [{ license_number: '', state_of_issue: '', license_class: '', expiration_date: '', is_cdl: true, is_primary: true, endorsements: [] }]) as any[]).map((l: any) => ({
         ...l,
         expiration_date: toUsDate(l.expiration_date),
     })),
@@ -300,7 +301,7 @@ const step4 = reactive({
 })
 
 function addLicense() {
-    step4.licenses.push({ license_number: '', state_of_issue: '', license_class: '', expiration_date: '', is_cdl: false, restrictions: '', is_primary: false, endorsements: [] })
+    step4.licenses.push({ license_number: '', state_of_issue: '', license_class: '', expiration_date: '', is_cdl: false, is_primary: false, endorsements: [] })
 }
 function removeLicense(i: number) {
     if (step4.licenses.length > 1) step4.licenses.splice(i, 1)
@@ -312,32 +313,36 @@ function removeExperience(i: number) {
     if (step4.experiences.length > 1) step4.experiences.splice(i, 1)
 }
 
-// Preview URLs for newly selected files
 const licFrontPreview = ref<string | null>(null)
 const licBackPreview  = ref<string | null>(null)
+
 function onLicFront(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0] ?? null
-    step4.license_front = file
     licFrontPreview.value = file ? URL.createObjectURL(file) : null
+    step4.license_front = file
 }
 function onLicBack(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0] ?? null
-    step4.license_back = file
     licBackPreview.value = file ? URL.createObjectURL(file) : null
+    step4.license_back = file
 }
 
 function submitStep4() {
     const data = new FormData()
-    // Only send relevant license fields, not server-only props like front_url/back_url
-    const licenseFields = ['id', 'license_number', 'state_of_issue', 'license_class', 'expiration_date', 'is_cdl', 'restrictions', 'is_primary']
+    const licenseFields = ['id', 'license_number', 'state_of_issue', 'license_class', 'expiration_date', 'is_cdl', 'is_primary']
     step4.licenses.forEach((l, i) => {
         licenseFields.forEach(k => {
-            if (k in l) data.append(`licenses[${i}][${k}]`, String((l as any)[k] ?? ''))
+            if (k in l) {
+                const v = (l as any)[k]
+                data.append(`licenses[${i}][${k}]`, typeof v === 'boolean' ? (v ? '1' : '0') : String(v ?? ''))
+            }
         })
         if (Array.isArray(l.endorsements)) {
             l.endorsements.forEach((eid: number) => data.append(`licenses[${i}][endorsements][]`, String(eid)))
         }
     })
+    if (step4.license_front) data.append('license_front', step4.license_front)
+    if (step4.license_back)  data.append('license_back',  step4.license_back)
     step4.experiences.forEach((e, i) => {
         if (!e.equipment_type) return
         data.append(`experiences[${i}][equipment_type]`, String(e.equipment_type))
@@ -345,8 +350,6 @@ function submitStep4() {
         data.append(`experiences[${i}][miles_driven]`, String(parseInt(e.miles_driven) || 0))
         data.append(`experiences[${i}][requires_cdl]`, e.requires_cdl ? '1' : '0')
     })
-    if (step4.license_front) data.append('license_front', step4.license_front)
-    if (step4.license_back)  data.append('license_back',  step4.license_back)
     data.append('_method', 'PUT')
     router.post(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 4 }), data)
 }
@@ -355,28 +358,31 @@ function submitStep4() {
 // Step 5 – Medical
 // ------------------------------------------------------------------
 const step5 = reactive({
+    // Social Security / Employment
+    hire_date:              toUsDate(props.stepData?.step5?.hire_date),
+    location:               props.stepData?.step5?.location ?? '',
+    // Social Security
+    social_security_number: props.stepData?.step5?.social_security_number ?? '',
+    social_security_card:   null as File | null,
+    ss_card_url:            props.stepData?.step5?.ss_card_url ?? null as string | null,
+    // Medical Examiner
     medical_examiner_name:            props.stepData?.step5?.medical_examiner_name ?? '',
     medical_examiner_registry_number: props.stepData?.step5?.medical_examiner_registry_number ?? '',
     medical_card_expiration_date:     toUsDate(props.stepData?.step5?.medical_card_expiration_date),
-    hire_date:                        toUsDate(props.stepData?.step5?.hire_date),
-    location:                         props.stepData?.step5?.location ?? '',
-    social_security_number:           props.stepData?.step5?.social_security_number ?? '',
-    medical_card: null as File | null,
-    social_security_card: null as File | null,
+    medical_card:     null as File | null,
     medical_card_url: props.stepData?.step5?.medical_card_url ?? null as string | null,
-    ss_card_url:      props.stepData?.step5?.ss_card_url ?? null as string | null,
 })
 
 function submitStep5() {
     const data = new FormData()
-    data.append('medical_examiner_name',            step5.medical_examiner_name)
-    data.append('medical_examiner_registry_number', step5.medical_examiner_registry_number)
-    data.append('medical_card_expiration_date',     step5.medical_card_expiration_date)
     data.append('hire_date',                        step5.hire_date)
     data.append('location',                         step5.location)
     data.append('social_security_number',           step5.social_security_number)
-    if (step5.medical_card)         data.append('medical_card',          step5.medical_card)
-    if (step5.social_security_card) data.append('social_security_card',  step5.social_security_card)
+    data.append('medical_examiner_name',            step5.medical_examiner_name)
+    data.append('medical_examiner_registry_number', step5.medical_examiner_registry_number)
+    data.append('medical_card_expiration_date',     step5.medical_card_expiration_date)
+    if (step5.medical_card)         data.append('medical_card',         step5.medical_card)
+    if (step5.social_security_card) data.append('social_security_card', step5.social_security_card)
     data.append('_method', 'PUT')
     router.post(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 5 }), data)
 }
@@ -1281,10 +1287,6 @@ function submitStep15() {
                             <label class="block text-xs font-medium mb-1">Expiration Date <span class="text-danger">*</span></label>
                             <Litepicker v-model="lic.expiration_date" :options="lpOptions" />
                         </div>
-                        <div>
-                            <label class="block text-xs font-medium mb-1">Restrictions</label>
-                            <FormInput v-model="lic.restrictions" placeholder="E.g. B, E, K" />
-                        </div>
                         <div class="flex items-center pt-5">
                             <FormCheck>
                                 <FormCheck.Input v-model="lic.is_cdl" type="checkbox" />
@@ -1312,31 +1314,30 @@ function submitStep15() {
                             </FormCheck>
                         </div>
                     </div>
-                </div>
 
-                <!-- License Photos -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">License Front Image</label>
-                        <label class="block text-xs text-slate-500 mb-1">Upload Images</label>
-                        <input type="file" accept="image/*,application/pdf" @change="onLicFront" class="w-full text-sm" />
-                        <!-- Preview -->
-                        <img v-if="licFrontPreview" :src="licFrontPreview" alt="License front preview" class="mt-2 rounded border max-h-32 object-contain" />
-                        <template v-else-if="step4.licenses[0]?.front_url">
-                            <img :src="step4.licenses[0].front_url" alt="License front" class="mt-2 rounded border max-h-32 object-contain" />
-                            <a :href="step4.licenses[0].front_url" target="_blank" class="text-xs text-primary mt-1 block">View full size</a>
-                        </template>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">License Back Image</label>
-                        <label class="block text-xs text-slate-500 mb-1">Upload Images</label>
-                        <input type="file" accept="image/*,application/pdf" @change="onLicBack" class="w-full text-sm" />
-                        <!-- Preview -->
-                        <img v-if="licBackPreview" :src="licBackPreview" alt="License back preview" class="mt-2 rounded border max-h-32 object-contain" />
-                        <template v-else-if="step4.licenses[0]?.back_url">
-                            <img :src="step4.licenses[0].back_url" alt="License back" class="mt-2 rounded border max-h-32 object-contain cursor-pointer" @click="window.open(step4.licenses[0].back_url, '_blank')" />
-                            <a :href="step4.licenses[0].back_url" target="_blank" class="text-xs text-primary mt-1 block">View full size</a>
-                        </template>
+                    <!-- License Images — only for first/primary license -->
+                    <div v-if="i === 0" class="mt-4 pt-4 border-t border-slate-100">
+                        <h4 class="text-sm font-medium mb-3">License Images</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium mb-1">License Front</label>
+                                <input type="file" accept="image/*,application/pdf" @change="onLicFront" class="w-full text-sm" />
+                                <img v-if="licFrontPreview" :src="licFrontPreview" alt="License front preview" class="mt-2 rounded border max-h-32 object-contain" />
+                                <template v-else-if="lic.front_url">
+                                    <img :src="lic.front_url" alt="License front" class="mt-2 rounded border max-h-32 object-contain" />
+                                    <a :href="lic.front_url" target="_blank" class="text-xs text-primary mt-1 block">View full size</a>
+                                </template>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">License Back</label>
+                                <input type="file" accept="image/*,application/pdf" @change="onLicBack" class="w-full text-sm" />
+                                <img v-if="licBackPreview" :src="licBackPreview" alt="License back preview" class="mt-2 rounded border max-h-32 object-contain" />
+                                <template v-else-if="lic.back_url">
+                                    <img :src="lic.back_url" alt="License back" class="mt-2 rounded border max-h-32 object-contain" />
+                                    <a :href="lic.back_url" target="_blank" class="text-xs text-primary mt-1 block">View full size</a>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1397,42 +1398,67 @@ function submitStep15() {
                  ==================================================== -->
             <div v-else-if="currentStep === 5">
                 <h2 class="text-lg font-semibold mb-5">Medical Qualification</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Medical Examiner Name</label>
-                        <FormInput v-model="step5.medical_examiner_name" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Registry Number</label>
-                        <FormInput v-model="step5.medical_examiner_registry_number" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Medical Card Expiration</label>
-                        <Litepicker v-model="step5.medical_card_expiration_date" :options="lpOptions" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Hire Date</label>
-                        <Litepicker v-model="step5.hire_date" :options="lpOptions" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Location</label>
-                        <FormInput v-model="step5.location" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Social Security Number</label>
-                        <FormInput v-model="step5.social_security_number" placeholder="XXX-XX-XXXX" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Medical Card Document</label>
-                        <input type="file" accept="image/*,application/pdf" @change="e => step5.medical_card = (e.target as HTMLInputElement).files?.[0] ?? null" class="w-full text-sm" />
-                        <a v-if="step5.medical_card_url" :href="step5.medical_card_url" target="_blank" class="text-xs text-primary mt-1 block">View current</a>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Social Security Card</label>
-                        <input type="file" accept="image/*,application/pdf" @change="e => step5.social_security_card = (e.target as HTMLInputElement).files?.[0] ?? null" class="w-full text-sm" />
-                        <a v-if="step5.ss_card_url" :href="step5.ss_card_url" target="_blank" class="text-xs text-primary mt-1 block">View current</a>
+
+                <!-- Social Security -->
+                <div class="border border-slate-200 rounded-lg p-4 mb-5">
+                    <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                        <Lucide icon="ShieldCheck" class="w-4 h-4" /> Social Security
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Social Security Number <span class="text-danger">*</span></label>
+                            <FormInput v-model="step5.social_security_number" placeholder="XXX-XX-XXXX" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Hire Date</label>
+                            <Litepicker v-model="step5.hire_date" :options="lpOptions" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Location</label>
+                            <FormInput v-model="step5.location" placeholder="City, State" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Social Security Card</label>
+                            <input type="file" accept="image/*,application/pdf"
+                                @change="e => step5.social_security_card = (e.target as HTMLInputElement).files?.[0] ?? null"
+                                class="w-full text-sm" />
+                            <a v-if="step5.ss_card_url" :href="step5.ss_card_url" target="_blank" class="text-xs text-primary mt-1 block">
+                                <Lucide icon="Paperclip" class="w-3 h-3 inline mr-1" />View current file
+                            </a>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Medical Examiner -->
+                <div class="border border-slate-200 rounded-lg p-4 mb-5">
+                    <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                        <Lucide icon="Stethoscope" class="w-4 h-4" /> Medical Examiner
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Examiner Name <span class="text-danger">*</span></label>
+                            <FormInput v-model="step5.medical_examiner_name" placeholder="Dr. John Smith" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Registry Number <span class="text-danger">*</span></label>
+                            <FormInput v-model="step5.medical_examiner_registry_number" placeholder="0000000000" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Medical Card Expiration <span class="text-danger">*</span></label>
+                            <Litepicker v-model="step5.medical_card_expiration_date" :options="lpOptions" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Medical Card Document</label>
+                            <input type="file" accept="image/*,application/pdf"
+                                @change="e => step5.medical_card = (e.target as HTMLInputElement).files?.[0] ?? null"
+                                class="w-full text-sm" />
+                            <a v-if="step5.medical_card_url" :href="step5.medical_card_url" target="_blank" class="text-xs text-primary mt-1 block">
+                                <Lucide icon="Paperclip" class="w-3 h-3 inline mr-1" />View current file
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-between mt-6">
                     <Button variant="outline-secondary" @click="currentStep = 4">
                         <Lucide icon="ChevronLeft" class="w-4 h-4 mr-1" /> Previous
@@ -2033,4 +2059,26 @@ function submitStep15() {
                             <Litepicker v-model="step15.clearinghouse_query_date" :options="lpOptions" />
                         </div>
                         <div>
-                            <
+                            <label class="block text-sm font-medium mb-1">Result</label>
+                            <TomSelect v-model="step15.clearinghouse_result">
+                                <option value="">Pending query</option>
+                                <option value="clear">Clear</option>
+                                <option value="fail">Disqualifying record found</option>
+                            </TomSelect>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between mt-6">
+                    <Button variant="outline-secondary" @click="currentStep = 14">
+                        <Lucide icon="ChevronLeft" class="w-4 h-4 mr-1" /> Previous
+                    </Button>
+                    <Button variant="primary" @click="submitStep15">
+                        <Lucide icon="Check" class="w-4 h-4 mr-1" /> Complete Application
+                    </Button>
+                </div>
+            </div>
+
+        </div>
+        </div>
+    </div>
+</template>
