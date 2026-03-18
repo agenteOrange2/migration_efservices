@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Driver;
 
 use App\Helpers\Constants;
+use App\Services\W9PdfService;
+use App\Services\Driver\StepCompletionCalculator;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\Driver\DriverAccident;
 use App\Models\Admin\Driver\DriverApplication;
@@ -24,6 +26,8 @@ use App\Models\Admin\Vehicle\Vehicle;
 use App\Models\Admin\Vehicle\VehicleDriverAssignment;
 use App\Models\Admin\Vehicle\VehicleType;
 use App\Models\Carrier;
+use App\Models\CarrierDocument;
+use App\Models\DocumentType;
 use App\Models\CompanyDriverDetail;
 use App\Models\OwnerOperatorDetail;
 use App\Models\ThirdPartyDetail;
@@ -114,7 +118,9 @@ class DriverAdminWizardController extends Controller
             ]);
 
             if ($request->hasFile('photo')) {
+                $ext = $request->file('photo')->getClientOriginalExtension() ?: 'jpg';
                 $driver->addMedia($request->file('photo'))
+                    ->usingFileName('profile.' . $ext)
                     ->toMediaCollection('profile_photo_driver');
             }
 
@@ -231,6 +237,9 @@ class DriverAdminWizardController extends Controller
             $driver->update(['current_step' => $step]);
         }
 
+        // Invalidate completion calculator cache so Step 15 shows fresh data
+        app(StepCompletionCalculator::class)->invalidateCache($driver->id);
+
         $nextStep = min($step + 1, 15);
 
         return redirect()
@@ -301,8 +310,10 @@ class DriverAdminWizardController extends Controller
         ]);
 
         if ($request->hasFile('photo')) {
+            $ext = $request->file('photo')->getClientOriginalExtension() ?: 'jpg';
             $driver->clearMediaCollection('profile_photo_driver');
             $driver->addMedia($request->file('photo'))
+                ->usingFileName('profile.' . $ext)
                 ->toMediaCollection('profile_photo_driver');
         }
     }
@@ -694,13 +705,17 @@ class DriverAdminWizardController extends Controller
 
         if ($primaryLicense) {
             if ($request->hasFile('license_front')) {
+                $ext = $request->file('license_front')->getClientOriginalExtension() ?: 'jpg';
                 $primaryLicense->clearMediaCollection('license_front');
                 $primaryLicense->addMedia($request->file('license_front'))
+                    ->usingFileName('front.' . $ext)
                     ->toMediaCollection('license_front');
             }
             if ($request->hasFile('license_back')) {
+                $ext = $request->file('license_back')->getClientOriginalExtension() ?: 'jpg';
                 $primaryLicense->clearMediaCollection('license_back');
                 $primaryLicense->addMedia($request->file('license_back'))
+                    ->usingFileName('back.' . $ext)
                     ->toMediaCollection('license_back');
             }
         }
@@ -757,13 +772,18 @@ class DriverAdminWizardController extends Controller
         );
 
         if ($request->hasFile('medical_card')) {
+            $ext = $request->file('medical_card')->getClientOriginalExtension() ?: 'jpg';
             $medical->clearMediaCollection('medical_card');
-            $medical->addMedia($request->file('medical_card'))->toMediaCollection('medical_card');
+            $medical->addMedia($request->file('medical_card'))
+                ->usingFileName('medical_card.' . $ext)
+                ->toMediaCollection('medical_card');
         }
 
         if ($request->hasFile('social_security_card')) {
+            $ext = $request->file('social_security_card')->getClientOriginalExtension() ?: 'jpg';
             $medical->clearMediaCollection('social_security_card');
             $medical->addMedia($request->file('social_security_card'))
+                ->usingFileName('social_security_card.' . $ext)
                 ->toMediaCollection('social_security_card');
         }
     }
@@ -781,6 +801,10 @@ class DriverAdminWizardController extends Controller
             'schools.*.date_end'                       => 'nullable|date',
             'schools.*.subject_to_safety_regulations'  => 'boolean',
             'schools.*.performed_safety_functions'     => 'boolean',
+            'schools.*.training_skills'                => 'nullable|array',
+            'schools.*.training_skills.*'              => 'string|max:100',
+            'school_certificates'                      => 'nullable|array',
+            'school_certificates.*'                    => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
             'courses'                                  => 'nullable|array',
             'courses.*.organization_name'              => 'required|string|max:255',
             'courses.*.city'                           => 'nullable|string|max:100',
@@ -789,13 +813,22 @@ class DriverAdminWizardController extends Controller
             'courses.*.expiration_date'                => 'nullable|date',
             'courses.*.experience'                     => 'nullable|string|max:255',
             'courses.*.years_experience'               => 'nullable|numeric',
+            'course_certificates'                      => 'nullable|array',
+            'course_certificates.*'                    => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
-        // Delete and recreate training schools
-        $driver->trainingSchools()->delete();
-        foreach ($request->schools ?? [] as $schoolData) {
+        // Training schools – upsert by ID to preserve existing files
+        $incomingSchoolIds = collect($request->schools ?? [])->pluck('id')->filter()->values()->toArray();
+        $driver->trainingSchools()->whereNotIn('id', $incomingSchoolIds)->get()->each(function ($s) {
+            $s->clearMediaCollection('school_certificates');
+            $s->delete();
+        });
+
+        foreach ($request->schools ?? [] as $index => $schoolData) {
             if (empty($schoolData['school_name'])) continue;
-            DriverTrainingSchool::create([
+
+            $skills = $schoolData['training_skills'] ?? null;
+            $attrs = [
                 'user_driver_detail_id'           => $driver->id,
                 'school_name'                     => $schoolData['school_name'],
                 'city'                            => $schoolData['city'] ?? null,
@@ -805,14 +838,37 @@ class DriverAdminWizardController extends Controller
                 'date_end'                        => $this->toDbDate($schoolData['date_end'] ?? null),
                 'subject_to_safety_regulations'   => (bool)($schoolData['subject_to_safety_regulations'] ?? false),
                 'performed_safety_functions'      => (bool)($schoolData['performed_safety_functions'] ?? false),
-            ]);
+                'training_skills'                 => is_array($skills) && count($skills) > 0 ? $skills : null,
+            ];
+
+            if (!empty($schoolData['id'])) {
+                $school = DriverTrainingSchool::find($schoolData['id']);
+                $school?->update($attrs);
+            } else {
+                $school = DriverTrainingSchool::create($attrs);
+            }
+
+            if ($school && $request->hasFile("school_certificates.{$index}")) {
+                $file = $request->file("school_certificates.{$index}");
+                $ext = $file->getClientOriginalExtension() ?: 'pdf';
+                $school->clearMediaCollection('school_certificates');
+                $school->addMedia($file)
+                    ->usingFileName('certificate.' . $ext)
+                    ->toMediaCollection('school_certificates');
+            }
         }
 
-        // Delete and recreate courses
-        $driver->courses()->delete();
-        foreach ($request->courses ?? [] as $courseData) {
+        // Courses – upsert by ID to preserve existing files
+        $incomingCourseIds = collect($request->courses ?? [])->pluck('id')->filter()->values()->toArray();
+        $driver->courses()->whereNotIn('id', $incomingCourseIds)->get()->each(function ($c) {
+            $c->clearMediaCollection('course_certificates');
+            $c->delete();
+        });
+
+        foreach ($request->courses ?? [] as $index => $courseData) {
             if (empty($courseData['organization_name'])) continue;
-            DriverCourse::create([
+
+            $attrs = [
                 'user_driver_detail_id' => $driver->id,
                 'organization_name'     => $courseData['organization_name'],
                 'city'                  => $courseData['city'] ?? null,
@@ -821,7 +877,23 @@ class DriverAdminWizardController extends Controller
                 'expiration_date'       => $this->toDbDate($courseData['expiration_date'] ?? null),
                 'experience'            => $courseData['experience'] ?? null,
                 'years_experience'      => $courseData['years_experience'] ?? null,
-            ]);
+            ];
+
+            if (!empty($courseData['id'])) {
+                $course = DriverCourse::find($courseData['id']);
+                $course?->update($attrs);
+            } else {
+                $course = DriverCourse::create($attrs);
+            }
+
+            if ($course && $request->hasFile("course_certificates.{$index}")) {
+                $file = $request->file("course_certificates.{$index}");
+                $ext = $file->getClientOriginalExtension() ?: 'pdf';
+                $course->clearMediaCollection('course_certificates');
+                $course->addMedia($file)
+                    ->usingFileName('certificate.' . $ext)
+                    ->toMediaCollection('course_certificates');
+            }
         }
     }
 
@@ -835,20 +907,50 @@ class DriverAdminWizardController extends Controller
             'convictions.*.location'             => 'required|string|max:255',
             'convictions.*.charge'               => 'required|string|max:255',
             'convictions.*.penalty'              => 'nullable|string|max:255',
+            'conviction_images'                  => 'nullable|array',
+            'conviction_images.*'               => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
-        $driver->trafficConvictions()->delete();
+        if ($request->boolean('no_traffic_convictions')) {
+            $driver->trafficConvictions()->get()->each(function ($c) {
+                $c->clearMediaCollection('traffic_images');
+                $c->delete();
+            });
+            return;
+        }
 
-        if (!$request->boolean('no_traffic_convictions')) {
-            foreach ($request->convictions ?? [] as $c) {
-                if (empty($c['charge'])) continue;
-                DriverTrafficConviction::create([
-                    'user_driver_detail_id' => $driver->id,
-                    'conviction_date'       => $this->toDbDate($c['conviction_date']),
-                    'location'              => $c['location'],
-                    'charge'                => $c['charge'],
-                    'penalty'               => $c['penalty'] ?? null,
-                ]);
+        // Upsert by ID to preserve existing media
+        $incomingIds = collect($request->convictions ?? [])->pluck('id')->filter()->values()->toArray();
+        $driver->trafficConvictions()->whereNotIn('id', $incomingIds)->get()->each(function ($c) {
+            $c->clearMediaCollection('traffic_images');
+            $c->delete();
+        });
+
+        foreach ($request->convictions ?? [] as $index => $c) {
+            if (empty($c['charge'])) continue;
+
+            $attrs = [
+                'user_driver_detail_id' => $driver->id,
+                'conviction_date'       => $this->toDbDate($c['conviction_date']),
+                'location'              => $c['location'],
+                'charge'                => $c['charge'],
+                'penalty'               => $c['penalty'] ?? null,
+            ];
+
+            if (!empty($c['id'])) {
+                $conviction = DriverTrafficConviction::find($c['id']);
+                $conviction?->update($attrs);
+            } else {
+                $conviction = DriverTrafficConviction::create($attrs);
+            }
+
+            if ($conviction && $request->hasFile("conviction_images.{$index}")) {
+                $file = $request->file("conviction_images.{$index}");
+                $ext = $file->getClientOriginalExtension() ?: 'jpg';
+                $conviction->clearMediaCollection('traffic_images');
+                $conviction->addMedia($file)
+                    ->usingFileName('conviction.' . $ext)
+                    ->toMediaCollection('traffic_images');
             }
         }
     }
@@ -863,24 +965,55 @@ class DriverAdminWizardController extends Controller
             'accidents.*.nature_of_accident'        => 'required|string|max:255',
             'accidents.*.number_of_fatalities'      => 'nullable|integer|min:0',
             'accidents.*.number_of_injuries'        => 'nullable|integer|min:0',
+            'accidents.*.hazmat_spill'              => 'boolean',
             'accidents.*.comments'                  => 'nullable|string|max:500',
+            'accident_images'                       => 'nullable|array',
+            'accident_images.*'                     => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
         ]);
 
-        $driver->accidents()->delete();
+        if ($request->boolean('no_accidents')) {
+            $driver->accidents()->get()->each(function ($a) {
+                $a->clearMediaCollection('accident-images');
+                $a->delete();
+            });
+            return;
+        }
 
-        if (!$request->boolean('no_accidents')) {
-            foreach ($request->accidents ?? [] as $a) {
-                if (empty($a['nature_of_accident'])) continue;
-                DriverAccident::create([
-                    'user_driver_detail_id'  => $driver->id,
-                    'accident_date'          => $this->toDbDate($a['accident_date']),
-                    'nature_of_accident'     => $a['nature_of_accident'],
-                    'had_fatalities'         => ($a['number_of_fatalities'] ?? 0) > 0,
-                    'had_injuries'           => ($a['number_of_injuries'] ?? 0) > 0,
-                    'number_of_fatalities'   => $a['number_of_fatalities'] ?? 0,
-                    'number_of_injuries'     => $a['number_of_injuries'] ?? 0,
-                    'comments'               => $a['comments'] ?? null,
-                ]);
+        // Upsert by ID to preserve existing media
+        $incomingIds = collect($request->accidents ?? [])->pluck('id')->filter()->values()->toArray();
+        $driver->accidents()->whereNotIn('id', $incomingIds)->get()->each(function ($a) {
+            $a->clearMediaCollection('accident-images');
+            $a->delete();
+        });
+
+        foreach ($request->accidents ?? [] as $index => $a) {
+            if (empty($a['nature_of_accident'])) continue;
+
+            $attrs = [
+                'user_driver_detail_id'  => $driver->id,
+                'accident_date'          => $this->toDbDate($a['accident_date']),
+                'nature_of_accident'     => $a['nature_of_accident'],
+                'had_fatalities'         => ($a['number_of_fatalities'] ?? 0) > 0,
+                'had_injuries'           => ($a['number_of_injuries'] ?? 0) > 0,
+                'number_of_fatalities'   => $a['number_of_fatalities'] ?? 0,
+                'number_of_injuries'     => $a['number_of_injuries'] ?? 0,
+                'comments'               => $a['comments'] ?? null,
+            ];
+
+            if (!empty($a['id'])) {
+                $accident = DriverAccident::find($a['id']);
+                $accident?->update($attrs);
+            } else {
+                $accident = DriverAccident::create($attrs);
+            }
+
+            if ($accident && $request->hasFile("accident_images.{$index}")) {
+                $file = $request->file("accident_images.{$index}");
+                $ext = $file->getClientOriginalExtension() ?: 'jpg';
+                $accident->clearMediaCollection('accident-images');
+                $accident->addMedia($file)
+                    ->usingFileName('accident.' . $ext)
+                    ->toMediaCollection('accident-images');
             }
         }
     }
@@ -889,25 +1022,41 @@ class DriverAdminWizardController extends Controller
     private function saveStep9(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
-            'is_disqualified'        => 'boolean',
-            'is_license_suspended'   => 'boolean',
-            'is_license_denied'      => 'boolean',
-            'has_positive_drug_test' => 'boolean',
-            'consent_to_release'     => 'boolean',
-            'has_duty_offenses'      => 'boolean',
-            'consent_driving_record' => 'boolean',
+            'is_disqualified'             => 'boolean',
+            'disqualified_details'        => 'nullable|string|max:1000',
+            'is_license_suspended'        => 'boolean',
+            'suspension_details'          => 'nullable|string|max:1000',
+            'is_license_denied'           => 'boolean',
+            'denial_details'              => 'nullable|string|max:1000',
+            'has_positive_drug_test'      => 'boolean',
+            'substance_abuse_professional'=> 'nullable|string|max:255',
+            'sap_phone'                   => 'nullable|string|max:30',
+            'return_duty_agency'          => 'nullable|string|max:255',
+            'consent_to_release'          => 'boolean',
+            'has_duty_offenses'           => 'boolean',
+            'recent_conviction_date'      => 'nullable|date',
+            'offense_details'             => 'nullable|string|max:1000',
+            'consent_driving_record'      => 'boolean',
         ]);
 
         DriverFmcsrData::updateOrCreate(
             ['user_driver_detail_id' => $driver->id],
             [
-                'is_disqualified'        => $request->boolean('is_disqualified'),
-                'is_license_suspended'   => $request->boolean('is_license_suspended'),
-                'is_license_denied'      => $request->boolean('is_license_denied'),
-                'has_positive_drug_test' => $request->boolean('has_positive_drug_test'),
-                'consent_to_release'     => $request->boolean('consent_to_release'),
-                'has_duty_offenses'      => $request->boolean('has_duty_offenses'),
-                'consent_driving_record' => $request->boolean('consent_driving_record'),
+                'is_disqualified'             => $request->boolean('is_disqualified'),
+                'disqualified_details'        => $request->boolean('is_disqualified') ? $request->input('disqualified_details') : null,
+                'is_license_suspended'        => $request->boolean('is_license_suspended'),
+                'suspension_details'          => $request->boolean('is_license_suspended') ? $request->input('suspension_details') : null,
+                'is_license_denied'           => $request->boolean('is_license_denied'),
+                'denial_details'              => $request->boolean('is_license_denied') ? $request->input('denial_details') : null,
+                'has_positive_drug_test'      => $request->boolean('has_positive_drug_test'),
+                'substance_abuse_professional'=> $request->boolean('has_positive_drug_test') ? $request->input('substance_abuse_professional') : null,
+                'sap_phone'                   => $request->boolean('has_positive_drug_test') ? $request->input('sap_phone') : null,
+                'return_duty_agency'          => $request->boolean('has_positive_drug_test') ? $request->input('return_duty_agency') : null,
+                'consent_to_release'          => $request->boolean('consent_to_release'),
+                'has_duty_offenses'           => $request->boolean('has_duty_offenses'),
+                'recent_conviction_date'      => $request->boolean('has_duty_offenses') ? $this->toDbDate($request->input('recent_conviction_date')) : null,
+                'offense_details'             => $request->boolean('has_duty_offenses') ? $request->input('offense_details') : null,
+                'consent_driving_record'      => $request->boolean('consent_driving_record'),
             ]
         );
     }
@@ -916,31 +1065,40 @@ class DriverAdminWizardController extends Controller
     private function saveStep10(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
-            'companies'                            => 'nullable|array',
-            'companies.*.company_name'             => 'required|string|max:255',
-            'companies.*.address'                  => 'nullable|string|max:255',
-            'companies.*.city'                     => 'nullable|string|max:100',
-            'companies.*.state'                    => 'nullable|string|max:5',
-            'companies.*.zip'                      => 'nullable|string|max:20',
-            'companies.*.phone'                    => 'nullable|string|max:20',
-            'companies.*.email'                    => 'nullable|email|max:255',
-            'companies.*.employed_from'            => 'nullable|date',
-            'companies.*.employed_to'              => 'nullable|date',
-            'companies.*.positions_held'           => 'nullable|string|max:255',
-            'companies.*.reason_for_leaving'       => 'nullable|string|max:255',
-            'companies.*.subject_to_fmcsr'         => 'boolean',
-            'companies.*.safety_sensitive_function'=> 'boolean',
-            'unemployment_periods'                 => 'nullable|array',
-            'unemployment_periods.*.start_date'    => 'required|date',
-            'unemployment_periods.*.end_date'      => 'nullable|date',
-            'unemployment_periods.*.comments'      => 'nullable|string|max:255',
+            'companies'                                => 'nullable|array',
+            'companies.*.company_name'                 => 'required|string|max:255',
+            'companies.*.address'                      => 'nullable|string|max:255',
+            'companies.*.city'                         => 'nullable|string|max:100',
+            'companies.*.state'                        => 'nullable|string|max:5',
+            'companies.*.zip'                          => 'nullable|string|max:20',
+            'companies.*.phone'                        => 'nullable|string|max:20',
+            'companies.*.fax'                          => 'nullable|string|max:20',
+            'companies.*.contact'                      => 'nullable|string|max:100',
+            'companies.*.email'                        => 'nullable|email|max:255',
+            'companies.*.employed_from'                => 'nullable|date',
+            'companies.*.employed_to'                  => 'nullable|date',
+            'companies.*.positions_held'               => 'nullable|string|max:255',
+            'companies.*.reason_for_leaving'           => 'nullable|string|max:100',
+            'companies.*.other_reason_description'     => 'nullable|string|max:255',
+            'companies.*.explanation'                  => 'nullable|string|max:1000',
+            'companies.*.subject_to_fmcsr'             => 'boolean',
+            'companies.*.safety_sensitive_function'    => 'boolean',
+            'unemployment_periods'                     => 'nullable|array',
+            'unemployment_periods.*.start_date'        => 'required|date',
+            'unemployment_periods.*.end_date'          => 'nullable|date',
+            'unemployment_periods.*.comments'          => 'nullable|string|max:255',
+            'related_employments'                      => 'nullable|array',
+            'related_employments.*.start_date'         => 'required|date',
+            'related_employments.*.end_date'           => 'nullable|date',
+            'related_employments.*.position'           => 'nullable|string|max:255',
+            'related_employments.*.comments'           => 'nullable|string|max:255',
+            'has_correct_information'                  => 'boolean',
         ]);
 
         $driver->employmentCompanies()->delete();
         foreach ($request->companies ?? [] as $c) {
             if (empty($c['company_name'])) continue;
 
-            // Create or find MasterCompany
             $masterCompany = \App\Models\Admin\Driver\MasterCompany::firstOrCreate(
                 ['company_name' => $c['company_name']],
                 [
@@ -949,6 +1107,8 @@ class DriverAdminWizardController extends Controller
                     'state'   => $c['state'] ?? null,
                     'zip'     => $c['zip'] ?? null,
                     'phone'   => $c['phone'] ?? null,
+                    'fax'     => $c['fax'] ?? null,
+                    'contact' => $c['contact'] ?? null,
                     'email'   => $c['email'] ?? null,
                 ]
             );
@@ -960,6 +1120,8 @@ class DriverAdminWizardController extends Controller
                 'employed_to'              => $this->toDbDate($c['employed_to'] ?? null),
                 'positions_held'           => $c['positions_held'] ?? null,
                 'reason_for_leaving'       => $c['reason_for_leaving'] ?? null,
+                'other_reason_description' => $c['other_reason_description'] ?? null,
+                'explanation'              => $c['explanation'] ?? null,
                 'subject_to_fmcsr'         => (bool)($c['subject_to_fmcsr'] ?? false),
                 'safety_sensitive_function'=> (bool)($c['safety_sensitive_function'] ?? false),
                 'email'                    => $c['email'] ?? null,
@@ -976,6 +1138,23 @@ class DriverAdminWizardController extends Controller
                 'comments'              => $u['comments'] ?? null,
             ]);
         }
+
+        // Save confirmation flag on the driver record
+        if ($request->has('has_correct_information')) {
+            $driver->update(['has_completed_employment_history' => $request->boolean('has_correct_information')]);
+        }
+
+        $driver->relatedEmployments()->delete();
+        foreach ($request->related_employments ?? [] as $r) {
+            if (empty($r['start_date'])) continue;
+            \App\Models\Admin\Driver\DriverRelatedEmployment::create([
+                'user_driver_detail_id' => $driver->id,
+                'start_date'            => $this->toDbDate($r['start_date']),
+                'end_date'              => $this->toDbDate($r['end_date'] ?? null),
+                'position'              => $r['position'] ?? null,
+                'comments'              => $r['comments'] ?? null,
+            ]);
+        }
     }
 
     /** Step 11 – Company Policy */
@@ -986,6 +1165,7 @@ class DriverAdminWizardController extends Controller
             'substance_testing_consent'     => 'boolean',
             'authorization_consent'         => 'boolean',
             'fmcsa_clearinghouse_consent'   => 'boolean',
+            'company_name'                  => 'nullable|string|max:255',
         ]);
 
         DriverCompanyPolicy::updateOrCreate(
@@ -995,6 +1175,7 @@ class DriverAdminWizardController extends Controller
                 'substance_testing_consent'     => $request->boolean('substance_testing_consent'),
                 'authorization_consent'         => $request->boolean('authorization_consent'),
                 'fmcsa_clearinghouse_consent'   => $request->boolean('fmcsa_clearinghouse_consent'),
+                'company_name'                  => $request->input('company_name', ''),
             ]
         );
     }
@@ -1025,55 +1206,152 @@ class DriverAdminWizardController extends Controller
     /** Step 13 – W-9 */
     private function saveStep13(Request $request, UserDriverDetail $driver): void
     {
+        $taxClass = $request->input('tax_classification', '');
+
         $request->validate([
-            'name'               => 'required|string|max:255',
-            'business_name'      => 'nullable|string|max:255',
-            'tax_classification' => 'required|string|max:50',
-            'tin_type'           => 'required|string|in:ssn,ein',
-            'tin'                => 'required|string|max:20',
-            'signature'          => 'nullable|string',
-            'signed_date'        => 'nullable|date',
-            'address'            => 'nullable|string|max:255',
-            'city'               => 'nullable|string|max:100',
-            'state'              => 'nullable|string|max:5',
-            'zip_code'           => 'nullable|string|max:20',
+            'name'                 => 'required|string|max:255',
+            'business_name'        => 'nullable|string|max:255',
+            'tax_classification'   => 'required|string|in:individual,c_corporation,s_corporation,partnership,trust_estate,llc,other',
+            'llc_classification'   => $taxClass === 'llc'   ? 'required|in:C,S,P' : 'nullable|string|max:5',
+            'other_classification' => $taxClass === 'other' ? 'required|string|max:255' : 'nullable|string|max:255',
+            'has_foreign_partners' => 'boolean',
+            'exempt_payee_code'    => 'nullable|string|max:50',
+            'fatca_exemption_code' => 'nullable|string|max:50',
+            'address'              => 'required|string|max:255',
+            'city'                 => 'required|string|max:100',
+            'state'                => 'required|string|max:5',
+            'zip_code'             => 'required|string|max:20',
+            'account_numbers'      => 'nullable|string|max:255',
+            'tin_type'             => 'required|string|in:ssn,ein',
+            'tin'                  => 'required|string|max:20',
+            'signature'            => 'nullable|string',
+            'signed_date'          => 'nullable|date',
         ]);
 
-        DriverW9Form::updateOrCreate(
+        $w9 = DriverW9Form::updateOrCreate(
             ['user_driver_detail_id' => $driver->id],
             [
-                'name'               => $request->name,
-                'business_name'      => $request->business_name,
-                'tax_classification' => $request->tax_classification,
-                'tin_type'           => $request->tin_type,
-                'tin_encrypted'      => $request->tin,
-                'signature'          => $request->signature,
-                'signed_date'        => $this->toDbDate($request->signed_date),
-                'address'            => $request->address,
-                'city'               => $request->city,
-                'state'              => $request->state,
-                'zip_code'           => $request->zip_code,
+                'name'                 => $request->name,
+                'business_name'        => $request->business_name,
+                'tax_classification'   => $request->tax_classification,
+                'llc_classification'   => $taxClass === 'llc'   ? $request->llc_classification   : null,
+                'other_classification' => $taxClass === 'other' ? $request->other_classification : null,
+                'has_foreign_partners' => $request->boolean('has_foreign_partners'),
+                'exempt_payee_code'    => $request->exempt_payee_code,
+                'fatca_exemption_code' => $request->fatca_exemption_code,
+                'address'              => $request->address,
+                'city'                 => $request->city,
+                'state'                => strtoupper($request->state ?? ''),
+                'zip_code'             => $request->zip_code,
+                'account_numbers'      => $request->account_numbers,
+                'tin_type'             => $request->tin_type,
+                'tin_encrypted'        => preg_replace('/\D/', '', $request->tin),
+                'signature'            => $request->signature,
+                'signed_date'          => $this->toDbDate($request->signed_date) ?? now()->toDateString(),
             ]
         );
+
+        // Generate W-9 PDF (same logic as Livewire DriverW9Step)
+        try {
+            $pdfService = app(W9PdfService::class);
+            $pdfPath = $pdfService->generate($w9);
+            $w9->update(['pdf_path' => $pdfPath]);
+
+            if (file_exists($pdfPath)) {
+                $driver->clearMediaCollection('w9_documents');
+                $driver->addMedia($pdfPath)
+                    ->preservingOriginal()
+                    ->usingFileName('W9_' . str_replace(' ', '_', $w9->name) . '_' . now()->format('Y-m-d') . '.pdf')
+                    ->toMediaCollection('w9_documents');
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('W9 PDF generation failed in admin wizard, data saved successfully', [
+                'error'  => $e->getMessage(),
+                'w9_id'  => $w9->id,
+                'driver' => $driver->id,
+            ]);
+        }
     }
 
     /** Step 14 – Certification */
     private function saveStep14(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
-            'signature'   => 'nullable|string',
+            'signature'   => 'required|string',
             'is_accepted' => 'boolean',
             'signed_at'   => 'nullable|date',
         ]);
 
-        DriverCertification::updateOrCreate(
+        $cert = DriverCertification::updateOrCreate(
             ['user_driver_detail_id' => $driver->id],
             [
                 'signature'   => $request->signature,
                 'is_accepted' => $request->boolean('is_accepted'),
-                'signed_at'   => $this->toDbDate($request->signed_at) ?? now(),
+                'signed_at'   => now(),
             ]
         );
+
+        // Save signature image to Spatie Media Library
+        $signature = $request->signature;
+        if (str_starts_with((string) $signature, 'data:image')) {
+            $this->saveCertificationSignature($cert, $signature);
+        }
+
+        // Mark application as completed
+        $driver->update(['application_completed' => true]);
+
+        // Regenerate W-9 PDF with the certification signature
+        $this->regenerateW9WithSignature($driver, $signature);
+
+        // Regenerate DOT Policy PDF with the certification signature
+        $this->regenerateDotPolicyWithSignature($driver, $signature);
+    }
+
+    private function regenerateW9WithSignature(UserDriverDetail $driver, string $signature): void
+    {
+        try {
+            $w9 = $driver->w9Form;
+            if (!$w9) return;
+
+            $pdfService = app(W9PdfService::class);
+            $pdfPath = $pdfService->generate($w9, $signature);
+            $w9->update(['pdf_path' => $pdfPath]);
+
+            if (file_exists($pdfPath)) {
+                $driver->clearMediaCollection('w9_documents');
+                $driver->addMedia($pdfPath)
+                    ->preservingOriginal()
+                    ->usingFileName('W9_' . str_replace(' ', '_', $w9->name) . '_' . now()->format('Y-m-d') . '.pdf')
+                    ->toMediaCollection('w9_documents');
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('W9 PDF re-generation with signature failed', [
+                'driver' => $driver->id, 'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function regenerateDotPolicyWithSignature(UserDriverDetail $driver, string $signature): void
+    {
+        try {
+            $carrier = $driver->carrier ?? Carrier::find($driver->carrier_id);
+            if (!$carrier) return;
+
+            $pdfService = app(\App\Services\DotPolicyPdfService::class);
+            $pdfPath = $pdfService->generate($carrier, $driver, $signature);
+
+            if (file_exists($pdfPath)) {
+                $driver->clearMediaCollection('dot_policy_documents');
+                $driver->addMedia($pdfPath)
+                    ->preservingOriginal()
+                    ->usingFileName('DOT_Policy_' . str_replace(' ', '_', $carrier->name) . '_' . now()->format('Y-m-d') . '.pdf')
+                    ->toMediaCollection('dot_policy_documents');
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('DOT Policy PDF re-generation with signature failed', [
+                'driver' => $driver->id, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /** Step 15 – Clearinghouse / Finalize */
@@ -1141,7 +1419,7 @@ class DriverAdminWizardController extends Controller
             'step12'=> $this->formatCriminalData($driver),
             'step13'=> $this->formatW9Data($driver),
             'step14'=> $this->formatCertificationData($driver),
-            'step15'=> ['application_completed' => $driver->application_completed],
+            'step15'=> $this->formatClearinghouseData($driver),
         ];
     }
 
@@ -1295,6 +1573,8 @@ class DriverAdminWizardController extends Controller
                 'date_end'                      => $s->date_end?->format('Y-m-d'),
                 'subject_to_safety_regulations' => $s->subject_to_safety_regulations,
                 'performed_safety_functions'    => $s->performed_safety_functions,
+                'training_skills'               => $s->training_skills ?? [],
+                'certificate_url'               => $s->getFirstMediaUrl('school_certificates') ?: null,
             ])->toArray(),
             'courses' => $driver->courses->map(fn($c) => [
                 'id'                 => $c->id,
@@ -1305,6 +1585,7 @@ class DriverAdminWizardController extends Controller
                 'expiration_date'    => $c->expiration_date?->format('Y-m-d'),
                 'experience'         => $c->experience,
                 'years_experience'   => $c->years_experience,
+                'certificate_url'    => $c->getFirstMediaUrl('course_certificates') ?: null,
             ])->toArray(),
         ];
     }
@@ -1319,6 +1600,7 @@ class DriverAdminWizardController extends Controller
                 'location'       => $c->location,
                 'charge'         => $c->charge,
                 'penalty'        => $c->penalty,
+                'image_url'      => $c->getFirstMediaUrl('traffic_images') ?: null,
             ])->toArray(),
         ];
     }
@@ -1331,9 +1613,12 @@ class DriverAdminWizardController extends Controller
                 'id'                   => $a->id,
                 'accident_date'        => $a->accident_date?->format('Y-m-d'),
                 'nature_of_accident'   => $a->nature_of_accident,
+                'had_fatalities'       => $a->had_fatalities,
+                'had_injuries'         => $a->had_injuries,
                 'number_of_fatalities' => $a->number_of_fatalities,
                 'number_of_injuries'   => $a->number_of_injuries,
                 'comments'             => $a->comments,
+                'image_url'            => $a->getFirstMediaUrl('accident-images') ?: null,
             ])->toArray(),
         ];
     }
@@ -1344,36 +1629,50 @@ class DriverAdminWizardController extends Controller
         if (!$f) return [];
 
         return [
-            'is_disqualified'        => $f->is_disqualified,
-            'is_license_suspended'   => $f->is_license_suspended,
-            'is_license_denied'      => $f->is_license_denied,
-            'has_positive_drug_test' => $f->has_positive_drug_test,
-            'consent_to_release'     => $f->consent_to_release,
-            'has_duty_offenses'      => $f->has_duty_offenses,
-            'consent_driving_record' => $f->consent_driving_record,
+            'is_disqualified'             => $f->is_disqualified,
+            'disqualified_details'        => $f->disqualified_details,
+            'is_license_suspended'        => $f->is_license_suspended,
+            'suspension_details'          => $f->suspension_details,
+            'is_license_denied'           => $f->is_license_denied,
+            'denial_details'              => $f->denial_details,
+            'has_positive_drug_test'      => $f->has_positive_drug_test,
+            'substance_abuse_professional'=> $f->substance_abuse_professional,
+            'sap_phone'                   => $f->sap_phone,
+            'return_duty_agency'          => $f->return_duty_agency,
+            'consent_to_release'          => $f->consent_to_release,
+            'has_duty_offenses'           => $f->has_duty_offenses,
+            'recent_conviction_date'      => $f->recent_conviction_date?->format('Y-m-d'),
+            'offense_details'             => $f->offense_details,
+            'consent_driving_record'      => $f->consent_driving_record,
         ];
     }
 
     private function formatEmploymentData(UserDriverDetail $driver): array
     {
-        $driver->load('employmentCompanies.masterCompany');
+        $driver->load('employmentCompanies.masterCompany', 'unemploymentPeriods', 'relatedEmployments');
 
         return [
             'companies' => $driver->employmentCompanies->map(fn($c) => [
-                'id'                     => $c->id,
-                'company_name'           => $c->masterCompany?->company_name ?? '',
-                'address'                => $c->masterCompany?->address,
-                'city'                   => $c->masterCompany?->city,
-                'state'                  => $c->masterCompany?->state,
-                'zip'                    => $c->masterCompany?->zip,
-                'phone'                  => $c->masterCompany?->phone,
-                'email'                  => $c->email,
-                'employed_from'          => $c->employed_from?->format('Y-m-d'),
-                'employed_to'            => $c->employed_to?->format('Y-m-d'),
-                'positions_held'         => $c->positions_held,
-                'reason_for_leaving'     => $c->reason_for_leaving,
-                'subject_to_fmcsr'       => $c->subject_to_fmcsr,
+                'id'                        => $c->id,
+                'company_name'              => $c->masterCompany?->company_name ?? '',
+                'address'                   => $c->masterCompany?->address,
+                'city'                      => $c->masterCompany?->city,
+                'state'                     => $c->masterCompany?->state,
+                'zip'                       => $c->masterCompany?->zip,
+                'phone'                     => $c->masterCompany?->phone,
+                'fax'                       => $c->masterCompany?->fax,
+                'contact'                   => $c->masterCompany?->contact,
+                'email'                     => $c->email,
+                'employed_from'             => $c->employed_from?->format('Y-m-d'),
+                'employed_to'               => $c->employed_to?->format('Y-m-d'),
+                'positions_held'            => $c->positions_held,
+                'reason_for_leaving'        => $c->reason_for_leaving,
+                'other_reason_description'  => $c->other_reason_description,
+                'explanation'               => $c->explanation,
+                'subject_to_fmcsr'          => $c->subject_to_fmcsr,
                 'safety_sensitive_function' => $c->safety_sensitive_function,
+                'email_sent'                => $c->email_sent,
+                'verification_status'       => $c->verification_status,
             ])->toArray(),
             'unemployment_periods' => $driver->unemploymentPeriods->map(fn($u) => [
                 'id'         => $u->id,
@@ -1381,65 +1680,274 @@ class DriverAdminWizardController extends Controller
                 'end_date'   => $u->end_date?->format('Y-m-d'),
                 'comments'   => $u->comments,
             ])->toArray(),
+            'related_employments' => $driver->relatedEmployments->map(fn($r) => [
+                'id'         => $r->id,
+                'start_date' => $r->start_date?->format('Y-m-d'),
+                'end_date'   => $r->end_date?->format('Y-m-d'),
+                'position'   => $r->position,
+                'comments'   => $r->comments,
+            ])->toArray(),
+            'has_correct_information' => (bool) $driver->has_completed_employment_history,
         ];
     }
 
     private function formatPolicyData(UserDriverDetail $driver): array
     {
         $p = $driver->companyPolicy;
-        if (!$p) return [];
 
-        return [
+        // --- company_name ---
+        $companyName = $p?->company_name ?? null;
+        if (empty($companyName)) {
+            $carrier = $driver->carrier ?? Carrier::find($driver->carrier_id);
+            $companyName = $carrier?->name ?? 'EF Services';
+        }
+
+        // --- license info ---
+        $license = $driver->licenses()->first();
+        $licenseNumber = $license?->license_number;
+        $licenseState  = $license?->state_of_issue;
+
+        // --- policy document URL ---
+        $policyDocumentUrl = $this->resolvePolicyDocumentUrl($driver);
+
+        $base = [
+            'company_name'        => $companyName,
+            'license_number'      => $licenseNumber,
+            'license_state'       => $licenseState,
+            'policy_document_url' => $policyDocumentUrl,
+        ];
+
+        if (!$p) return $base;
+
+        return array_merge($base, [
             'consent_all_policies_attached' => $p->consent_all_policies_attached,
             'substance_testing_consent'     => $p->substance_testing_consent,
             'authorization_consent'         => $p->authorization_consent,
             'fmcsa_clearinghouse_consent'   => $p->fmcsa_clearinghouse_consent,
-        ];
+        ]);
+    }
+
+    private function resolvePolicyDocumentUrl(UserDriverDetail $driver): string
+    {
+        $carrierId = $driver->carrier_id;
+
+        if ($carrierId) {
+            $carrier = $driver->carrier ?? Carrier::find($carrierId);
+
+            // 1. Carrier's generated DOT Policy PDF
+            if ($carrier) {
+                $dotMedia = $carrier->getFirstMedia('dot_policy_documents');
+                if ($dotMedia) {
+                    return $dotMedia->getUrl();
+                }
+            }
+
+            // 2. Carrier's custom 'Politics' document upload
+            $policyType = DocumentType::where('name', 'Politics')
+                ->orWhere('name', 'Policy Document')
+                ->first();
+
+            if ($policyType) {
+                $carrierDoc = CarrierDocument::where('carrier_id', $carrierId)
+                    ->where('document_type_id', $policyType->id)
+                    ->first();
+
+                if ($carrierDoc) {
+                    $media = $carrierDoc->getFirstMedia('carrier_documents');
+                    if ($media) {
+                        return $media->getUrl();
+                    }
+
+                    // 3. Carrier approved the default document
+                    if ($carrierDoc->status == CarrierDocument::STATUS_APPROVED) {
+                        $defaultMedia = $policyType->getFirstMedia('default_documents');
+                        if ($defaultMedia) {
+                            return $defaultMedia->getUrl();
+                        }
+                    }
+                }
+
+                // 4. DocumentType global default
+                $defaultMedia = $policyType->getFirstMedia('default_documents');
+                if ($defaultMedia) {
+                    return $defaultMedia->getUrl();
+                }
+            }
+        }
+
+        // 5. Generic fallback
+        return asset('storage/documents/company_policy.pdf');
     }
 
     private function formatCriminalData(UserDriverDetail $driver): array
     {
-        $c = $driver->criminalHistory;
-        if (!$c) return [];
+        // Reference display data (read-only)
+        $ssn = $driver->medicalQualification?->social_security_number;
+        $ssnLastFour = $ssn ? substr(preg_replace('/\D/', '', $ssn), -4) : null;
+        $license = $driver->licenses()->first();
 
-        return [
+        $ref = [
+            'full_name'       => $driver->user?->name ?? null,
+            'middle_name'     => $driver->middle_name,
+            'last_name'       => $driver->last_name,
+            'date_of_birth'   => $driver->date_of_birth?->format('Y-m-d'),
+            'ssn_last_four'   => $ssnLastFour,
+            'license_number'  => $license?->license_number,
+            'license_state'   => $license?->state_of_issue,
+        ];
+
+        $c = $driver->criminalHistory;
+        if (!$c) return $ref;
+
+        return array_merge($ref, [
             'has_criminal_charges'    => $c->has_criminal_charges,
             'has_felony_conviction'   => $c->has_felony_conviction,
             'has_minister_permit'     => $c->has_minister_permit,
             'fcra_consent'            => $c->fcra_consent,
             'background_info_consent' => $c->background_info_consent,
-        ];
+        ]);
     }
 
     private function formatW9Data(UserDriverDetail $driver): array
     {
         $w = $driver->w9Form;
-        if (!$w) return [];
+
+        // Pre-fill defaults when no W9 yet
+        if (!$w) {
+            $fullName = trim(($driver->user?->name ?? '') . ' ' . ($driver->last_name ?? ''));
+            $addr = $driver->application?->addresses()->orderByDesc('id')->first();
+            return [
+                'name'                 => $fullName ?: null,
+                'business_name'        => null,
+                'tax_classification'   => '',
+                'llc_classification'   => '',
+                'other_classification' => '',
+                'has_foreign_partners' => false,
+                'exempt_payee_code'    => '',
+                'fatca_exemption_code' => '',
+                'address'              => $addr?->address_line1,
+                'city'                 => $addr?->city,
+                'state'                => $addr?->state,
+                'zip_code'             => $addr?->zip_code,
+                'account_numbers'      => '',
+                'tin_type'             => 'ssn',
+                'tin'                  => null,
+                'signature'            => null,
+                'signed_date'          => null,
+            ];
+        }
+
+        // PDF URL — prefer Spatie media, fall back to pdf_path
+        $pdfMedia = $driver->getFirstMedia('w9_documents');
+        $pdfUrl   = $pdfMedia?->getUrl() ?? ($w->pdf_path ? asset('storage/' . ltrim($w->pdf_path, 'public/')) : null);
 
         return [
-            'name'               => $w->name,
-            'business_name'      => $w->business_name,
-            'tax_classification' => $w->tax_classification,
-            'tin_type'           => $w->tin_type,
-            'tin'                => $w->tin_encrypted,
-            'signature'          => $w->signature,
-            'signed_date'        => $w->signed_date?->format('Y-m-d'),
-            'address'            => $w->address,
-            'city'               => $w->city,
-            'state'              => $w->state,
-            'zip_code'           => $w->zip_code,
+            'name'                 => $w->name,
+            'business_name'        => $w->business_name,
+            'tax_classification'   => $w->tax_classification,
+            'llc_classification'   => $w->llc_classification ?? '',
+            'other_classification' => $w->other_classification ?? '',
+            'has_foreign_partners' => $w->has_foreign_partners,
+            'exempt_payee_code'    => $w->exempt_payee_code ?? '',
+            'fatca_exemption_code' => $w->fatca_exemption_code ?? '',
+            'address'              => $w->address,
+            'city'                 => $w->city,
+            'state'                => $w->state,
+            'zip_code'             => $w->zip_code,
+            'account_numbers'      => $w->account_numbers ?? '',
+            'tin_type'             => $w->tin_type,
+            'tin'                  => $w->tin_encrypted,
+            'signature'            => $w->signature,
+            'signed_date'          => $w->signed_date?->format('Y-m-d'),
+            'pdf_url'              => $pdfUrl,
         ];
     }
 
     private function formatCertificationData(UserDriverDetail $driver): array
     {
-        $c = $driver->certification;
-        if (!$c) return [];
+        // Employment history for the Safety Performance History table
+        $employmentHistory = $driver->employmentCompanies()
+            ->with('masterCompany')
+            ->orderByDesc('employed_from')
+            ->get()
+            ->map(function ($c) {
+                $mc = $c->masterCompany;
+                return [
+                    'company_name'  => $c->company_name  ?? $mc?->company_name ?? 'N/A',
+                    'address'       => $c->address       ?? $mc?->address      ?? 'N/A',
+                    'city'          => $c->city          ?? $mc?->city         ?? 'N/A',
+                    'state'         => $c->state         ?? $mc?->state        ?? 'N/A',
+                    'zip'           => $c->zip           ?? $mc?->zip          ?? 'N/A',
+                    'employed_from' => $c->employed_from?->format('M d, Y') ?? 'N/A',
+                    'employed_to'   => $c->employed_to?->format('M d, Y')   ?? 'Present',
+                ];
+            })->toArray();
+
+        $cert = $driver->certification;
+
+        // Signature URL from Spatie media (preferred) or base64 stored in DB
+        $signatureUrl = $cert?->getFirstMediaUrl('signature') ?: null;
 
         return [
-            'signature'   => $c->signature,
-            'is_accepted' => $c->is_accepted,
-            'signed_at'   => $c->signed_at?->format('Y-m-d'),
+            'signature'          => $cert?->signature,
+            'signature_url'      => $signatureUrl,
+            'is_accepted'        => $cert?->is_accepted ?? false,
+            'signed_at'          => $cert?->signed_at?->format('Y-m-d'),
+            'employment_history' => $employmentHistory,
         ];
+    }
+
+    private function formatClearinghouseData(UserDriverDetail $driver): array
+    {
+        $calculator = app(StepCompletionCalculator::class);
+        $summary    = $calculator->getCompletionSummary($driver->id);
+
+        $stepNames = [
+            1  => 'General Info',
+            2  => 'Address',
+            3  => 'Application',
+            4  => 'License',
+            5  => 'Medical',
+            6  => 'Training',
+            7  => 'Traffic',
+            8  => 'Accident',
+            9  => 'FMCSR',
+            10 => 'Employment',
+            11 => 'Policy',
+            12 => 'Criminal',
+            13 => 'W-9',
+            14 => 'Certification',
+        ];
+
+        $stepsNeedingAttention = collect($summary['steps_needing_attention'])
+            ->map(fn ($s) => [
+                'step'       => $s['step'],
+                'name'       => $stepNames[$s['step']] ?? 'Step ' . $s['step'],
+                'percentage' => $s['percentage'],
+            ])->values()->toArray();
+
+        return [
+            'application_completed'   => (bool) $driver->application_completed,
+            'total_percentage'        => $summary['total_percentage'],
+            'steps_needing_attention' => $stepsNeedingAttention,
+            'is_complete'             => empty($stepsNeedingAttention),
+        ];
+    }
+
+    private function saveCertificationSignature(DriverCertification $cert, string $base64): void
+    {
+        // Decode base64 data URL → PNG file → Spatie Media Library
+        if (!str_starts_with($base64, 'data:image')) return;
+
+        $data     = base64_decode(explode(',', $base64)[1]);
+        $tmpFile  = tempnam(sys_get_temp_dir(), 'sig_') . '.png';
+        file_put_contents($tmpFile, $data);
+
+        try {
+            $cert->clearMediaCollection('signature');
+            $cert->addMedia($tmpFile)->toMediaCollection('signature');
+        } finally {
+            @unlink($tmpFile);
+        }
     }
 }

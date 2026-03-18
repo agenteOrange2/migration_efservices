@@ -109,6 +109,26 @@ class DriverListController extends Controller
         return Inertia::render('admin/drivers/Show', $driverData);
     }
 
+    public function destroy(UserDriverDetail $driver): \Illuminate\Http\RedirectResponse
+    {
+        try {
+            $user = $driver->user;
+
+            $driver->clearMediaCollection('profile_photo_driver');
+            $driver->delete();
+
+            if ($user) {
+                $user->delete();
+            }
+
+            return redirect()->route('admin.drivers.index')
+                ->with('success', 'Driver deleted successfully.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error deleting driver: ' . $e->getMessage());
+            return back()->withErrors('Error deleting driver.');
+        }
+    }
+
     public function activate(UserDriverDetail $driver)
     {
         $driver->status = UserDriverDetail::STATUS_ACTIVE;

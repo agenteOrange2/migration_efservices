@@ -32,7 +32,7 @@ class StepCompletionCalculator extends BaseService
             'application.addresses',
         ],
         3 => [ // Application
-            'application.application_type',
+            'application_detail',
         ],
         4 => [ // License
             'licenses',
@@ -84,6 +84,7 @@ class StepCompletionCalculator extends BaseService
         $driver = UserDriverDetail::with([
             'user',
             'application.addresses',
+            'application.details',
             'licenses',
             'medicalQualification',
             'trainingSchools',
@@ -291,8 +292,13 @@ class StepCompletionCalculator extends BaseService
             return $driver->certification !== null;
         }
 
+        if ($field === 'application_detail') {
+            return $driver->application?->details?->applying_position !== null
+                && $driver->application->details->applying_position !== '';
+        }
+
         if ($field === 'has_completed_employment_history') {
-            return $driver->has_completed_employment_history === true;
+            return (bool) $driver->has_completed_employment_history;
         }
 
         // Campo simple

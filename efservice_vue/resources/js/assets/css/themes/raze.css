@@ -9,13 +9,13 @@
   margin-top: 1.25rem;
   margin-bottom: 0.75rem;
 }
-/*
+
 @media (min-width: 96rem) {
   .raze .container {
       max-width: 100%!important;
   }
 }
-  */
+  
 /* --- Link --- */
 .raze .side-menu__link {
   display: flex;

@@ -87,6 +87,22 @@ function regenerateDotPolicy() {
     })
 }
 
+function deleteCarrierUser(userId: number) {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        router.delete(route('admin.carriers.user-carriers.destroy', { carrier: props.carrier.slug, userCarrier: userId }), {
+            preserveScroll: true,
+        })
+    }
+}
+
+function deleteDriver(driverId: number) {
+    if (confirm('Are you sure you want to delete this driver? This action cannot be undone.')) {
+        router.delete(route('admin.drivers.destroy', driverId), {
+            preserveScroll: true,
+        })
+    }
+}
+
 const tabs = [
     { id: 'overview', label: 'Overview', icon: 'LayoutDashboard' },
     { id: 'documents', label: 'Documents', icon: 'FileText' },
@@ -474,6 +490,7 @@ const tabs = [
                                         <th>Position</th>
                                         <th>Phone</th>
                                         <th>Status</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -490,9 +507,14 @@ const tabs = [
                                                 {{ uc.status == 1 ? 'Active' : 'Inactive' }}
                                             </span>
                                         </td>
+                                        <td>
+                                            <button @click="deleteCarrierUser(uc.user_id)" class="p-1 rounded hover:bg-danger/10 text-danger" title="Delete user">
+                                                <Lucide icon="Trash2" class="w-4 h-4" />
+                                            </button>
+                                        </td>
                                     </tr>
                                     <tr v-if="!userCarriers.length">
-                                        <td colspan="5" class="px-4 py-8 text-center text-slate-400">No users associated</td>
+                                        <td colspan="6" class="px-4 py-8 text-center text-slate-400">No users associated</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -536,13 +558,25 @@ const tabs = [
                                         </td>
                                         <td class="text-sm text-slate-500">{{ driver.created_at ? new Date(driver.created_at).toLocaleDateString() : '-' }}</td>
                                         <td>
-                                            <Link
-                                                v-if="driver.id"
-                                                :href="route('admin.drivers.show', driver.id)"
-                                                class="text-xs text-primary hover:underline"
-                                            >
-                                                View
-                                            </Link>
+                                            <div class="flex items-center gap-2">
+                                                <Link
+                                                    v-if="driver.id"
+                                                    :href="route('admin.drivers.show', driver.id)"
+                                                    class="text-xs text-primary hover:underline"
+                                                >
+                                                    View
+                                                </Link>
+                                                <Link
+                                                    v-if="driver.id"
+                                                    :href="route('admin.drivers.wizard.edit', driver.id)"
+                                                    class="text-xs text-warning hover:underline"
+                                                >
+                                                    Edit
+                                                </Link>
+                                                <button @click="deleteDriver(driver.id)" class="p-1 rounded hover:bg-danger/10 text-danger" title="Delete driver">
+                                                    <Lucide icon="Trash2" class="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr v-if="!drivers.length">

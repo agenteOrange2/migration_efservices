@@ -30,13 +30,41 @@ class CustomPathGenerator implements PathGenerator
             return "user_carrier/{$model->id}/";
         }
 
+        if ($model instanceof \App\Models\Admin\Driver\DriverLicense) {
+            $driverId = $model->user_driver_detail_id ?? 'unknown';
+            return "driver/{$driverId}/licenses/";
+        }
+
+        if ($model instanceof \App\Models\Admin\Driver\DriverMedicalQualification) {
+            $driverId = $model->user_driver_detail_id ?? 'unknown';
+            return "driver/{$driverId}/medical/";
+        }
+
+        if ($model instanceof \App\Models\Admin\Driver\DriverTrafficConviction) {
+            $driverId = $model->user_driver_detail_id ?? 'unknown';
+            return "driver/{$driverId}/traffic_convictions/{$model->getKey()}/";
+        }
+
+        if ($model instanceof \App\Models\Admin\Driver\DriverAccident) {
+            $driverId = $model->user_driver_detail_id ?? 'unknown';
+            return "driver/{$driverId}/accidents/{$model->getKey()}/";
+        }
+
+        if ($model instanceof \App\Models\Admin\Driver\DriverTrainingSchool) {
+            $driverId = $model->user_driver_detail_id ?? 'unknown';
+            return "driver/{$driverId}/training_schools/{$model->getKey()}/";
+        }
+
+        if ($model instanceof \App\Models\Admin\Driver\DriverCourse) {
+            $driverId = $model->user_driver_detail_id ?? 'unknown';
+            return "driver/{$driverId}/courses/{$model->getKey()}/";
+        }
+
         if ($model instanceof \App\Models\UserDriverDetail) {
             $driverId = $model->id ?? 'unknown';
 
-            if ($collection === 'license_front') {
-                return "driver/{$driverId}/licenses/front/";
-            } elseif ($collection === 'license_back') {
-                return "driver/{$driverId}/licenses/back/";
+            if ($collection === 'profile_photo_driver') {
+                return "driver/{$driverId}/profile/";
             }
 
             if ($collection === 'trip_reports') {
