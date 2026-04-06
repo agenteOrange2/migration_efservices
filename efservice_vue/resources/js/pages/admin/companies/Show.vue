@@ -343,69 +343,138 @@ const verificationBadge = (status: string | null) => {
     </div>
 
     <!-- Edit Modal -->
-    <Dialog :open="showEditModal" @close="showEditModal = false" static-backdrop>
-        <Dialog.Panel class="w-full max-w-[900px] max-h-[90vh] overflow-y-auto">
-            <div class="sticky top-0 bg-white px-6 pt-6 pb-4 border-b border-slate-200 z-10">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-primary/10 rounded-lg">
-                            <Lucide icon="Edit" class="w-5 h-5 text-primary" />
+    <Dialog :open="showEditModal" @close="showEditModal = false" static-backdrop size="xl">
+        <Dialog.Panel class="flex max-h-[90vh] w-[95vw] max-w-[900px] flex-col overflow-hidden sm:w-[900px]">
+            <div class="border-b border-slate-200 bg-white px-8 py-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-start gap-4">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+                            <Lucide icon="Edit" class="h-6 w-6 text-primary" />
                         </div>
-                        <h3 class="text-lg font-bold text-slate-800">Edit Company</h3>
+                        <div>
+                            <h3 class="text-xl font-semibold text-slate-800">Update Company</h3>
+                            <p class="mt-1 text-sm text-slate-500">
+                                Edit the company details used by linked employment verifications.
+                            </p>
+                        </div>
                     </div>
-                    <button @click="showEditModal = false" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
-                        <Lucide icon="X" class="w-5 h-5" />
+                    <button @click="showEditModal = false" class="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
+                        <Lucide icon="X" class="h-5 w-5" />
                     </button>
                 </div>
             </div>
 
-            <div class="px-6 py-5 space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Company Name <span class="text-red-500">*</span></label>
-                    <FormInput v-model="form.company_name" type="text" />
-                    <p v-if="errors.company_name" class="text-xs text-red-500 mt-1">{{ errors.company_name[0] }}</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Address</label>
-                    <FormInput v-model="form.address" type="text" />
-                </div>
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">City</label>
-                        <FormInput v-model="form.city" type="text" />
+            <div class="flex-1 overflow-y-auto bg-slate-50/50 px-8 py-7">
+                <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div class="border-b border-slate-200 px-6 py-4">
+                        <h4 class="text-base font-semibold text-slate-800">Company Information</h4>
+                        <p class="mt-1 text-sm text-slate-500">
+                            Keep the master directory clean so verification requests stay accurate.
+                        </p>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">State</label>
-                        <FormInput v-model="form.state" type="text" maxlength="10" />
+
+                    <div class="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+                        <div>
+                            <label class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Lucide icon="Building2" class="h-4 w-4 text-slate-400" />
+                                Company Name <span class="text-danger">*</span>
+                            </label>
+                            <FormInput v-model="form.company_name" type="text" placeholder="Enter company name" />
+                            <p v-if="errors.company_name" class="mt-1 text-xs text-danger">{{ errors.company_name[0] }}</p>
+                        </div>
+
+                        <div>
+                            <label class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Lucide icon="User" class="h-4 w-4 text-slate-400" />
+                                Contact Person
+                            </label>
+                            <FormInput v-model="form.contact" type="text" placeholder="Enter contact person name" />
+                        </div>
+
+                        <div>
+                            <label class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Lucide icon="Mail" class="h-4 w-4 text-slate-400" />
+                                Email
+                            </label>
+                            <FormInput v-model="form.email" type="email" placeholder="Enter email address" />
+                            <p v-if="errors.email" class="mt-1 text-xs text-danger">{{ errors.email[0] }}</p>
+                        </div>
+
+                        <div>
+                            <label class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Lucide icon="Phone" class="h-4 w-4 text-slate-400" />
+                                Phone
+                            </label>
+                            <FormInput v-model="form.phone" type="text" placeholder="Enter phone number" />
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Lucide icon="MapPin" class="h-4 w-4 text-slate-400" />
+                                Address
+                            </label>
+                            <FormInput v-model="form.address" type="text" placeholder="Enter company address" />
+                        </div>
+
+                        <div>
+                            <label class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Lucide icon="Map" class="h-4 w-4 text-slate-400" />
+                                City
+                            </label>
+                            <FormInput v-model="form.city" type="text" placeholder="Enter city" />
+                        </div>
+
+                        <div>
+                            <label class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Lucide icon="Flag" class="h-4 w-4 text-slate-400" />
+                                State
+                            </label>
+                            <FormInput v-model="form.state" type="text" maxlength="10" placeholder="Enter state" />
+                        </div>
+
+                        <div>
+                            <label class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Lucide icon="Hash" class="h-4 w-4 text-slate-400" />
+                                ZIP Code
+                            </label>
+                            <FormInput v-model="form.zip" type="text" maxlength="20" placeholder="Enter ZIP code" />
+                        </div>
+
+                        <div>
+                            <label class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <Lucide icon="Printer" class="h-4 w-4 text-slate-400" />
+                                Fax
+                            </label>
+                            <FormInput v-model="form.fax" type="text" placeholder="Enter fax number" />
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">ZIP</label>
-                        <FormInput v-model="form.zip" type="text" maxlength="20" />
+
+                    <div class="border-t border-slate-200 bg-warning/10 px-6 py-3 text-xs text-warning">
+                        Changing the email will update all linked driver employment records.
                     </div>
-                </div>
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Contact Person</label>
-                        <FormInput v-model="form.contact" type="text" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                        <FormInput v-model="form.phone" type="text" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Fax</label>
-                        <FormInput v-model="form.fax" type="text" />
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <FormInput v-model="form.email" type="email" />
-                    <p v-if="errors.email" class="text-xs text-red-500 mt-1">{{ errors.email[0] }}</p>
-                    <p class="text-xs text-amber-600 mt-1">Changing the email will update all linked driver employment records.</p>
                 </div>
             </div>
 
-            <div class="sticky bottom-0 bg-white px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+            <div class="border-t border-slate-200 bg-white px-8 py-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Button
+                        @click="saveEdit"
+                        variant="primary"
+                        :disabled="saving"
+                        class="min-w-40 gap-2"
+                    >
+                        <Lucide v-if="saving" icon="Loader" class="h-4 w-4 animate-spin" />
+                        <Lucide v-else icon="Check" class="h-4 w-4" />
+                        {{ saving ? 'Saving...' : 'Save Changes' }}
+                    </Button>
+                    <Button variant="outline-secondary" @click="showEditModal = false" class="min-w-32 gap-2">
+                        <Lucide icon="X" class="h-4 w-4" />
+                        Cancel
+                    </Button>
+                </div>
+            </div>
+
+            <div class="hidden sticky bottom-0 bg-white px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
                 <Button variant="outline-secondary" @click="showEditModal = false">Cancel</Button>
                 <Button
                     @click="saveEdit"
