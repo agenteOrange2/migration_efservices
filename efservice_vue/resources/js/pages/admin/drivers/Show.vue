@@ -14,17 +14,24 @@ interface Carrier { id: number; name: string; address: string | null; state: str
 interface Address { address_line1: string; address_line2?: string; city: string; state: string; zip_code: string; primary: boolean; from_date?: string; to_date?: string }
 interface License { id: number; license_number: string; state_of_issue: string | null; license_class: string | null; expiration_date: string | null; is_cdl: boolean; status: string | null; license_front_url: string | null; license_back_url: string | null; endorsements: string[] }
 interface Experience { equipment_type: string | null; years_experience: number | null; miles_driven: number | null; requires_cdl: boolean }
-interface Medical { medical_card_expiration_date: string | null; medical_examiner_name: string | null; medical_examiner_registry: string | null; medical_status: string; medical_card_url: string | null; social_security_card_url: string | null; medical_certificate_url: string | null }
+interface MedicalRecord { name: string; url: string; size: string }
+interface Medical { medical_card_expiration_date: string | null; medical_examiner_name: string | null; medical_examiner_registry: string | null; medical_status: string; ssn_masked: string | null; medical_card_url: string | null; social_security_card_url: string | null; medical_certificate_url: string | null; medical_records: MedicalRecord[] }
 interface Employment { company_name: string | null; company_address: string | null; company_phone: string | null; positions_held: string | null; from_date: string | null; to_date: string | null; subject_to_fmcsr: boolean; safety_sensitive_function: boolean; reason_for_leaving: string | null; email: string | null; email_sent: boolean; verification_status: string | null; verification_date: string | null; explanation: string | null }
-interface RelatedEmployment { period: string | null; position: string | null; work_position: string | null; comments: string | null; from_date: string | null; to_date: string | null }
-interface UnemploymentPeriod { from_date: string | null; to_date: string | null; comments: string | null; type: string | null }
-interface TrainingSchool { name: string | null; location: string | null; from_date: string | null; to_date: string | null; graduated: boolean | null; subject_fmcsr: boolean | null; certificate_url: string | null }
+interface RelatedEmployment { position: string | null; comments: string | null; from_date: string | null; to_date: string | null }
+interface UnemploymentPeriod { from_date: string | null; to_date: string | null; comments: string | null }
+interface TrainingSchool { name: string | null; city: string | null; state: string | null; from_date: string | null; to_date: string | null; graduated: boolean; subject_fmcsr: boolean; certificate_url: string | null }
 interface Course { organization_name: string | null; location: string | null; status: string | null; certification_date: string | null; expiration_date: string | null; certificate_url: string | null }
 interface Testing { id: number; test_date: string | null; test_type: string | null; test_result: string | null; status: string | null; administered_by: string | null; location: string | null; next_test_due: string | null; notes: string | null; is_random_test: boolean; is_post_accident_test: boolean; is_pre_employment_test: boolean; drug_test_pdf_url: string | null; test_results_url: string | null }
 interface Inspection { inspection_date: string | null; inspection_type: string | null; inspection_level: string | null; inspector_name: string | null; location: string | null; status: string | null; defects_found: string | null; is_defects_corrected: boolean; corrective_actions: string | null; notes: string | null; vehicle: string | null }
 interface VehicleAssignment { driver_type: string | null; start_date: string | null; end_date: string | null; status: string | null; notes: string | null; vehicle: { make: string | null; model: string | null; year: string | null; vin: string | null } | null }
 interface Accident { accident_date: string | null; nature_of_accident: string | null; had_fatalities: boolean; had_injuries: boolean; number_of_fatalities: number; number_of_injuries: number; comments: string | null }
 interface TrafficConviction { conviction_date: string | null; location: string | null; charge: string | null; penalty: string | null; conviction_type: string | null; description: string | null }
+interface FmcsrData { is_disqualified: boolean; disqualified_details: string | null; is_license_suspended: boolean; suspension_details: string | null; is_license_denied: boolean; denial_details: string | null; has_positive_drug_test: boolean; has_duty_offenses: boolean; offense_details: string | null; consent_driving_record: boolean }
+interface CriminalHistory { has_criminal_charges: boolean; has_felony_conviction: boolean; has_minister_permit: boolean; fcra_consent: boolean }
+interface HosData { cycle_type: string; change_requested: boolean; change_requested_to: string | null; change_requested_at: string | null; change_approved_at: string | null }
+interface WizardStep { step: number; label: string; status: string; percentage: number }
+interface MigrationHistory { id: number; migrated_at: string; migrated_at_raw: string; source_carrier: string; target_carrier: string; performed_by: string; reason: string | null; notes: string | null; status: string; can_rollback: boolean; rolled_back_at: string | null; rollback_reason: string | null }
+interface AvailableCarrier { id: number; name: string; dot_number: string | null; mc_number: string | null; state: string | null; address: string | null; current_drivers: number; max_drivers: number }
 
 interface Driver {
     id: number; full_name: string; name: string; middle_name: string | null; last_name: string | null
@@ -37,10 +44,16 @@ interface Driver {
     employment: Employment[]; related_employments: RelatedEmployment[]; unemployment_periods: UnemploymentPeriod[]
     training_schools: TrainingSchool[]; courses: Course[]; testings: Testing[]; inspections: Inspection[]
     vehicle_assignments: VehicleAssignment[]; accidents: Accident[]; traffic_convictions: TrafficConviction[]
+    fmcsr_data: FmcsrData | null
+    criminal_history: CriminalHistory | null
+    hos_data: HosData
+    wizard_steps: WizardStep[]
+    wizard_total_pct: number
+    migration_history: MigrationHistory[]
 }
 
 interface Stats { total_documents: number; licenses_count: number; medical_status: string; medical_expiration: string | null; records_uploaded: number; testing_count: number; testing_status: string; vehicles_count: number; vehicles_status: string }
-interface DocItem { name: string; url: string; size: string; date: string; related_info: string }
+interface DocItem { name: string; url: string; size: string; date: string; related_info: string; type?: string; company?: string }
 
 const props = defineProps<{ driver: Driver; documentsByCategory: Record<string, DocItem[]>; stats: Stats }>()
 
@@ -56,6 +69,9 @@ const tabs = [
     { id: 'training',    label: 'Training',    icon: 'GraduationCap' },
     { id: 'testing',     label: 'Testing',     icon: 'ClipboardCheck'},
     { id: 'inspections', label: 'Inspections', icon: 'Shield'        },
+    { id: 'compliance',  label: 'Compliance',  icon: 'ClipboardList' },
+    { id: 'hos',         label: 'HOS',         icon: 'Clock'         },
+    { id: 'wizard',      label: 'Wizard Steps',icon: 'ListChecks'    },
     { id: 'documents',   label: 'Documents',   icon: 'FileText'      },
 ]
 
@@ -97,6 +113,31 @@ const inspLevelBadge = (level: string | null) => {
     return map[level ?? ''] ?? 'bg-slate-100 text-slate-600'
 }
 
+const yesNo = (v: boolean | null | undefined) => v ? 'Yes' : 'No'
+const categoryLabel = (key: string): string => ({
+    license:                          'Licenses',
+    medical:                          'Medical',
+    training_schools:                 'Training Schools',
+    courses:                          'Courses & Certifications',
+    accidents:                        'Accidents',
+    traffic:                          'Traffic Convictions',
+    inspections:                      'Inspections',
+    testing:                          'Testing',
+    records:                          'Records (MVR / Criminal / Clearing House)',
+    application_forms:                'Application Forms',
+    employment_verification:          'Employment Verification',
+    employment_verification_attempts: 'Employment Verification Attempts',
+    w9_documents:                     'W-9 Tax Form',
+    dot_policy_documents:             'DOT Drug & Alcohol Policy',
+    certification:                    'Certification',
+}[key] ?? key.replace(/_/g, ' '))
+const hosLabel: Record<string, string> = { '60_7': '60 hrs / 7 days', '70_8': '70 hrs / 8 days' }
+const stepStatusClass: Record<string, string> = {
+    completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    missing:   'bg-red-50 text-red-600 border-red-200',
+    pending:   'bg-amber-50 text-amber-700 border-amber-200',
+}
+
 const testTypeName: Record<string, string> = {
     dot_drug_test: 'DOT Drug Test (MRO)', non_dot_lab: 'NON-DOT Lab (MRO)',
     dot_alcohol_test: 'DOT Alcohol Test', non_dot_alcohol_test: 'NON-DOT Alcohol Test',
@@ -120,6 +161,135 @@ function activateDriver() {
 function deactivateDriver() {
     if (confirm(`Deactivate driver "${props.driver.full_name}"?`))
         router.put(route('admin.drivers.deactivate', props.driver.id), {}, { preserveScroll: true })
+}
+
+// ─── Migration Wizard ─────────────────────────────────────────────────────────
+const showMigrationModal  = ref(false)
+const migrationStep       = ref<1|2|3|4>(1)
+const migrationCarriers   = ref<AvailableCarrier[]>([])
+const migrationLoading    = ref(false)
+const migrationSearch     = ref('')
+const selectedCarrier     = ref<AvailableCarrier | null>(null)
+const migrationValidation = ref<{ is_valid: boolean; errors: string[]; warnings: string[] } | null>(null)
+const migrationReason     = ref('')
+const migrationNotes      = ref('')
+const migrationDone       = ref<{ record_id: number; target_carrier: string } | null>(null)
+const migrationError      = ref<string | null>(null)
+const rollbackModal       = ref(false)
+const rollbackRecordId    = ref<number | null>(null)
+const rollbackReason      = ref('')
+
+const filteredCarriers = computed(() =>
+    migrationSearch.value.trim()
+        ? migrationCarriers.value.filter(c =>
+            c.name.toLowerCase().includes(migrationSearch.value.toLowerCase()) ||
+            (c.dot_number ?? '').includes(migrationSearch.value))
+        : migrationCarriers.value
+)
+
+async function openMigrationModal() {
+    migrationStep.value       = 1
+    selectedCarrier.value     = null
+    migrationValidation.value = null
+    migrationReason.value     = ''
+    migrationNotes.value      = ''
+    migrationDone.value       = null
+    migrationError.value      = null
+    migrationSearch.value     = ''
+    migrationCarriers.value   = []
+    migrationLoading.value    = true
+    showMigrationModal.value  = true
+    try {
+        const res = await fetch(route('admin.drivers.migration.carriers', { driver: props.driver.id }), {
+            headers: { 'Accept': 'application/json' },
+        })
+        const data = await res.json()
+        migrationCarriers.value = Array.isArray(data) ? data : []
+    } catch { migrationCarriers.value = [] }
+    migrationLoading.value = false
+}
+
+function getCsrfToken(): string {
+    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
+    return meta?.content ?? ''
+}
+
+async function postJson(url: string, body: object): Promise<{ ok: boolean; status: number; data: any }> {
+    const res = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        body: JSON.stringify(body),
+    })
+    let data: any = null
+    try { data = await res.json() } catch { data = null }
+    return { ok: res.ok, status: res.status, data }
+}
+
+async function selectCarrierAndValidate(carrier: AvailableCarrier) {
+    selectedCarrier.value     = carrier
+    migrationValidation.value = null
+    migrationError.value      = null
+    migrationLoading.value    = true
+    migrationStep.value       = 2
+    try {
+        const { ok, status, data } = await postJson(
+            route('admin.drivers.migration.validate', { driver: props.driver.id }),
+            { carrier_id: carrier.id }
+        )
+        if (!ok || !data) {
+            migrationError.value = data?.message ?? `Server error (${status}). Check that you are logged in and try again.`
+        } else {
+            migrationValidation.value = {
+                is_valid: data.is_valid ?? false,
+                errors:   Array.isArray(data.errors)   ? data.errors   : [],
+                warnings: Array.isArray(data.warnings) ? data.warnings : [],
+            }
+        }
+    } catch (e: any) {
+        migrationError.value = e?.message ?? 'Network error. Please try again.'
+    }
+    migrationLoading.value = false
+}
+
+function goToConfirm() { migrationStep.value = 3 }
+
+function submitMigration() {
+    migrationLoading.value = true
+    router.post(
+        route('admin.drivers.migration.execute', props.driver.id),
+        { carrier_id: selectedCarrier.value!.id, reason: migrationReason.value, notes: migrationNotes.value },
+        {
+            onSuccess: () => {
+                migrationDone.value = { record_id: 0, target_carrier: selectedCarrier.value!.name }
+                migrationStep.value = 4
+                migrationLoading.value = false
+            },
+            onError: (errors) => {
+                migrationError.value = errors.migration ?? 'Migration failed.'
+                migrationLoading.value = false
+            },
+        }
+    )
+}
+
+function openRollbackModal(recordId: number) {
+    rollbackRecordId.value = recordId
+    rollbackReason.value   = ''
+    rollbackModal.value    = true
+}
+
+function submitRollback() {
+    if (!rollbackReason.value.trim() || !rollbackRecordId.value) return
+    router.post(
+        route('admin.migration-records.rollback', rollbackRecordId.value),
+        { rollback_reason: rollbackReason.value },
+        { onFinish: () => { rollbackModal.value = false } }
+    )
 }
 </script>
 
@@ -183,6 +353,10 @@ function deactivateDriver() {
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition">
                             <Lucide icon="Download" class="w-4 h-4" /> Download Docs
                         </a>
+                        <Link v-if="isActive" :href="route('admin.drivers.migration.wizard', driver.id)"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition">
+                            <Lucide icon="ArrowRightLeft" class="w-4 h-4" /> Migrate Carrier
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -406,42 +580,86 @@ function deactivateDriver() {
 
                     <!-- ─────────────────────────── TAB: MEDICAL -->
                     <div v-show="activeTab === 'medical'" class="space-y-6">
-                        <div v-if="driver.medical" class="space-y-4">
-                            <!-- Status Banner -->
-                            <div :class="[medicalBadge(driver.medical.medical_status), 'flex items-center gap-3 p-4 rounded-lg border']">
-                                <Lucide icon="Heart" class="w-5 h-5 flex-shrink-0" />
-                                <div>
-                                    <p class="font-semibold">Medical Certification: {{ medicalLabel(driver.medical.medical_status) }}</p>
-                                    <p v-if="driver.medical.medical_card_expiration_date" class="text-sm opacity-80">
-                                        Expires {{ formatDate(driver.medical.medical_card_expiration_date) }}
-                                    </p>
+                        <div v-if="driver.medical">
+
+                            <!-- Medical Qualification Card -->
+                            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                                <!-- Card Header -->
+                                <div class="flex items-center gap-2 px-5 py-4 border-b border-slate-100 bg-slate-50">
+                                    <div class="p-1.5 bg-blue-100 rounded-lg">
+                                        <Lucide icon="Heart" class="w-4 h-4 text-blue-500" />
+                                    </div>
+                                    <span class="font-semibold text-slate-800">Medical Qualification</span>
+                                </div>
+
+                                <!-- Fields Grid -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                                    <!-- Medical Examiner -->
+                                    <div class="px-5 py-4">
+                                        <p class="text-xs text-slate-400 mb-1">Medical Examiner</p>
+                                        <p class="text-sm font-medium text-slate-800">{{ driver.medical.medical_examiner_name || '—' }}</p>
+                                    </div>
+                                    <!-- Registry Number -->
+                                    <div class="px-5 py-4">
+                                        <p class="text-xs text-slate-400 mb-1">Registry Number</p>
+                                        <p class="text-sm font-medium text-slate-800">{{ driver.medical.medical_examiner_registry || '—' }}</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100 border-t border-slate-100">
+                                    <!-- Medical Card Expiration -->
+                                    <div class="px-5 py-4">
+                                        <p class="text-xs text-slate-400 mb-1">Medical Card Expiration</p>
+                                        <div class="flex items-center gap-2">
+                                            <p class="text-sm font-medium text-slate-800">{{ formatDate(driver.medical.medical_card_expiration_date) || '—' }}</p>
+                                            <span v-if="driver.medical.medical_status !== 'valid' && driver.medical.medical_card_expiration_date"
+                                                :class="medicalBadge(driver.medical.medical_status)"
+                                                class="px-2 py-0.5 rounded-full text-xs font-medium">
+                                                {{ medicalLabel(driver.medical.medical_status) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <!-- SSN (masked) -->
+                                    <div class="px-5 py-4">
+                                        <p class="text-xs text-slate-400 mb-1">Expiration Date</p>
+                                        <p class="text-sm font-medium text-slate-800 font-mono">{{ driver.medical.ssn_masked || '—' }}</p>
+                                    </div>
+                                </div>
+
+                                <!-- View Medical Card -->
+                                <div class="border-t border-slate-100 px-5 py-4">
+                                    <p class="text-sm font-semibold text-slate-700 mb-3">View Medical Card</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <a v-if="driver.medical.medical_card_url" :href="driver.medical.medical_card_url" target="_blank"
+                                            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-700 bg-white hover:bg-slate-50 transition">
+                                            <Lucide icon="FileText" class="w-4 h-4 text-slate-500" /> View Certificate
+                                        </a>
+                                        <a v-if="driver.medical.medical_certificate_url" :href="driver.medical.medical_certificate_url" target="_blank"
+                                            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-700 bg-white hover:bg-slate-50 transition">
+                                            <Lucide icon="Award" class="w-4 h-4 text-slate-500" /> Medical Certificate
+                                        </a>
+                                        <a v-if="driver.medical.social_security_card_url" :href="driver.medical.social_security_card_url" target="_blank"
+                                            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-700 bg-white hover:bg-slate-50 transition">
+                                            <Lucide icon="CreditCard" class="w-4 h-4 text-slate-500" /> SSN Card
+                                        </a>
+                                        <span v-if="!driver.medical.medical_card_url && !driver.medical.medical_certificate_url && !driver.medical.social_security_card_url"
+                                            class="text-sm text-slate-400 italic">No documents uploaded</span>
+                                    </div>
+                                </div>
+
+                                <!-- View Medical Records -->
+                                <div class="border-t border-slate-100 px-5 py-4">
+                                    <p class="text-sm font-semibold text-slate-700 mb-3">View Medical Records</p>
+                                    <div v-if="driver.medical.medical_records?.length" class="flex flex-wrap gap-2">
+                                        <a v-for="rec in driver.medical.medical_records" :key="rec.url"
+                                            :href="rec.url" target="_blank"
+                                            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-700 bg-white hover:bg-slate-50 transition">
+                                            <Lucide icon="FileText" class="w-4 h-4 text-slate-500" /> {{ rec.name }}
+                                        </a>
+                                    </div>
+                                    <span v-else class="text-sm text-slate-400 italic">No medical records uploaded</span>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                                    <p class="text-xs text-slate-500 mb-1">Medical Examiner</p>
-                                    <p class="font-medium text-slate-800">{{ driver.medical.medical_examiner_name || 'N/A' }}</p>
-                                    <p v-if="driver.medical.medical_examiner_registry" class="text-xs text-slate-500 mt-0.5">Registry: {{ driver.medical.medical_examiner_registry }}</p>
-                                </div>
-                                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                                    <p class="text-xs text-slate-500 mb-1">Expiration Date</p>
-                                    <p class="font-medium text-slate-800">{{ formatDate(driver.medical.medical_card_expiration_date) }}</p>
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-3">
-                                <a v-if="driver.medical.medical_card_url" :href="driver.medical.medical_card_url" target="_blank"
-                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-700 hover:bg-slate-50">
-                                    <Lucide icon="FileText" class="w-4 h-4" /> View Medical Card
-                                </a>
-                                <a v-if="driver.medical.medical_certificate_url" :href="driver.medical.medical_certificate_url" target="_blank"
-                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-700 hover:bg-slate-50">
-                                    <Lucide icon="Award" class="w-4 h-4" /> Medical Certificate
-                                </a>
-                                <a v-if="driver.medical.social_security_card_url" :href="driver.medical.social_security_card_url" target="_blank"
-                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-700 hover:bg-slate-50">
-                                    <Lucide icon="CreditCard" class="w-4 h-4" /> SSN Card
-                                </a>
-                            </div>
+
                         </div>
                         <div v-else class="flex flex-col items-center py-12 text-slate-400">
                             <Lucide icon="Heart" class="w-12 h-12 mb-3" />
@@ -500,7 +718,6 @@ function deactivateDriver() {
                                         <p class="text-sm font-medium">{{ formatDate(up.from_date) }} – {{ up.to_date ? formatDate(up.to_date) : 'Present' }}</p>
                                         <p v-if="up.comments" class="text-xs text-slate-600 mt-0.5">{{ up.comments }}</p>
                                     </div>
-                                    <span v-if="up.type" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs capitalize">{{ up.type }}</span>
                                 </div>
                             </div>
                         </div>
@@ -510,9 +727,8 @@ function deactivateDriver() {
                             <h3 class="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><Lucide icon="Link" class="w-4 h-4 text-primary" /> Related Employment</h3>
                             <div class="space-y-2">
                                 <div v-for="(re, i) in driver.related_employments" :key="i" class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-sm">
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
                                         <div v-if="re.position"><p class="text-xs text-slate-500">Position</p><p>{{ re.position }}</p></div>
-                                        <div v-if="re.work_position"><p class="text-xs text-slate-500">Work Position</p><p>{{ re.work_position }}</p></div>
                                         <div v-if="re.from_date || re.to_date"><p class="text-xs text-slate-500">Period</p><p>{{ formatDate(re.from_date) }} – {{ re.to_date ? formatDate(re.to_date) : 'Present' }}</p></div>
                                     </div>
                                     <p v-if="re.comments" class="text-xs text-slate-600 mt-2 italic">{{ re.comments }}</p>
@@ -531,7 +747,7 @@ function deactivateDriver() {
                                     <div class="flex items-start justify-between gap-3">
                                         <div>
                                             <p class="font-medium text-slate-800">{{ ts.name || 'N/A' }}</p>
-                                            <p v-if="ts.location" class="text-xs text-slate-500">{{ ts.location }}</p>
+                                            <p v-if="ts.city || ts.state" class="text-xs text-slate-500">{{ [ts.city, ts.state].filter(Boolean).join(', ') }}</p>
                                             <p v-if="ts.from_date || ts.to_date" class="text-xs text-slate-500 mt-0.5">
                                                 {{ formatDate(ts.from_date) }} – {{ ts.to_date ? formatDate(ts.to_date) : 'Present' }}
                                             </p>
@@ -835,43 +1051,187 @@ function deactivateDriver() {
                         </div>
                     </div>
 
-                    <!-- ─────────────────────────── TAB: DOCUMENTS -->
-                    <div v-show="activeTab === 'documents'" class="space-y-6">
-                        <div v-for="(docs, category) in documentsByCategory" :key="category">
-                            <template v-if="docs?.length">
-                                <h4 class="font-semibold text-slate-700 mb-2 capitalize flex items-center gap-2">
-                                    <Lucide icon="Folder" class="w-4 h-4 text-primary" />
-                                    {{ String(category).replace(/_/g, ' ') }}
-                                    <span class="text-xs text-slate-400 font-normal">({{ docs.length }})</span>
-                                </h4>
-                                <div class="overflow-x-auto rounded-lg border border-slate-200 mb-4">
-                                    <table class="w-full text-sm">
-                                        <thead class="bg-slate-50">
-                                            <tr>
-                                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">File Name</th>
-                                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">Size</th>
-                                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">Date</th>
-                                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">Related To</th>
-                                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="(doc, di) in docs" :key="di" class="border-t border-slate-100 hover:bg-slate-50/50">
-                                                <td class="px-4 py-3 flex items-center gap-2">
-                                                    <Lucide icon="FileText" class="w-4 h-4 text-slate-400 flex-shrink-0" />
-                                                    {{ doc.name }}
-                                                </td>
-                                                <td class="px-4 py-3 text-slate-500">{{ doc.size }}</td>
-                                                <td class="px-4 py-3 text-slate-500">{{ doc.date }}</td>
-                                                <td class="px-4 py-3 text-slate-500 text-xs">{{ doc.related_info }}</td>
-                                                <td class="px-4 py-3">
-                                                    <a :href="doc.url" target="_blank" class="inline-flex items-center gap-1 text-primary hover:underline text-xs"><Lucide icon="Eye" class="w-3.5 h-3.5" /> View</a>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                    <!-- ─────────────────────────── TAB: COMPLIANCE (FMCSR + Criminal) -->
+                    <div v-show="activeTab === 'compliance'" class="space-y-8">
+                        <!-- FMCSR -->
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                                <Lucide icon="ClipboardList" class="w-4 h-4 text-primary" /> FMCSR Data
+                            </h3>
+                            <div v-if="driver.fmcsr_data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-slate-600">License Disqualified</span>
+                                        <span :class="driver.fmcsr_data.is_disqualified ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.is_disqualified) }}</span>
+                                    </div>
+                                    <p v-if="driver.fmcsr_data.disqualified_details" class="text-xs text-slate-500 italic">{{ driver.fmcsr_data.disqualified_details }}</p>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-slate-600">License Suspended</span>
+                                        <span :class="driver.fmcsr_data.is_license_suspended ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.is_license_suspended) }}</span>
+                                    </div>
+                                    <p v-if="driver.fmcsr_data.suspension_details" class="text-xs text-slate-500 italic">{{ driver.fmcsr_data.suspension_details }}</p>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-slate-600">License Denied</span>
+                                        <span :class="driver.fmcsr_data.is_license_denied ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.is_license_denied) }}</span>
+                                    </div>
+                                    <p v-if="driver.fmcsr_data.denial_details" class="text-xs text-slate-500 italic">{{ driver.fmcsr_data.denial_details }}</p>
                                 </div>
-                            </template>
+                                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-slate-600">Positive Drug Test</span>
+                                        <span :class="driver.fmcsr_data.has_positive_drug_test ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.has_positive_drug_test) }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-slate-600">Duty Offenses</span>
+                                        <span :class="driver.fmcsr_data.has_duty_offenses ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.has_duty_offenses) }}</span>
+                                    </div>
+                                    <p v-if="driver.fmcsr_data.offense_details" class="text-xs text-slate-500 italic">{{ driver.fmcsr_data.offense_details }}</p>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-slate-600">Consent Driving Record</span>
+                                        <span :class="driver.fmcsr_data.consent_driving_record ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.consent_driving_record) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="text-slate-400 text-sm italic">No FMCSR data recorded.</div>
+                        </div>
+
+                        <!-- Criminal History -->
+                        <div class="border-t pt-6">
+                            <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                                <Lucide icon="AlertTriangle" class="w-4 h-4 text-orange-500" /> Criminal History
+                            </h3>
+                            <div v-if="driver.criminal_history" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
+                                    <p class="text-xs text-slate-500 mb-1">Criminal Charges</p>
+                                    <span :class="driver.criminal_history.has_criminal_charges ? 'text-red-600' : 'text-emerald-600'" class="text-lg font-bold">{{ yesNo(driver.criminal_history.has_criminal_charges) }}</span>
+                                </div>
+                                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
+                                    <p class="text-xs text-slate-500 mb-1">Felony Conviction</p>
+                                    <span :class="driver.criminal_history.has_felony_conviction ? 'text-red-600' : 'text-emerald-600'" class="text-lg font-bold">{{ yesNo(driver.criminal_history.has_felony_conviction) }}</span>
+                                </div>
+                                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
+                                    <p class="text-xs text-slate-500 mb-1">Minister's Permit</p>
+                                    <span class="text-lg font-bold text-slate-700">{{ yesNo(driver.criminal_history.has_minister_permit) }}</span>
+                                </div>
+                                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
+                                    <p class="text-xs text-slate-500 mb-1">FCRA Consent</p>
+                                    <span :class="driver.criminal_history.fcra_consent ? 'text-emerald-600' : 'text-slate-500'" class="text-lg font-bold">{{ yesNo(driver.criminal_history.fcra_consent) }}</span>
+                                </div>
+                            </div>
+                            <div v-else class="text-slate-400 text-sm italic">No criminal history recorded.</div>
+                        </div>
+                    </div>
+
+                    <!-- ─────────────────────────── TAB: HOS -->
+                    <div v-show="activeTab === 'hos'" class="space-y-6">
+                        <h3 class="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                            <Lucide icon="Clock" class="w-4 h-4 text-primary" /> Hours of Service (HOS)
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Current cycle -->
+                            <div class="bg-primary/5 border border-primary/20 rounded-xl p-5">
+                                <p class="text-xs text-slate-500 mb-1">Current Cycle</p>
+                                <p class="text-xl font-bold text-primary">{{ hosLabel[driver.hos_data.cycle_type] ?? driver.hos_data.cycle_type }}</p>
+                                <p class="text-xs text-slate-500 mt-1">{{ driver.hos_data.cycle_type === '60_7' ? '60 hours available in 7 consecutive days' : '70 hours available in 8 consecutive days' }}</p>
+                            </div>
+
+                            <!-- Change request status -->
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                                <p class="text-xs text-slate-500 mb-3">Change Request</p>
+                                <div v-if="driver.hos_data.change_requested" class="space-y-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">Pending Approval</span>
+                                    </div>
+                                    <p class="text-sm">Requesting: <strong>{{ hosLabel[driver.hos_data.change_requested_to ?? ''] ?? driver.hos_data.change_requested_to }}</strong></p>
+                                    <p v-if="driver.hos_data.change_requested_at" class="text-xs text-slate-500">Requested: {{ driver.hos_data.change_requested_at }}</p>
+                                </div>
+                                <div v-else-if="driver.hos_data.change_approved_at" class="space-y-1">
+                                    <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">Approved</span>
+                                    <p class="text-xs text-slate-500 mt-1">Approved: {{ driver.hos_data.change_approved_at }}</p>
+                                </div>
+                                <p v-else class="text-sm text-slate-400 italic">No change request pending</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ─────────────────────────── TAB: WIZARD STEPS -->
+                    <div v-show="activeTab === 'wizard'" class="space-y-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                <Lucide icon="ListChecks" class="w-4 h-4 text-primary" /> Application Wizard Progress
+                            </h3>
+                            <div class="flex items-center gap-3">
+                                <div class="w-32 h-2 rounded-full bg-slate-200 overflow-hidden">
+                                    <div class="h-full rounded-full bg-primary transition-all" :style="`width:${driver.wizard_total_pct}%`" />
+                                </div>
+                                <span class="text-sm font-semibold text-slate-700">{{ driver.wizard_total_pct }}%</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                            <div v-for="step in driver.wizard_steps" :key="step.step"
+                                class="flex items-center gap-3 p-3 rounded-lg border text-sm"
+                                :class="stepStatusClass[step.status] ?? 'bg-slate-50 text-slate-600 border-slate-200'">
+                                <div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                                    :class="step.status === 'completed' ? 'bg-emerald-600 text-white' : step.status === 'missing' ? 'bg-red-500 text-white' : 'bg-amber-400 text-white'">
+                                    <Lucide v-if="step.status === 'completed'" icon="Check" class="w-3.5 h-3.5" />
+                                    <Lucide v-else-if="step.status === 'missing'" icon="X" class="w-3.5 h-3.5" />
+                                    <span v-else>{{ step.step }}</span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium truncate">{{ step.label }}</p>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <div class="flex-1 h-1 rounded-full bg-black/10 overflow-hidden">
+                                            <div class="h-full rounded-full bg-current opacity-60 transition-all" :style="`width:${step.percentage}%`" />
+                                        </div>
+                                        <span class="text-xs opacity-75">{{ step.percentage }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="!driver.wizard_steps.length" class="text-slate-400 text-sm italic">No wizard data available.</div>
+                    </div>
+
+                    <!-- ─────────────────────────── TAB: DOCUMENTS -->
+                    <div v-show="activeTab === 'documents'" class="space-y-8">
+                        <div v-for="(docs, category) in documentsByCategory" :key="category">
+                            <!-- Section header -->
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold">{{ docs.length }}</span>
+                                <h4 class="font-semibold text-slate-700 capitalize text-sm">
+                                    {{ categoryLabel(String(category)) }}
+                                </h4>
+                            </div>
+                            <!-- Cards grid -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-2">
+                                <div v-for="(doc, di) in docs" :key="di"
+                                    class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-2 shadow-sm hover:shadow-md transition">
+                                    <div class="flex items-start gap-3">
+                                        <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
+                                            <Lucide icon="FileText" class="w-5 h-5 text-slate-400" />
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-medium text-slate-800 truncate">{{ doc.name }}</p>
+                                            <p class="text-xs text-slate-400">{{ doc.size }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-slate-500 space-y-0.5">
+                                        <p>Date: {{ doc.date }}</p>
+                                        <p v-if="doc.type">Type: {{ doc.type }}</p>
+                                        <p>Info: {{ doc.related_info }}</p>
+                                        <p v-if="doc.company">Company: {{ doc.company }}</p>
+                                    </div>
+                                    <div class="flex gap-2 mt-auto pt-2 border-t border-slate-100">
+                                        <a :href="doc.url" target="_blank"
+                                            class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 hover:bg-slate-50 transition">
+                                            <Lucide icon="Eye" class="w-3.5 h-3.5" /> View
+                                        </a>
+                                        <a :href="doc.url" download
+                                            class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs hover:bg-primary/90 transition">
+                                            <Lucide icon="Download" class="w-3.5 h-3.5" /> Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div v-if="stats.total_documents === 0" class="flex flex-col items-center py-12 text-slate-400">
                             <Lucide icon="FileX" class="w-12 h-12 mb-3" />
@@ -882,5 +1242,250 @@ function deactivateDriver() {
                 </div><!-- /p-6 -->
             </div><!-- /box -->
         </div>
+
+        <!-- ══════════════════════════════════════ MIGRATION HISTORY -->
+        <div v-if="driver.migration_history?.length" class="col-span-12">
+            <div class="box box--stacked p-6">
+                <h2 class="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                    <Lucide icon="ArrowRightLeft" class="w-5 h-5 text-amber-500" />
+                    Migration History
+                </h2>
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">#</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">Date</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">From</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">To</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">By</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">Reason</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">Status</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-medium text-slate-500">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="m in driver.migration_history" :key="m.id" class="hover:bg-slate-50">
+                                <td class="px-4 py-3 text-xs text-slate-400">#{{ m.id }}</td>
+                                <td class="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{{ m.migrated_at }}</td>
+                                <td class="px-4 py-3 text-xs font-medium text-slate-700">{{ m.source_carrier }}</td>
+                                <td class="px-4 py-3 text-xs font-medium text-slate-700">{{ m.target_carrier }}</td>
+                                <td class="px-4 py-3 text-xs text-slate-600">{{ m.performed_by }}</td>
+                                <td class="px-4 py-3 text-xs text-slate-500 max-w-[160px] truncate">{{ m.reason || '—' }}</td>
+                                <td class="px-4 py-3">
+                                    <span v-if="m.status === 'completed'" class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Completed</span>
+                                    <span v-else class="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Rolled Back</span>
+                                    <div v-if="m.status === 'rolled_back'" class="text-xs text-slate-400 mt-0.5">{{ m.rolled_back_at }}</div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <button v-if="m.can_rollback" type="button" @click="openRollbackModal(m.id)"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition">
+                                        <Lucide icon="RotateCcw" class="w-3.5 h-3.5" /> Rollback
+                                    </button>
+                                    <span v-else class="text-xs text-slate-300">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
+
+    <!-- ══════════════════ MIGRATION WIZARD MODAL ══════════════════════════════ -->
+    <div v-if="showMigrationModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-amber-100 rounded-lg"><Lucide icon="ArrowRightLeft" class="w-5 h-5 text-amber-600" /></div>
+                    <div>
+                        <h2 class="text-base font-semibold text-slate-800">Migrate Driver to Another Carrier</h2>
+                        <p class="text-xs text-slate-500">{{ driver.full_name }}</p>
+                    </div>
+                </div>
+                <button type="button" @click="showMigrationModal = false" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+                    <Lucide icon="X" class="w-5 h-5" />
+                </button>
+            </div>
+
+            <!-- Step indicators -->
+            <div class="flex border-b border-slate-100 flex-shrink-0">
+                <div v-for="s in [1,2,3,4]" :key="s"
+                    class="flex-1 py-2.5 text-center text-xs font-medium transition"
+                    :class="migrationStep === s ? 'text-primary border-b-2 border-primary bg-primary/5' : migrationStep > s ? 'text-emerald-600' : 'text-slate-400'">
+                    <span class="mr-1">{{ ['1. Select Carrier','2. Validation','3. Confirm','4. Done'][s-1] }}</span>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="flex-1 overflow-y-auto p-6">
+
+                <!-- Step 1: Select Carrier -->
+                <div v-if="migrationStep === 1">
+                    <div v-if="migrationLoading" class="flex flex-col items-center py-10 text-slate-400">
+                        <Lucide icon="Loader" class="w-8 h-8 animate-spin mb-2" /> Loading carriers...
+                    </div>
+                    <template v-else>
+                        <input v-model="migrationSearch" type="text" placeholder="Search by name or DOT number..."
+                            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                        <div v-if="filteredCarriers.length" class="space-y-2">
+                            <div v-for="c in filteredCarriers" :key="c.id"
+                                class="flex items-center justify-between border border-slate-200 rounded-xl p-4 hover:border-primary hover:bg-primary/5 cursor-pointer transition"
+                                @click="selectCarrierAndValidate(c)">
+                                <div>
+                                    <div class="font-semibold text-slate-800">{{ c.name }}</div>
+                                    <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-3">
+                                        <span v-if="c.dot_number">DOT: {{ c.dot_number }}</span>
+                                        <span v-if="c.state">{{ c.state }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-right flex-shrink-0 ml-4">
+                                    <div class="text-xs text-slate-500">{{ c.current_drivers }} / {{ c.max_drivers }} drivers</div>
+                                    <div class="w-16 bg-slate-100 rounded-full h-1.5 mt-1">
+                                        <div class="bg-primary h-1.5 rounded-full" :style="`width:${Math.min((c.current_drivers/c.max_drivers)*100,100)}%`"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="flex flex-col items-center py-10 text-slate-400">
+                            <Lucide icon="Building2" class="w-10 h-10 mb-2" />
+                            <p class="text-sm">No available carriers found</p>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Step 2: Validation -->
+                <div v-else-if="migrationStep === 2">
+                    <div v-if="migrationLoading" class="flex flex-col items-center py-10 text-slate-400">
+                        <Lucide icon="Loader" class="w-8 h-8 animate-spin mb-2" /> Validating migration...
+                    </div>
+                    <div v-else-if="migrationError" class="flex flex-col items-center py-10 text-center">
+                        <Lucide icon="AlertCircle" class="w-10 h-10 text-red-400 mb-3" />
+                        <p class="text-sm font-medium text-red-600 mb-1">Validation Failed</p>
+                        <p class="text-xs text-slate-500 max-w-xs">{{ migrationError }}</p>
+                        <button type="button" @click="migrationStep = 1; migrationError = null" class="mt-4 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition">
+                            Go Back
+                        </button>
+                    </div>
+                    <div v-else-if="migrationValidation">
+                        <div class="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <p class="text-xs text-slate-500 mb-0.5">Migrating to</p>
+                            <p class="font-semibold text-slate-800">{{ selectedCarrier?.name }}</p>
+                        </div>
+                        <div v-if="migrationValidation.errors.length" class="mb-4">
+                            <div class="flex items-center gap-2 mb-2 text-red-600 font-medium text-sm"><Lucide icon="XCircle" class="w-4 h-4" /> Blocking Issues</div>
+                            <div v-for="e in migrationValidation.errors" :key="e"
+                                class="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 mb-2">
+                                <Lucide icon="AlertCircle" class="w-4 h-4 flex-shrink-0 mt-0.5" /> {{ e }}
+                            </div>
+                        </div>
+                        <div v-if="migrationValidation.warnings.length" class="mb-4">
+                            <div class="flex items-center gap-2 mb-2 text-amber-600 font-medium text-sm"><Lucide icon="AlertTriangle" class="w-4 h-4" /> Warnings</div>
+                            <div v-for="w in migrationValidation.warnings" :key="w"
+                                class="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 mb-2">
+                                <Lucide icon="AlertTriangle" class="w-4 h-4 flex-shrink-0 mt-0.5" /> {{ w }}
+                            </div>
+                        </div>
+                        <div v-if="migrationValidation.is_valid && !migrationValidation.warnings.length"
+                            class="flex items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm">
+                            <Lucide icon="CheckCircle" class="w-5 h-5" /> Driver is eligible for migration.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Confirm -->
+                <div v-else-if="migrationStep === 3" class="space-y-5">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                            <p class="text-xs text-slate-400 mb-1">From</p>
+                            <p class="font-semibold text-slate-800">{{ driver.carrier?.name ?? '—' }}</p>
+                        </div>
+                        <div class="bg-primary/5 rounded-xl p-4 border border-primary/20">
+                            <p class="text-xs text-slate-400 mb-1">To</p>
+                            <p class="font-semibold text-primary">{{ selectedCarrier?.name }}</p>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex items-start gap-2">
+                        <Lucide icon="Info" class="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        Driver status will be set to <strong>Pending</strong> after migration. All active vehicle assignments will be ended. You have 24 hours to rollback this action.
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Reason for Migration <span class="text-slate-400 font-normal">(optional)</span></label>
+                        <textarea v-model="migrationReason" rows="2" placeholder="Enter reason..."
+                            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Additional Notes <span class="text-slate-400 font-normal">(optional)</span></label>
+                        <textarea v-model="migrationNotes" rows="2" placeholder="Any additional notes..."
+                            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"></textarea>
+                    </div>
+                    <div v-if="migrationError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ migrationError }}</div>
+                </div>
+
+                <!-- Step 4: Done -->
+                <div v-else-if="migrationStep === 4" class="flex flex-col items-center py-8 text-center">
+                    <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                        <Lucide icon="CheckCircle" class="w-8 h-8 text-emerald-600" />
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-2">Migration Successful!</h3>
+                    <p class="text-sm text-slate-500 mb-6">Driver has been successfully migrated to <strong>{{ migrationDone?.target_carrier }}</strong>.</p>
+                    <button type="button" @click="showMigrationModal = false"
+                        class="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition">
+                        Close
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-slate-50">
+                <button v-if="migrationStep > 1 && migrationStep < 4" type="button" @click="migrationStep = (migrationStep - 1) as any"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-white transition">
+                    <Lucide icon="ChevronLeft" class="w-4 h-4" /> Back
+                </button>
+                <div v-else></div>
+                <div class="flex gap-2">
+                    <button v-if="migrationStep < 4" type="button" @click="showMigrationModal = false"
+                        class="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-white transition">Cancel</button>
+                    <button v-if="migrationStep === 2 && migrationValidation?.is_valid" type="button" @click="goToConfirm"
+                        class="px-5 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition">
+                        Continue <Lucide icon="ChevronRight" class="w-4 h-4 inline" />
+                    </button>
+                    <button v-if="migrationStep === 3" type="button" @click="submitMigration" :disabled="migrationLoading"
+                        class="px-5 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition disabled:opacity-60 flex items-center gap-1.5">
+                        <Lucide v-if="migrationLoading" icon="Loader" class="w-4 h-4 animate-spin" />
+                        Confirm Migration
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ ROLLBACK MODAL ══════════════════════════════════════ -->
+    <div v-if="rollbackModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="p-2 bg-red-100 rounded-lg"><Lucide icon="RotateCcw" class="w-5 h-5 text-red-600" /></div>
+                <h2 class="text-base font-semibold text-slate-800">Rollback Migration</h2>
+            </div>
+            <p class="text-sm text-slate-600 mb-4">This will restore the driver to their original carrier. This action can only be performed within 24 hours of the migration.</p>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Reason for Rollback <span class="text-red-500">*</span></label>
+                <textarea v-model="rollbackReason" rows="3" placeholder="Required..."
+                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" @click="rollbackModal = false"
+                    class="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+                <button type="button" @click="submitRollback" :disabled="!rollbackReason.trim()"
+                    class="px-5 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition disabled:opacity-50">
+                    Confirm Rollback
+                </button>
+            </div>
+        </div>
+    </div>
+
 </template>

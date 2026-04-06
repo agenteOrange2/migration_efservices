@@ -353,18 +353,20 @@ function removeExperience(i: number) {
     if (step4.experiences.length > 1) step4.experiences.splice(i, 1)
 }
 
-const licFrontPreview = ref<string | null>(null)
-const licBackPreview  = ref<string | null>(null)
+const licFrontPreviews = ref<(string | null)[]>([])
+const licBackPreviews  = ref<(string | null)[]>([])
+const licFrontFiles    = ref<(File | null)[]>([])
+const licBackFiles     = ref<(File | null)[]>([])
 
-function onLicFront(e: Event) {
+function onLicFront(e: Event, i: number) {
     const file = (e.target as HTMLInputElement).files?.[0] ?? null
-    licFrontPreview.value = file ? URL.createObjectURL(file) : null
-    step4.license_front = file
+    licFrontFiles.value[i] = file
+    licFrontPreviews.value[i] = file ? URL.createObjectURL(file) : null
 }
-function onLicBack(e: Event) {
+function onLicBack(e: Event, i: number) {
     const file = (e.target as HTMLInputElement).files?.[0] ?? null
-    licBackPreview.value = file ? URL.createObjectURL(file) : null
-    step4.license_back = file
+    licBackFiles.value[i] = file
+    licBackPreviews.value[i] = file ? URL.createObjectURL(file) : null
 }
 
 const step4Errors = ref<string[]>([])
@@ -398,8 +400,8 @@ function submitStep4() {
             l.endorsements.forEach((eid: number) => data.append(`licenses[${i}][endorsements][]`, String(eid)))
         }
     })
-    if (step4.license_front) data.append('license_front', step4.license_front)
-    if (step4.license_back)  data.append('license_back',  step4.license_back)
+    licFrontFiles.value.forEach((file, i) => { if (file) data.append(`license_front_${i}`, file) })
+    licBackFiles.value.forEach((file, i)  => { if (file) data.append(`license_back_${i}`, file) })
     step4.experiences.forEach((e, i) => {
         if (!e.equipment_type) return
         data.append(`experiences[${i}][equipment_type]`, String(e.equipment_type))
@@ -654,7 +656,7 @@ const step9Errors = ref<string[]>([])
 
 function submitStep9() {
     const errs: string[] = []
-    if (!step9.consent_to_release)    errs.push('You must consent to the release of drug/alcohol test information.')
+    if (step9.has_positive_drug_test && !step9.consent_to_release) errs.push('You must consent to the release of drug/alcohol test information.')
     if (!step9.consent_driving_record) errs.push('You must consent to the check of your driving record.')
     step9Errors.value = errs
     if (errs.length) return
@@ -1040,6 +1042,23 @@ function submitStep13() {
     step13Errors.value = errs
     if (errs.length) return
     router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 13 }), { ...step13 })
+}
+
+function onTinInput(e: Event) {
+    const digits = (e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 9)
+    if (step13.tin_type === 'ssn') {
+        if (digits.length > 5)      step13.tin = `${digits.slice(0,3)}-${digits.slice(3,5)}-${digits.slice(5)}`
+        else if (digits.length > 3) step13.tin = `${digits.slice(0,3)}-${digits.slice(3)}`
+        else                        step13.tin = digits
+    } else {
+        step13.tin = digits.length > 2 ? `${digits.slice(0,2)}-${digits.slice(2)}` : digits
+    }
+}
+function onZipInput(e: Event) {
+    step13.zip_code = (e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 5)
+}
+function onExemptCodeInput(e: Event) {
+    step13.exempt_payee_code = (e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 2)
 }
 
 // ------------------------------------------------------------------
@@ -1858,14 +1877,14 @@ function submitStep15() {
                         </div>
                     </div>
 
-                    <!-- License Images — only for first/primary license -->
-                    <div v-if="i === 0" class="mt-4 pt-4 border-t border-slate-100">
+                    <!-- License Images -->
+                    <div class="mt-4 pt-4 border-t border-slate-100">
                         <h4 class="text-sm font-medium mb-3">License Images</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium mb-1">License Front</label>
-                                <input type="file" accept="image/*,application/pdf" @change="onLicFront" class="w-full text-sm" />
-                                <img v-if="licFrontPreview" :src="licFrontPreview" alt="License front preview" class="mt-2 rounded border max-h-32 object-contain" />
+                                <input type="file" accept="image/*,application/pdf" @change="(e) => onLicFront(e, i)" class="w-full text-sm" />
+                                <img v-if="licFrontPreviews[i]" :src="licFrontPreviews[i]!" alt="License front preview" class="mt-2 rounded border max-h-32 object-contain" />
                                 <template v-else-if="lic.front_url">
                                     <img :src="lic.front_url" alt="License front" class="mt-2 rounded border max-h-32 object-contain" />
                                     <a :href="lic.front_url" target="_blank" class="text-xs text-primary mt-1 block">View full size</a>
@@ -1873,8 +1892,8 @@ function submitStep15() {
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">License Back</label>
-                                <input type="file" accept="image/*,application/pdf" @change="onLicBack" class="w-full text-sm" />
-                                <img v-if="licBackPreview" :src="licBackPreview" alt="License back preview" class="mt-2 rounded border max-h-32 object-contain" />
+                                <input type="file" accept="image/*,application/pdf" @change="(e) => onLicBack(e, i)" class="w-full text-sm" />
+                                <img v-if="licBackPreviews[i]" :src="licBackPreviews[i]!" alt="License back preview" class="mt-2 rounded border max-h-32 object-contain" />
                                 <template v-else-if="lic.back_url">
                                     <img :src="lic.back_url" alt="License back" class="mt-2 rounded border max-h-32 object-contain" />
                                     <a :href="lic.back_url" target="_blank" class="text-xs text-primary mt-1 block">View full size</a>
@@ -3226,7 +3245,7 @@ function submitStep15() {
                 <div class="mb-6 p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
                     <h3 class="text-base font-semibold text-slate-800 mb-1">Line 1 — Name <span class="text-danger">*</span></h3>
                     <p class="text-xs text-slate-500 mb-3">Name of entity/individual. An entry is required.</p>
-                    <FormInput v-model="step13.name" placeholder="Enter name as shown on your income tax return" />
+                    <FormInput v-model="step13.name" placeholder="Enter name as shown on your income tax return" maxlength="100" />
                     <p v-if="step13Errors.find(e => e.includes('Name'))" class="text-red-500 text-xs mt-1">{{ step13Errors.find(e => e.includes('Name')) }}</p>
                 </div>
 
@@ -3234,7 +3253,7 @@ function submitStep15() {
                 <div class="mb-6 p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
                     <h3 class="text-base font-semibold text-slate-800 mb-1">Line 2 — Business Name</h3>
                     <p class="text-xs text-slate-500 mb-3">Business name/disregarded entity name, if different from above.</p>
-                    <FormInput v-model="step13.business_name" placeholder="Business name (optional)" />
+                    <FormInput v-model="step13.business_name" placeholder="Business name (optional)" maxlength="100" />
                 </div>
 
                 <!-- Line 3a: Tax Classification -->
@@ -3276,7 +3295,7 @@ function submitStep15() {
                     <!-- Other sub-option -->
                     <div v-if="step13.tax_classification === 'other'" class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Specify Other Classification <span class="text-danger">*</span></label>
-                        <FormInput v-model="step13.other_classification" placeholder="Enter classification" />
+                        <FormInput v-model="step13.other_classification" placeholder="Enter classification" maxlength="50" />
                         <p v-if="step13Errors.find(e => e.includes('other classification'))" class="text-red-500 text-xs mt-1">{{ step13Errors.find(e => e.includes('other classification')) }}</p>
                     </div>
                 </div>
@@ -3298,11 +3317,11 @@ function submitStep15() {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Exempt payee code (if any)</label>
-                            <FormInput v-model="step13.exempt_payee_code" placeholder="Code" />
+                            <FormInput v-model="step13.exempt_payee_code" placeholder="1–13" maxlength="2" inputmode="numeric" @input="onExemptCodeInput" />
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">FATCA reporting code (if any)</label>
-                            <FormInput v-model="step13.fatca_exemption_code" placeholder="Code" />
+                            <FormInput v-model="step13.fatca_exemption_code" placeholder="A–M" maxlength="1" />
                         </div>
                     </div>
                 </div>
@@ -3312,13 +3331,13 @@ function submitStep15() {
                     <h3 class="text-base font-semibold text-slate-800 mb-3">Lines 5 &amp; 6 — Address <span class="text-danger">*</span></h3>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Address (number, street, and apt. or suite no.)</label>
-                        <FormInput v-model="step13.address" placeholder="Street address" />
+                        <FormInput v-model="step13.address" placeholder="Street address" maxlength="200" />
                         <p v-if="step13Errors.find(e => e.includes('Address'))" class="text-red-500 text-xs mt-1">{{ step13Errors.find(e => e.includes('Address')) }}</p>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">City <span class="text-danger">*</span></label>
-                            <FormInput v-model="step13.city" placeholder="City" />
+                            <FormInput v-model="step13.city" placeholder="City" maxlength="50" />
                             <p v-if="step13Errors.find(e => e.includes('City'))" class="text-red-500 text-xs mt-1">{{ step13Errors.find(e => e.includes('City')) }}</p>
                         </div>
                         <div>
@@ -3331,7 +3350,7 @@ function submitStep15() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">ZIP Code <span class="text-danger">*</span></label>
-                            <FormInput v-model="step13.zip_code" placeholder="XXXXX" />
+                            <FormInput v-model="step13.zip_code" placeholder="XXXXX" maxlength="5" inputmode="numeric" @input="onZipInput" />
                             <p v-if="step13Errors.find(e => e.includes('ZIP'))" class="text-red-500 text-xs mt-1">{{ step13Errors.find(e => e.includes('ZIP')) }}</p>
                         </div>
                     </div>
@@ -3341,7 +3360,7 @@ function submitStep15() {
                 <div class="mb-6 p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
                     <h3 class="text-base font-semibold text-slate-800 mb-1">Line 7 — Account Numbers</h3>
                     <p class="text-xs text-slate-500 mb-3">List account number(s) here (optional).</p>
-                    <FormInput v-model="step13.account_numbers" placeholder="Account numbers (optional)" />
+                    <FormInput v-model="step13.account_numbers" placeholder="Account numbers (optional)" maxlength="200" />
                 </div>
 
                 <!-- Part I: TIN -->
@@ -3362,7 +3381,7 @@ function submitStep15() {
                         <label class="block text-sm font-medium text-slate-700 mb-1">
                             {{ step13.tin_type === 'ssn' ? 'Social Security Number' : 'Employer Identification Number' }}
                         </label>
-                        <FormInput v-model="step13.tin" type="password" :placeholder="step13.tin_type === 'ssn' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'" />
+                        <FormInput v-model="step13.tin" type="password" :placeholder="step13.tin_type === 'ssn' ? 'XXX-XX-XXXX' : 'XX-XXXXXXX'" :maxlength="step13.tin_type === 'ssn' ? 11 : 10" inputmode="numeric" @input="onTinInput" />
                         <p v-if="step13Errors.find(e => e.includes('TIN'))" class="text-red-500 text-xs mt-1">{{ step13Errors.find(e => e.includes('TIN')) }}</p>
                     </div>
                 </div>

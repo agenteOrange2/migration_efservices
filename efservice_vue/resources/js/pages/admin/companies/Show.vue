@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref, reactive } from 'vue'
+import Button from '@/components/Base/Button'
 import Lucide from '@/components/Base/Lucide'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 import { Dialog } from '@/components/Base/Headless'
+import { FormInput } from '@/components/Base/Form'
 
 declare function route(name: string, params?: any): string
 
@@ -86,13 +88,13 @@ function fullAddress(c: Company) {
 
 const emailStatusBadge = (sent: boolean, hasEmail: boolean) => {
     if (!hasEmail) return 'bg-slate-100 text-slate-500'
-    return sent ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+    return sent ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-700'
 }
 
 const verificationBadge = (status: string | null) => {
-    if (status === 'verified') return 'bg-emerald-100 text-emerald-700'
-    if (status === 'rejected') return 'bg-red-100 text-red-700'
-    return 'bg-amber-100 text-amber-700'
+    if (status === 'verified') return 'bg-primary/10 text-primary'
+    if (status === 'rejected') return 'bg-danger/10 text-danger'
+    return 'bg-slate-100 text-slate-700'
 }
 </script>
 
@@ -114,26 +116,27 @@ const verificationBadge = (status: string | null) => {
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <Link
-                        :href="route('admin.companies.index')"
-                        class="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm"
-                    >
-                        <Lucide icon="ArrowLeft" class="w-4 h-4" /> Back to List
+                    <Link :href="route('admin.companies.index')">
+                        <Button variant="outline-secondary" class="inline-flex items-center gap-2">
+                            <Lucide icon="ArrowLeft" class="w-4 h-4" /> Back to List
+                        </Button>
                     </Link>
-                    <button
+                    <Button
                         @click="openEdit"
-                        class="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+                        variant="primary"
+                        class="inline-flex items-center gap-2"
                     >
                         <Lucide icon="Edit" class="w-4 h-4" /> Edit Company
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         @click="deleteCompany"
+                        variant="danger"
                         :disabled="company.driver_employment_companies_count > 0"
-                        class="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        class="inline-flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                         :title="company.driver_employment_companies_count > 0 ? 'Cannot delete: has employment records' : 'Delete company'"
                     >
                         <Lucide icon="Trash2" class="w-4 h-4" /> Delete
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>
@@ -253,7 +256,7 @@ const verificationBadge = (status: string | null) => {
                                             :class="emailStatusBadge(h.email_sent, !!h.email)"
                                         >
                                             <span class="w-1.5 h-1.5 rounded-full inline-block"
-                                                :class="!h.email ? 'bg-slate-400' : h.email_sent ? 'bg-emerald-500' : 'bg-amber-500'" />
+                                                :class="!h.email ? 'bg-slate-400' : h.email_sent ? 'bg-primary' : 'bg-slate-500'" />
                                             {{ !h.email ? 'No Email' : h.email_sent ? 'Sent' : 'Not Sent' }}
                                         </span>
                                     </td>
@@ -265,7 +268,7 @@ const verificationBadge = (status: string | null) => {
                                         >
                                             {{ h.verification_status }}
                                         </span>
-                                        <span v-else class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded bg-amber-100 text-amber-700">
+                                        <span v-else class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-700">
                                             Pending
                                         </span>
                                     </td>
@@ -280,7 +283,7 @@ const verificationBadge = (status: string | null) => {
                                             </Link>
                                             <Link
                                                 :href="route('admin.drivers.employment-verification.show', h.id)"
-                                                class="p-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"
+                                                class="p-1.5 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
                                                 title="View verification details"
                                             >
                                                 <Lucide icon="FileCheck" class="w-4 h-4" />
@@ -288,7 +291,7 @@ const verificationBadge = (status: string | null) => {
                                             <button
                                                 v-if="h.email"
                                                 @click="sendVerification(h.id)"
-                                                class="p-1.5 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                                class="p-1.5 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
                                                 title="Send/Resend verification email"
                                             >
                                                 <Lucide icon="Mail" class="w-4 h-4" />
@@ -341,7 +344,7 @@ const verificationBadge = (status: string | null) => {
 
     <!-- Edit Modal -->
     <Dialog :open="showEditModal" @close="showEditModal = false" static-backdrop>
-        <Dialog.Panel class="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <Dialog.Panel class="w-full max-w-[900px] max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-white px-6 pt-6 pb-4 border-b border-slate-200 z-10">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -359,59 +362,60 @@ const verificationBadge = (status: string | null) => {
             <div class="px-6 py-5 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Company Name <span class="text-red-500">*</span></label>
-                    <input v-model="form.company_name" type="text" class="w-full border border-slate-300 rounded-lg text-sm px-3 py-2.5 focus:ring-primary focus:border-primary" />
+                    <FormInput v-model="form.company_name" type="text" />
                     <p v-if="errors.company_name" class="text-xs text-red-500 mt-1">{{ errors.company_name[0] }}</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Address</label>
-                    <input v-model="form.address" type="text" class="w-full border border-slate-300 rounded-lg text-sm px-3 py-2.5 focus:ring-primary focus:border-primary" />
+                    <FormInput v-model="form.address" type="text" />
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">City</label>
-                        <input v-model="form.city" type="text" class="w-full border border-slate-300 rounded-lg text-sm px-3 py-2.5 focus:ring-primary focus:border-primary" />
+                        <FormInput v-model="form.city" type="text" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">State</label>
-                        <input v-model="form.state" type="text" class="w-full border border-slate-300 rounded-lg text-sm px-3 py-2.5 focus:ring-primary focus:border-primary" maxlength="10" />
+                        <FormInput v-model="form.state" type="text" maxlength="10" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">ZIP</label>
-                        <input v-model="form.zip" type="text" class="w-full border border-slate-300 rounded-lg text-sm px-3 py-2.5 focus:ring-primary focus:border-primary" maxlength="20" />
+                        <FormInput v-model="form.zip" type="text" maxlength="20" />
                     </div>
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Contact Person</label>
-                        <input v-model="form.contact" type="text" class="w-full border border-slate-300 rounded-lg text-sm px-3 py-2.5 focus:ring-primary focus:border-primary" />
+                        <FormInput v-model="form.contact" type="text" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                        <input v-model="form.phone" type="text" class="w-full border border-slate-300 rounded-lg text-sm px-3 py-2.5 focus:ring-primary focus:border-primary" />
+                        <FormInput v-model="form.phone" type="text" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Fax</label>
-                        <input v-model="form.fax" type="text" class="w-full border border-slate-300 rounded-lg text-sm px-3 py-2.5 focus:ring-primary focus:border-primary" />
+                        <FormInput v-model="form.fax" type="text" />
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input v-model="form.email" type="email" class="w-full border border-slate-300 rounded-lg text-sm px-3 py-2.5 focus:ring-primary focus:border-primary" />
+                    <FormInput v-model="form.email" type="email" />
                     <p v-if="errors.email" class="text-xs text-red-500 mt-1">{{ errors.email[0] }}</p>
                     <p class="text-xs text-amber-600 mt-1">Changing the email will update all linked driver employment records.</p>
                 </div>
             </div>
 
             <div class="sticky bottom-0 bg-white px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-                <button @click="showEditModal = false" class="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
-                <button
+                <Button variant="outline-secondary" @click="showEditModal = false">Cancel</Button>
+                <Button
                     @click="saveEdit"
+                    variant="primary"
                     :disabled="saving"
-                    class="px-4 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary/90 font-medium disabled:opacity-60 inline-flex items-center gap-2"
+                    class="inline-flex items-center gap-2"
                 >
                     <Lucide v-if="saving" icon="Loader" class="w-4 h-4 animate-spin" />
                     {{ saving ? 'Saving…' : 'Save Changes' }}
-                </button>
+                </Button>
             </div>
         </Dialog.Panel>
     </Dialog>

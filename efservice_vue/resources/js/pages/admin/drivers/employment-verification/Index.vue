@@ -117,6 +117,15 @@ const statusIcon = (status: string) => {
                     Back to Drivers
                 </Link>
             </div>
+            <div class="mt-5 flex justify-end">
+                <Link
+                    :href="route('admin.drivers.employment-verification.new')"
+                    class="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+                >
+                    <Lucide icon="Plus" class="w-4 h-4" />
+                    New Verification
+                </Link>
+            </div>
         </div>
 
         <!-- Filters -->

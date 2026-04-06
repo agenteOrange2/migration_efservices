@@ -22,6 +22,7 @@ class VehicleMaintenance extends Model implements HasMedia
         'unit',
         'service_date',
         'next_service_date',
+        'notes',
         'service_tasks',
         'vendor_mechanic',
         'description',

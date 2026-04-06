@@ -427,6 +427,22 @@ class UserDriverDetail extends Model implements HasMedia
             ->useDisk('public')
             ->singleFile()
             ->acceptsMimeTypes(['application/pdf']);
+
+        $this->addMediaCollection('driving_records')
+            ->useDisk('public')
+            ->acceptsMimeTypes(['application/pdf', 'image/jpeg', 'image/png']);
+
+        $this->addMediaCollection('criminal_records')
+            ->useDisk('public')
+            ->acceptsMimeTypes(['application/pdf', 'image/jpeg', 'image/png']);
+
+        $this->addMediaCollection('medical_records')
+            ->useDisk('public')
+            ->acceptsMimeTypes(['application/pdf', 'image/jpeg', 'image/png']);
+
+        $this->addMediaCollection('clearing_house')
+            ->useDisk('public')
+            ->acceptsMimeTypes(['application/pdf', 'image/jpeg', 'image/png']);
     }
 
     public function registerMediaConversions(Media $media = null): void

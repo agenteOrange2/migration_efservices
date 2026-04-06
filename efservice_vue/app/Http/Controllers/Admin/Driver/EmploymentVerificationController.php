@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Admin\Driver;
 
 use App\Http\Controllers\Controller;
 use App\Mail\EmploymentVerification;
+use App\Models\Carrier;
 use App\Models\Admin\Driver\DriverEmploymentCompany;
 use App\Models\Admin\Driver\EmploymentVerificationToken;
+use App\Models\Admin\Driver\MasterCompany;
 use App\Models\UserDriverDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -16,6 +19,34 @@ use Inertia\Inertia;
 
 class EmploymentVerificationController extends Controller
 {
+    public function create()
+    {
+        $carriers = Carrier::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($carrier) => [
+                'id' => $carrier->id,
+                'name' => $carrier->name,
+            ]);
+
+        $drivers = UserDriverDetail::query()
+            ->with(['user', 'carrier'])
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn ($driver) => [
+                'id' => $driver->id,
+                'carrier_id' => $driver->carrier_id,
+                'carrier_name' => $driver->carrier?->name,
+                'name' => trim(($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')),
+                'email' => $driver->user->email,
+            ]);
+
+        return Inertia::render('admin/drivers/employment-verification/Create', [
+            'carriers' => $carriers,
+            'drivers' => $drivers,
+        ]);
+    }
+
     public function index(Request $request)
     {
         $query = DriverEmploymentCompany::query()
@@ -142,6 +173,122 @@ class EmploymentVerificationController extends Controller
         ]);
     }
 
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'carrier_id' => 'required|exists:carriers,id',
+            'driver_id' => 'required|exists:user_driver_details,id',
+            'company_mode' => 'required|in:existing,new',
+            'selected_company_id' => 'nullable|required_if:company_mode,existing|exists:master_companies,id',
+            'company_name' => 'required|string|max:255',
+            'company_email' => 'nullable|email|max:255',
+            'company_address' => 'nullable|string|max:255',
+            'company_city' => 'nullable|string|max:100',
+            'company_state' => 'nullable|string|max:10',
+            'company_zip' => 'nullable|string|max:20',
+            'company_phone' => 'nullable|string|max:30',
+            'company_contact' => 'nullable|string|max:255',
+            'company_fax' => 'nullable|string|max:30',
+            'employed_from' => 'required|date',
+            'employed_to' => 'nullable|date|after_or_equal:employed_from',
+            'positions_held' => 'required|string|max:255',
+            'subject_to_fmcsr' => 'boolean',
+            'safety_sensitive_function' => 'boolean',
+            'reason_for_leaving' => 'required|string|max:255',
+            'other_reason_description' => 'nullable|string|max:255',
+            'explanation' => 'nullable|string|max:1000',
+            'send_email' => 'boolean',
+            'add_to_directory' => 'boolean',
+        ]);
+
+        $driver = UserDriverDetail::with('user')->findOrFail($validated['driver_id']);
+
+        if ((int) $driver->carrier_id !== (int) $validated['carrier_id']) {
+            return back()->withErrors([
+                'driver_id' => 'The selected driver does not belong to the selected carrier.',
+            ])->withInput();
+        }
+
+        try {
+            $company = DB::transaction(function () use ($validated, $driver) {
+                if ($validated['company_mode'] === 'existing') {
+                    $masterCompany = MasterCompany::findOrFail($validated['selected_company_id']);
+                } else {
+                    $masterCompany = MasterCompany::firstOrCreate(
+                        ['company_name' => $validated['company_name']],
+                        [
+                            'address' => $validated['company_address'] ?? null,
+                            'city' => $validated['company_city'] ?? null,
+                            'state' => $validated['company_state'] ?? null,
+                            'zip' => $validated['company_zip'] ?? null,
+                            'phone' => $validated['company_phone'] ?? null,
+                            'contact' => $validated['company_contact'] ?? null,
+                            'email' => $validated['company_email'] ?? null,
+                            'fax' => $validated['company_fax'] ?? null,
+                        ]
+                    );
+
+                    if (!empty($validated['add_to_directory'])) {
+                        $masterCompany->fill([
+                            'address' => $validated['company_address'] ?? $masterCompany->address,
+                            'city' => $validated['company_city'] ?? $masterCompany->city,
+                            'state' => $validated['company_state'] ?? $masterCompany->state,
+                            'zip' => $validated['company_zip'] ?? $masterCompany->zip,
+                            'phone' => $validated['company_phone'] ?? $masterCompany->phone,
+                            'contact' => $validated['company_contact'] ?? $masterCompany->contact,
+                            'email' => $validated['company_email'] ?? $masterCompany->email,
+                            'fax' => $validated['company_fax'] ?? $masterCompany->fax,
+                        ])->save();
+                    }
+                }
+
+                return DriverEmploymentCompany::create([
+                    'user_driver_detail_id' => $driver->id,
+                    'master_company_id' => $masterCompany->id,
+                    'employed_from' => $validated['employed_from'],
+                    'employed_to' => $validated['employed_to'] ?? null,
+                    'positions_held' => $validated['positions_held'],
+                    'subject_to_fmcsr' => (bool) ($validated['subject_to_fmcsr'] ?? false),
+                    'safety_sensitive_function' => (bool) ($validated['safety_sensitive_function'] ?? false),
+                    'reason_for_leaving' => $validated['reason_for_leaving'],
+                    'other_reason_description' => $validated['other_reason_description'] ?? null,
+                    'explanation' => $validated['explanation'] ?? null,
+                    'email' => $validated['company_email'] ?? $masterCompany->email,
+                    'email_sent' => false,
+                ]);
+            });
+
+            $message = 'Employment verification created successfully.';
+
+            if (!empty($validated['send_email']) && !empty($company->email)) {
+                try {
+                    $attemptNumber = $this->sendVerificationEmail($company);
+                    $message .= " Verification email sent (Attempt #{$attemptNumber}/3).";
+                } catch (\Exception $e) {
+                    Log::warning('Employment verification created but initial email failed', [
+                        'employment_company_id' => $company->id,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    $message .= ' The record was created, but the verification email could not be sent.';
+                }
+            }
+
+            return redirect()
+                ->route('admin.drivers.employment-verification.show', $company->id)
+                ->with('success', $message);
+        } catch (\Exception $e) {
+            Log::error('Failed to create employment verification', [
+                'error' => $e->getMessage(),
+                'driver_id' => $validated['driver_id'] ?? null,
+            ]);
+
+            return back()->withErrors([
+                'general' => 'Failed to create employment verification: ' . $e->getMessage(),
+            ])->withInput();
+        }
+    }
+
     public function resend($id)
     {
         $company = DriverEmploymentCompany::with(['userDriverDetail.user', 'masterCompany'])->findOrFail($id);
@@ -156,41 +303,7 @@ class EmploymentVerificationController extends Controller
         }
 
         try {
-            $token = Str::random(64);
-
-            EmploymentVerificationToken::create([
-                'token'                 => $token,
-                'driver_id'             => $company->user_driver_detail_id,
-                'employment_company_id' => $company->id,
-                'email'                 => $company->email,
-                'expires_at'            => now()->addDays(30),
-            ]);
-
-            $companyName = $company->masterCompany?->company_name ?? ($company->company_name ?? 'Company');
-            $driver = $company->userDriverDetail;
-            $driverName = $driver ? trim(($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')) : 'Driver';
-
-            $employmentData = [
-                'positions_held'            => $company->positions_held,
-                'employed_from'             => $company->employed_from?->format('m/d/Y'),
-                'employed_to'               => $company->employed_to?->format('m/d/Y'),
-                'reason_for_leaving'        => $company->reason_for_leaving,
-                'subject_to_fmcsr'          => $company->subject_to_fmcsr,
-                'safety_sensitive_function' => $company->safety_sensitive_function,
-            ];
-
-            Mail::to($company->email)->send(new EmploymentVerification(
-                $companyName,
-                $driverName,
-                $employmentData,
-                $token,
-                $company->user_driver_detail_id,
-                $company->id,
-            ));
-
-            $company->update(['email_sent' => true]);
-
-            $attemptNumber = $attemptCount + 1;
+            $attemptNumber = $this->sendVerificationEmail($company);
 
             Log::info('Admin resent employment verification email', [
                 'employment_id' => $company->id,
@@ -310,5 +423,49 @@ class EmploymentVerificationController extends Controller
         $token->delete();
 
         return back()->with('success', 'Verification attempt deleted.');
+    }
+
+    protected function sendVerificationEmail(DriverEmploymentCompany $company): int
+    {
+        $attemptCount = EmploymentVerificationToken::where('employment_company_id', $company->id)->count();
+        if ($attemptCount >= 3) {
+            throw new \RuntimeException('Maximum verification attempts (3) reached. No more emails can be sent.');
+        }
+
+        $token = Str::random(64);
+
+        EmploymentVerificationToken::create([
+            'token'                 => $token,
+            'driver_id'             => $company->user_driver_detail_id,
+            'employment_company_id' => $company->id,
+            'email'                 => $company->email,
+            'expires_at'            => now()->addDays(30),
+        ]);
+
+        $companyName = $company->masterCompany?->company_name ?? ($company->company_name ?? 'Company');
+        $driver = $company->userDriverDetail;
+        $driverName = $driver ? trim(($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')) : 'Driver';
+
+        $employmentData = [
+            'positions_held'            => $company->positions_held,
+            'employed_from'             => $company->employed_from?->format('m/d/Y'),
+            'employed_to'               => $company->employed_to?->format('m/d/Y'),
+            'reason_for_leaving'        => $company->reason_for_leaving,
+            'subject_to_fmcsr'          => $company->subject_to_fmcsr,
+            'safety_sensitive_function' => $company->safety_sensitive_function,
+        ];
+
+        Mail::to($company->email)->send(new EmploymentVerification(
+            $companyName,
+            $driverName,
+            $employmentData,
+            $token,
+            $company->user_driver_detail_id,
+            $company->id,
+        ));
+
+        $company->update(['email_sent' => true]);
+
+        return $attemptCount + 1;
     }
 }

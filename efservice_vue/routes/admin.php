@@ -6,14 +6,34 @@ use App\Http\Controllers\Admin\CarrierDocumentController;
 use App\Http\Controllers\Admin\DocumentTypeController;
 use App\Http\Controllers\Admin\MembershipController;
 use App\Http\Controllers\Admin\SafetyDataSystemController;
+use App\Http\Controllers\Admin\TrainingDashboardController;
+use App\Http\Controllers\Admin\TrainingAssignmentsController;
+use App\Http\Controllers\Admin\TrainingsController;
 use App\Http\Controllers\Admin\UserCarrierController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CompanyController;
+use App\Http\Controllers\Admin\Driver\AccidentsController;
 use App\Http\Controllers\Admin\Driver\DriverAdminWizardController;
+use App\Http\Controllers\Admin\Driver\ArchivedDriversController;
+use App\Http\Controllers\Admin\Driver\CoursesController;
 use App\Http\Controllers\Admin\Driver\DriverEmploymentController;
+use App\Http\Controllers\Admin\Driver\DriverLicenseController;
 use App\Http\Controllers\Admin\Driver\DriverListController;
+use App\Http\Controllers\Admin\Driver\MedicalRecordsController;
+use App\Http\Controllers\Admin\Driver\InspectionsController;
+use App\Http\Controllers\Admin\Driver\TrafficConvictionsController;
+use App\Http\Controllers\Admin\Driver\TrainingSchoolsController;
 use App\Http\Controllers\Admin\Driver\DriverTestingController;
 use App\Http\Controllers\Admin\Driver\EmploymentVerificationController;
+use App\Http\Controllers\Admin\Driver\DriverMigrationController;
+use App\Http\Controllers\Admin\Driver\DriverRecruitmentController;
+use App\Http\Controllers\Admin\Vehicles\VehicleController;
+use App\Http\Controllers\Admin\Vehicles\VehicleDashboardController;
+use App\Http\Controllers\Admin\Vehicles\VehicleDocumentController;
+use App\Http\Controllers\Admin\Vehicles\EmergencyRepairController;
+use App\Http\Controllers\Admin\Vehicles\MaintenanceController;
+use App\Http\Controllers\Admin\Vehicles\VehicleMakeController;
+use App\Http\Controllers\Admin\Vehicles\VehicleTypeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -64,6 +84,7 @@ Route::put('carrier-documents/{document}/update-status', [CarrierController::cla
 |--------------------------------------------------------------------------
 */
 Route::get('carriers-documents', [CarrierDocumentController::class, 'listCarriersForDocuments'])->name('carriers-documents.index');
+Route::get('carriers-documents/export/pdf', [CarrierDocumentController::class, 'exportPdf'])->name('carriers-documents.export-pdf');
 Route::get('carriers-documents/{carrier}', [CarrierDocumentController::class, 'index'])->name('carriers-documents.carrier');
 Route::post('carriers-documents/{carrier}/upload/{documentType}', [CarrierDocumentController::class, 'upload'])->name('carriers-documents.upload');
 Route::put('carriers-documents/{carrier}/document/{document}', [CarrierDocumentController::class, 'update'])->name('carriers-documents.update-doc');
@@ -85,6 +106,73 @@ Route::resource('document-types', DocumentTypeController::class)->except(['show'
 |--------------------------------------------------------------------------
 */
 Route::resource('memberships', MembershipController::class);
+Route::get('vehicles/dashboard', [VehicleDashboardController::class, 'index'])->name('vehicles.dashboard');
+Route::prefix('maintenance')->name('maintenance.')->group(function () {
+    Route::get('/', [MaintenanceController::class, 'index'])->name('index');
+    Route::get('create', [MaintenanceController::class, 'create'])->name('create');
+    Route::post('/', [MaintenanceController::class, 'store'])->name('store');
+    Route::get('calendar', [MaintenanceController::class, 'calendar'])->name('calendar');
+    Route::get('reports', [MaintenanceController::class, 'reports'])->name('reports');
+    Route::get('{maintenance}', [MaintenanceController::class, 'show'])->name('show');
+    Route::get('{maintenance}/edit', [MaintenanceController::class, 'edit'])->name('edit');
+    Route::put('{maintenance}', [MaintenanceController::class, 'update'])->name('update');
+    Route::delete('{maintenance}', [MaintenanceController::class, 'destroy'])->name('destroy');
+    Route::put('{maintenance}/toggle-status', [MaintenanceController::class, 'toggleStatus'])->name('toggle-status');
+    Route::post('{maintenance}/reschedule', [MaintenanceController::class, 'reschedule'])->name('reschedule');
+    Route::post('{maintenance}/attachments', [MaintenanceController::class, 'storeDocuments'])->name('attachments.store');
+    Route::delete('{maintenance}/attachments/{media}', [MaintenanceController::class, 'deleteDocument'])->name('attachments.destroy');
+    Route::post('{maintenance}/generate-report', [MaintenanceController::class, 'generateReport'])->name('generate-report');
+    Route::delete('{maintenance}/reports/{document}', [MaintenanceController::class, 'deleteReport'])->name('delete-report');
+});
+Route::prefix('vehicles/emergency-repairs')->name('vehicles.emergency-repairs.')->group(function () {
+    Route::get('/', [EmergencyRepairController::class, 'index'])->name('index');
+    Route::get('create', [EmergencyRepairController::class, 'create'])->name('create');
+    Route::post('/', [EmergencyRepairController::class, 'store'])->name('store');
+    Route::get('{emergencyRepair}', [EmergencyRepairController::class, 'show'])->name('show');
+    Route::get('{emergencyRepair}/edit', [EmergencyRepairController::class, 'edit'])->name('edit');
+    Route::put('{emergencyRepair}', [EmergencyRepairController::class, 'update'])->name('update');
+    Route::delete('{emergencyRepair}', [EmergencyRepairController::class, 'destroy'])->name('destroy');
+    Route::post('{emergencyRepair}/attachments', [EmergencyRepairController::class, 'uploadDocument'])->name('attachments.store');
+    Route::delete('{emergencyRepair}/attachments/{media}', [EmergencyRepairController::class, 'deleteFile'])->name('attachments.destroy');
+    Route::post('{emergencyRepair}/generate-report', [EmergencyRepairController::class, 'generateSingleReport'])->name('generate-report');
+    Route::delete('{emergencyRepair}/reports/{document}', [EmergencyRepairController::class, 'deleteRepairReport'])->name('delete-report');
+});
+Route::prefix('vehicles')->name('vehicles.')->group(function () {
+    Route::get('/', [VehicleController::class, 'index'])->name('index');
+    Route::get('create', [VehicleController::class, 'create'])->name('create');
+    Route::post('/', [VehicleController::class, 'store'])->name('store');
+    Route::get('unassigned', [VehicleController::class, 'unassigned'])->name('unassigned');
+    Route::get('{vehicle}/maintenance', [MaintenanceController::class, 'vehicleIndex'])->name('maintenance.index');
+    Route::get('{vehicle}/maintenance/create', [MaintenanceController::class, 'createForVehicle'])->name('maintenance.create');
+    Route::get('{vehicle}/repairs', [EmergencyRepairController::class, 'vehicleIndex'])->name('repairs.index');
+    Route::get('{vehicle}/repairs/create', [EmergencyRepairController::class, 'createForVehicle'])->name('repairs.create');
+    Route::get('{vehicle}/driver-assignment-history', [VehicleController::class, 'driverAssignmentHistory'])->name('driver-assignment-history');
+    Route::get('{vehicle}/documents', [VehicleDocumentController::class, 'index'])->name('documents.index');
+    Route::post('{vehicle}/documents', [VehicleDocumentController::class, 'store'])->name('documents.store');
+    Route::put('{vehicle}/documents/{document}', [VehicleDocumentController::class, 'update'])->name('documents.update');
+    Route::delete('{vehicle}/documents/{document}', [VehicleDocumentController::class, 'destroy'])->name('documents.destroy');
+    Route::get('{vehicle}/edit', [VehicleController::class, 'edit'])->name('edit');
+    Route::get('{vehicle}', [VehicleController::class, 'show'])->name('show');
+    Route::put('{vehicle}', [VehicleController::class, 'update'])->name('update');
+    Route::delete('{vehicle}', [VehicleController::class, 'destroy'])->name('destroy');
+});
+Route::get('vehicles-documents', [VehicleDocumentController::class, 'overview'])->name('vehicles-documents.index');
+Route::resource('vehicle-makes', VehicleMakeController::class)->only(['index', 'store', 'update', 'destroy'])->names('vehicle-makes');
+Route::resource('vehicle-types', VehicleTypeController::class)->only(['index', 'store', 'update', 'destroy'])->names('vehicle-types');
+Route::get('training-dashboard', [TrainingDashboardController::class, 'index'])->name('training-dashboard.index');
+Route::get('training-dashboard/export', [TrainingDashboardController::class, 'export'])->name('training-dashboard.export');
+Route::prefix('trainings')->name('trainings.')->group(function () {
+    Route::delete('media/{media}', [TrainingsController::class, 'destroyMedia'])->name('media.destroy');
+    Route::get('{training}/assign', [TrainingAssignmentsController::class, 'createForTraining'])->name('assign.form');
+    Route::post('{training}/assign', [TrainingAssignmentsController::class, 'storeForTraining'])->name('assign');
+});
+Route::resource('trainings', TrainingsController::class);
+Route::prefix('training-assignments')->name('training-assignments.')->group(function () {
+    Route::post('{assignment}/mark-complete', [TrainingAssignmentsController::class, 'markComplete'])->name('mark-complete');
+});
+Route::resource('training-assignments', TrainingAssignmentsController::class)->parameters([
+    'training-assignments' => 'training_assignment',
+]);
 
 /*
 |--------------------------------------------------------------------------
@@ -99,8 +187,88 @@ Route::post('users/{user}/delete-photo', [UserController::class, 'deletePhoto'])
 | Admin Drivers (Fase 3.4)
 |--------------------------------------------------------------------------
 */
+Route::prefix('licenses')->name('licenses.')->group(function () {
+    Route::get('documents', [DriverLicenseController::class, 'documents'])->name('documents.index');
+    Route::get('{license}/documents', [DriverLicenseController::class, 'showDocuments'])->name('documents.show');
+    Route::delete('media/{media}', [DriverLicenseController::class, 'destroyMedia'])->name('media.destroy');
+});
+Route::resource('licenses', DriverLicenseController::class)->except(['show']);
+
+Route::prefix('medical-records')->name('medical-records.')->group(function () {
+    Route::get('{medical_record}/documents', [MedicalRecordsController::class, 'showDocuments'])->name('documents.show');
+    Route::delete('media/{media}', [MedicalRecordsController::class, 'destroyMedia'])->name('media.destroy');
+});
+Route::resource('medical-records', MedicalRecordsController::class)->except(['show']);
+Route::prefix('training-schools')->name('training-schools.')->group(function () {
+    Route::get('documents', [TrainingSchoolsController::class, 'documents'])->name('documents.index');
+    Route::get('{training_school}/documents', [TrainingSchoolsController::class, 'showDocuments'])->name('documents.show');
+    Route::delete('media/{media}', [TrainingSchoolsController::class, 'destroyMedia'])->name('media.destroy');
+});
+Route::resource('training-schools', TrainingSchoolsController::class);
+Route::prefix('courses')->name('courses.')->group(function () {
+    Route::get('all/documents', [CoursesController::class, 'getAllDocuments'])->name('all-documents');
+    Route::get('{course}/documents', [CoursesController::class, 'getFiles'])->name('documents');
+    Route::delete('document/{document}', [CoursesController::class, 'destroyMedia'])->name('document.delete');
+});
+Route::resource('courses', CoursesController::class)->except(['show']);
+Route::get('drivers/{driver}/course-history', [CoursesController::class, 'driverHistory'])->name('drivers.course-history');
+Route::prefix('traffic')->name('traffic.')->group(function () {
+    Route::get('/', [TrafficConvictionsController::class, 'index'])->name('index');
+    Route::get('create', [TrafficConvictionsController::class, 'create'])->name('create');
+    Route::post('/', [TrafficConvictionsController::class, 'store'])->name('store');
+    Route::get('driver/{driver}/history', [TrafficConvictionsController::class, 'driverHistory'])->name('driver-history');
+    Route::get('{conviction}/edit', [TrafficConvictionsController::class, 'edit'])->name('edit');
+    Route::put('{conviction}', [TrafficConvictionsController::class, 'update'])->name('update');
+    Route::delete('{conviction}', [TrafficConvictionsController::class, 'destroy'])->name('destroy');
+    Route::get('{conviction}/documents', [TrafficConvictionsController::class, 'showDocuments'])->name('documents.show');
+    Route::delete('media/{media}', [TrafficConvictionsController::class, 'destroyMedia'])->name('media.destroy');
+});
+Route::prefix('inspections')->name('inspections.')->group(function () {
+    Route::get('/', [InspectionsController::class, 'index'])->name('index');
+    Route::get('create', [InspectionsController::class, 'create'])->name('create');
+    Route::post('/', [InspectionsController::class, 'store'])->name('store');
+    Route::get('documents', [InspectionsController::class, 'documents'])->name('documents.index');
+    Route::get('driver/{driver}/history', [InspectionsController::class, 'driverHistory'])->name('driver-history');
+    Route::get('driver/{driver}/documents', [InspectionsController::class, 'driverDocuments'])->name('driver-documents');
+    Route::get('{inspection}/edit', [InspectionsController::class, 'edit'])->name('edit');
+    Route::put('{inspection}', [InspectionsController::class, 'update'])->name('update');
+    Route::delete('{inspection}', [InspectionsController::class, 'destroy'])->name('destroy');
+    Route::delete('media/{media}', [InspectionsController::class, 'destroyMedia'])->name('media.destroy');
+});
+Route::prefix('accidents')->name('accidents.')->group(function () {
+    Route::get('/', [AccidentsController::class, 'index'])->name('index');
+    Route::get('create', [AccidentsController::class, 'create'])->name('create');
+    Route::post('/', [AccidentsController::class, 'store'])->name('store');
+    Route::get('documents', [AccidentsController::class, 'documents'])->name('documents.index');
+    Route::get('driver/{driver}/history', [AccidentsController::class, 'driverHistory'])->name('driver-history');
+    Route::get('carrier/{carrier}/history', [AccidentsController::class, 'carrierHistory'])->name('carrier-history');
+    Route::get('{accident}/edit', [AccidentsController::class, 'edit'])->name('edit');
+    Route::put('{accident}', [AccidentsController::class, 'update'])->name('update');
+    Route::delete('{accident}', [AccidentsController::class, 'destroy'])->name('destroy');
+    Route::get('{accident}/documents', [AccidentsController::class, 'showDocuments'])->name('documents.show');
+    Route::delete('documents/{document}', [AccidentsController::class, 'destroyDocument'])->name('documents.destroy');
+    Route::delete('media/{mediaId}', [AccidentsController::class, 'destroyMedia'])->name('media.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Driver Testings – Global Index
+|--------------------------------------------------------------------------
+*/
+Route::prefix('driver-testings')->name('driver-testings.')->group(function () {
+    Route::get('/', [DriverTestingController::class, 'index'])->name('index');
+    Route::get('{testing}', [DriverTestingController::class, 'show'])->name('show');
+    Route::get('{testing}/download-pdf', [DriverTestingController::class, 'downloadPdf'])->name('download-pdf');
+    Route::post('{testing}/regenerate-pdf', [DriverTestingController::class, 'regeneratePdf'])->name('regenerate-pdf');
+    Route::post('{testing}/attachments', [DriverTestingController::class, 'uploadAttachment'])->name('upload-attachment');
+    Route::delete('{testing}/attachments/{media}', [DriverTestingController::class, 'deleteAttachment'])->name('delete-attachment');
+    Route::delete('{testing}', [DriverTestingController::class, 'destroyGlobal'])->name('destroy');
+});
+
 Route::prefix('drivers')->name('drivers.')->group(function () {
     Route::get('/', [DriverListController::class, 'index'])->name('index');
+    Route::get('archived', [ArchivedDriversController::class, 'index'])->name('archived.index');
+    Route::get('archived/{archive}', [ArchivedDriversController::class, 'show'])->name('archived.show');
 
     // Admin Driver Registration Wizard (Phase 3.6)
     // NOTE: wizard/create must appear before {driver} pattern
@@ -118,6 +286,8 @@ Route::prefix('drivers')->name('drivers.')->group(function () {
     // Employment Verification Management page (static prefix — must come before {driver} wildcard)
     Route::prefix('employment-verification')->name('employment-verification.')->group(function () {
         Route::get('/', [EmploymentVerificationController::class, 'index'])->name('index');
+        Route::get('new', [EmploymentVerificationController::class, 'create'])->name('new');
+        Route::post('new', [EmploymentVerificationController::class, 'store'])->name('store');
         Route::get('{id}', [EmploymentVerificationController::class, 'show'])->name('show');
         Route::post('{id}/resend', [EmploymentVerificationController::class, 'resend'])->name('resend');
         Route::post('{id}/toggle-email-flag', [EmploymentVerificationController::class, 'toggleEmailFlag'])->name('toggle-email-flag');
@@ -129,6 +299,11 @@ Route::prefix('drivers')->name('drivers.')->group(function () {
     });
 
     Route::get('{driver}/documents/download', [DriverListController::class, 'downloadDocuments'])->name('documents.download');
+
+    // Migration wizard (dedicated Inertia page)
+    Route::get('{driver}/migration', [DriverMigrationController::class, 'wizard'])->name('migration.wizard');
+    Route::post('{driver}/migration', [DriverMigrationController::class, 'execute'])->name('migration.execute');
+
     Route::get('{driver}', [DriverListController::class, 'show'])->name('show');
     Route::put('{driver}/activate', [DriverListController::class, 'activate'])->name('activate');
     Route::put('{driver}/deactivate', [DriverListController::class, 'deactivate'])->name('deactivate');
@@ -142,6 +317,40 @@ Route::prefix('drivers')->name('drivers.')->group(function () {
         Route::put('{testing}', [DriverTestingController::class, 'update'])->name('update');
         Route::delete('{testing}', [DriverTestingController::class, 'destroy'])->name('destroy');
     });
+});
+
+// Migration rollback (keyed by MigrationRecord, separate from driver prefix)
+Route::post('migration-records/{record}/rollback', [DriverMigrationController::class, 'rollback'])->name('migration-records.rollback');
+
+/*
+|--------------------------------------------------------------------------
+| Driver Recruitment Management
+|--------------------------------------------------------------------------
+*/
+Route::prefix('driver-recruitment')->name('driver-recruitment.')->group(function () {
+    Route::get('/', [DriverRecruitmentController::class, 'index'])->name('index');
+    Route::get('{driver}', [DriverRecruitmentController::class, 'show'])->name('show');
+    Route::post('{driver}/checklist', [DriverRecruitmentController::class, 'updateChecklist'])->name('checklist.update');
+    Route::post('{driver}/approve', [DriverRecruitmentController::class, 'approve'])->name('approve');
+    Route::post('{driver}/reject', [DriverRecruitmentController::class, 'reject'])->name('reject');
+    // Image uploads
+    Route::post('{driver}/licenses/{license}/upload-image', [DriverRecruitmentController::class, 'uploadLicenseImage'])->name('licenses.upload-image');
+    Route::post('{driver}/upload-medical-image', [DriverRecruitmentController::class, 'uploadMedicalImage'])->name('upload-medical-image');
+    Route::post('{driver}/upload-document', [DriverRecruitmentController::class, 'uploadDocument'])->name('upload-document');
+    Route::delete('{driver}/documents/{media}', [DriverRecruitmentController::class, 'destroyDocument'])->name('documents.destroy');
+    // Store / Update / Delete records
+    Route::post('{driver}/training-schools', [DriverRecruitmentController::class, 'storeTrainingSchool'])->name('training-schools.store');
+    Route::post('{driver}/training-schools/{school}', [DriverRecruitmentController::class, 'updateTrainingSchool'])->name('training-schools.update');
+    Route::delete('{driver}/training-schools/{school}', [DriverRecruitmentController::class, 'destroyTrainingSchool'])->name('training-schools.destroy');
+    Route::post('{driver}/courses', [DriverRecruitmentController::class, 'storeCourse'])->name('courses.store');
+    Route::post('{driver}/courses/{course}', [DriverRecruitmentController::class, 'updateCourse'])->name('courses.update');
+    Route::delete('{driver}/courses/{course}', [DriverRecruitmentController::class, 'destroyCourse'])->name('courses.destroy');
+    Route::post('{driver}/traffic-convictions', [DriverRecruitmentController::class, 'storeTrafficConviction'])->name('traffic-convictions.store');
+    Route::post('{driver}/traffic-convictions/{conviction}', [DriverRecruitmentController::class, 'updateTrafficConviction'])->name('traffic-convictions.update');
+    Route::delete('{driver}/traffic-convictions/{conviction}', [DriverRecruitmentController::class, 'destroyTrafficConviction'])->name('traffic-convictions.destroy');
+    Route::post('{driver}/accidents', [DriverRecruitmentController::class, 'storeAccident'])->name('accidents.store');
+    Route::post('{driver}/accidents/{accident}', [DriverRecruitmentController::class, 'updateAccident'])->name('accidents.update');
+    Route::delete('{driver}/accidents/{accident}', [DriverRecruitmentController::class, 'destroyAccident'])->name('accidents.destroy');
 });
 
 /*

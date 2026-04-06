@@ -72,4 +72,12 @@
 
   --container-2xl: 1320px;
   --breakpoint-3xl: 1600px;
+
+  /* Sidebar colors - dark navy theme matching theme-1/theme-2 gradient */
+  --color-sidebar: #03045e;
+  --color-sidebar-foreground: #ffffff;
+  --color-sidebar-accent: rgb(255 255 255 / 0.1);
+  --color-sidebar-accent-foreground: #ffffff;
+  --color-sidebar-border: rgb(255 255 255 / 0.15);
+  --color-sidebar-ring: rgb(255 255 255 / 0.3);
 }

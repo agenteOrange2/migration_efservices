@@ -117,15 +117,17 @@ class DriverArchiveService
 
         return [
             'id' => $medical->id,
-            'expiration_date' => $medical->medical_card_expiration_date?->format('Y-m-d'),
-            'examiner_name' => $medical->medical_examiner_name ?? null,
-            'examiner_registry_number' => $medical->medical_examiner_registry_number ?? null,
+            'social_security_number' => $medical->social_security_number ?? null,
             'hire_date' => $medical->hire_date?->format('Y-m-d'),
             'location' => $medical->location ?? null,
             'is_suspended' => $medical->is_suspended ?? false,
             'suspension_date' => $medical->suspension_date?->format('Y-m-d'),
             'is_terminated' => $medical->is_terminated ?? false,
             'termination_date' => $medical->termination_date?->format('Y-m-d'),
+            'expiration_date' => $medical->medical_card_expiration_date?->format('Y-m-d'),
+            'examiner_name' => $medical->medical_examiner_name ?? null,
+            'examiner_registry_number' => $medical->medical_examiner_registry_number ?? null,
+            'status' => $medical->status,
         ];
     }
 

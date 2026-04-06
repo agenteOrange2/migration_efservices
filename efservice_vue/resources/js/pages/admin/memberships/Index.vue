@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import { FormInput, FormSelect } from '@/components/Base/Form'
-import Button from '@/components/Base/Button'
+import { Dialog } from '@/components/Base/Headless'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 interface Membership {
@@ -21,7 +21,8 @@ interface Membership {
     status: number
     show_in_register: number
     carriers_count: number
-    created_at: string
+    created_at?: string
+    image_url?: string | null
 }
 
 const props = defineProps<{
@@ -32,6 +33,8 @@ defineOptions({ layout: RazeLayout })
 
 const search = ref('')
 const statusFilter = ref('')
+const deleteModalOpen = ref(false)
+const selectedMembership = ref<Membership | null>(null)
 
 const filteredMemberships = computed(() => {
     let result = props.memberships
@@ -45,15 +48,31 @@ const filteredMemberships = computed(() => {
     return result
 })
 
-function deleteMembership(membership: Membership) {
-    if (confirm(`Are you sure you want to delete "${membership.name}"?`)) {
-        router.delete(route('admin.memberships.destroy', membership.id))
-    }
-}
-
 function formatPrice(value: number | null): string {
     if (value === null || value === undefined) return '-'
     return `$${Number(value).toFixed(2)}`
+}
+
+const stats = computed(() => ({
+    total: props.memberships.length,
+    active: props.memberships.filter(m => m.status === 1).length,
+    visible: props.memberships.filter(m => Boolean(m.show_in_register)).length,
+    assignedCarriers: props.memberships.reduce((sum, item) => sum + item.carriers_count, 0),
+}))
+
+function openDeleteModal(membership: Membership) {
+    selectedMembership.value = membership
+    deleteModalOpen.value = true
+}
+
+function confirmDelete() {
+    if (!selectedMembership.value) return
+    router.delete(route('admin.memberships.destroy', selectedMembership.value.id), {
+        onSuccess: () => {
+            deleteModalOpen.value = false
+            selectedMembership.value = null
+        },
+    })
 }
 </script>
 
@@ -66,16 +85,35 @@ function formatPrice(value: number | null): string {
                 <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
                         <div class="p-3 bg-primary/10 rounded-xl border border-primary/20">
-                            <Lucide icon="CreditCard" class="w-8 h-8 text-primary" />
+                            <Lucide icon="BadgeDollarSign" class="w-8 h-8 text-primary" />
                         </div>
                         <div>
                             <h1 class="text-2xl font-bold text-slate-800">Membership Management</h1>
-                            <p class="text-slate-500">Manage subscription plans and pricing</p>
+                            <p class="text-slate-500">Manage plans, pricing rules, and registration visibility.</p>
                         </div>
                     </div>
                     <Link :href="route('admin.memberships.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
                         <Lucide icon="Plus" class="w-4 h-4" /> Add Membership
                     </Link>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                <div class="box box--stacked p-5">
+                    <p class="text-sm text-slate-500">Total Plans</p>
+                    <p class="text-2xl font-semibold text-slate-800 mt-1">{{ stats.total }}</p>
+                </div>
+                <div class="box box--stacked p-5">
+                    <p class="text-sm text-slate-500">Active Plans</p>
+                    <p class="text-2xl font-semibold text-success mt-1">{{ stats.active }}</p>
+                </div>
+                <div class="box box--stacked p-5">
+                    <p class="text-sm text-slate-500">Visible In Signup</p>
+                    <p class="text-2xl font-semibold text-primary mt-1">{{ stats.visible }}</p>
+                </div>
+                <div class="box box--stacked p-5">
+                    <p class="text-sm text-slate-500">Assigned Carriers</p>
+                    <p class="text-2xl font-semibold text-slate-800 mt-1">{{ stats.assignedCarriers }}</p>
                 </div>
             </div>
 
@@ -109,12 +147,20 @@ function formatPrice(value: number | null): string {
                         <tbody>
                             <tr v-for="m in filteredMemberships" :key="m.id" class="border-b border-slate-100 hover:bg-slate-50/50 transition">
                                 <td class="px-5 py-4">
-                                    <div class="font-semibold text-slate-700">{{ m.name }}</div>
-                                    <div class="text-xs text-slate-400 mt-0.5 line-clamp-1">{{ m.description }}</div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-12 w-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
+                                            <img v-if="m.image_url" :src="m.image_url" :alt="m.name" class="h-full w-full object-cover" />
+                                            <Lucide v-else icon="Image" class="w-5 h-5 text-slate-300" />
+                                        </div>
+                                        <div>
+                                            <div class="font-semibold text-slate-700">{{ m.name }}</div>
+                                            <div class="text-xs text-slate-400 mt-0.5 line-clamp-1">{{ m.description }}</div>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="m.pricing_type === 'plan' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'">
-                                        {{ m.pricing_type === 'plan' ? 'Bundle' : 'Individual' }}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="m.pricing_type === 'plan' ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'">
+                                        {{ m.pricing_type === 'plan' ? 'Plan' : 'Individual' }}
                                     </span>
                                 </td>
                                 <td class="px-5 py-4 text-sm">
@@ -138,12 +184,12 @@ function formatPrice(value: number | null): string {
                                     <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-bold">{{ m.carriers_count }}</span>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="m.status ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="m.status ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
                                         {{ m.status ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="m.show_in_register ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="m.show_in_register ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-500'">
                                         {{ m.show_in_register ? 'Visible' : 'Hidden' }}
                                     </span>
                                 </td>
@@ -152,10 +198,10 @@ function formatPrice(value: number | null): string {
                                         <Link :href="route('admin.memberships.show', m.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="route('admin.memberships.edit', m.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit">
+                                        <Link :href="route('admin.memberships.edit', m.id)" class="p-1.5 text-slate-400 hover:text-warning transition" title="Edit">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
-                                        <button @click="deleteMembership(m)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
+                                        <button @click="openDeleteModal(m)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
                                             <Lucide icon="Trash2" class="w-4 h-4" />
                                         </button>
                                     </div>
@@ -173,4 +219,29 @@ function formatPrice(value: number | null): string {
             </div>
         </div>
     </div>
+
+    <Dialog :open="deleteModalOpen" @close="deleteModalOpen = false" size="lg" staticBackdrop>
+        <Dialog.Panel class="w-full max-w-[600px] overflow-hidden">
+            <div class="p-8 text-center">
+                <div class="flex justify-end mb-2">
+                    <button type="button" class="text-slate-400 hover:text-slate-600" @click="deleteModalOpen = false">
+                        <Lucide icon="X" class="w-5 h-5" />
+                    </button>
+                </div>
+                <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border-2 border-red-600 text-red-600">
+                    <Lucide icon="X" class="w-8 h-8" />
+                </div>
+                <h3 class="text-[44px] leading-none font-light text-slate-600 mb-4">Are you sure?</h3>
+                <p class="text-[15px] leading-8 text-slate-500 max-w-[420px] mx-auto">
+                    Do you really want to delete this membership?<br>
+                    This process cannot be undone.
+                </p>
+                <p class="mt-5 text-2xl font-medium text-slate-700">{{ selectedMembership?.name ?? 'Membership' }}</p>
+                <div class="mt-8 flex items-center justify-center gap-4">
+                    <button type="button" class="min-w-[110px] rounded-xl border border-slate-300 px-6 py-3 text-lg text-slate-600 hover:bg-slate-50" @click="deleteModalOpen = false">Cancel</button>
+                    <button type="button" class="min-w-[110px] rounded-xl bg-red-600 px-6 py-3 text-lg font-semibold text-white hover:bg-red-700" @click="confirmDelete">Delete</button>
+                </div>
+            </div>
+        </Dialog.Panel>
+    </Dialog>
 </template>

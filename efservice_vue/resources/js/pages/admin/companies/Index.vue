@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref, reactive, watch } from 'vue'
+import Button from '@/components/Base/Button'
 import Lucide from '@/components/Base/Lucide'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 import { Dialog } from '@/components/Base/Headless'
+import { FormInput, FormSelect } from '@/components/Base/Form'
 import { useDebounceFn } from '@vueuse/core'
 
 declare function route(name: string, params?: any): string
@@ -154,13 +156,10 @@ function deleteCompany(company: Company) {
                         <p class="text-slate-500 text-sm">Manage employment verification companies database</p>
                     </div>
                 </div>
-                <button
-                    @click="openCreate"
-                    class="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors font-medium"
-                >
+                <Button variant="primary" class="inline-flex items-center gap-2" @click="openCreate">
                     <Lucide icon="Plus" class="w-4 h-4" />
                     Add New Company
-                </button>
+                </Button>
             </div>
         </div>
 
@@ -173,34 +172,33 @@ function deleteCompany(company: Company) {
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-slate-700 mb-1">Search</label>
-                    <input
+                    <FormInput
                         v-model="search"
                         type="text"
                         placeholder="Company name, city, contact, email..."
-                        class="w-full text-sm border-slate-200 shadow-sm rounded-lg py-2.5 px-3 border focus:ring-primary focus:border-primary"
                     />
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">State</label>
-                    <select v-model="stateFilter" class="w-full text-sm border-slate-200 shadow-sm rounded-lg py-2.5 px-3 border focus:ring-primary focus:border-primary">
+                    <FormSelect v-model="stateFilter" class="w-full">
                         <option value="">All States</option>
                         <option v-for="s in allStates" :key="s" :value="s">{{ s }}</option>
-                    </select>
+                    </FormSelect>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">City</label>
-                    <select v-model="cityFilter" class="w-full text-sm border-slate-200 shadow-sm rounded-lg py-2.5 px-3 border focus:ring-primary focus:border-primary">
+                    <FormSelect v-model="cityFilter" class="w-full">
                         <option value="">All Cities</option>
                         <option v-for="c in allCities" :key="c" :value="c">{{ c }}</option>
-                    </select>
+                    </FormSelect>
                 </div>
                 <div class="md:col-span-4 flex gap-2">
-                    <button @click="applyFilters" class="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                    <Button variant="primary" class="inline-flex items-center gap-2" @click="applyFilters">
                         <Lucide icon="Search" class="w-4 h-4" /> Apply Filters
-                    </button>
-                    <button @click="clearFilters" class="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                    </Button>
+                    <Button variant="outline-secondary" class="inline-flex items-center gap-2" @click="clearFilters">
                         <Lucide icon="X" class="w-4 h-4" /> Clear
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>
@@ -295,7 +293,7 @@ function deleteCompany(company: Company) {
                                         @click="deleteCompany(company)"
                                         title="Delete company"
                                         :disabled="company.driver_employment_companies_count > 0"
-                                        class="p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        class="p-1.5 rounded-lg border border-danger/30 text-danger hover:bg-danger/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                         <Lucide icon="Trash2" class="w-4 h-4" />
                                     </button>
@@ -308,9 +306,9 @@ function deleteCompany(company: Company) {
                                     <Lucide icon="Building2" class="w-12 h-12 text-slate-300" />
                                     <p class="text-slate-500 font-medium">No companies found</p>
                                     <p class="text-sm text-slate-400">Try adjusting your filters or add a new company</p>
-                                    <button @click="openCreate" class="mt-2 inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 text-sm font-medium">
+                                    <Button variant="primary" class="mt-2 inline-flex items-center gap-2" @click="openCreate">
                                         <Lucide icon="Plus" class="w-4 h-4" /> Add Company
-                                    </button>
+                                    </Button>
                                 </div>
                             </td>
                         </tr>
@@ -343,7 +341,7 @@ function deleteCompany(company: Company) {
 
     <!-- Create / Edit Modal -->
     <Dialog :open="showModal" @close="showModal = false" static-backdrop>
-        <Dialog.Panel class="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <Dialog.Panel class="w-full max-w-[900px] max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-white px-6 pt-6 pb-4 border-b border-slate-200 z-10">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -364,29 +362,29 @@ function deleteCompany(company: Company) {
                 <!-- Company Name -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Company Name <span class="text-red-500">*</span></label>
-                    <input v-model="form.company_name" type="text" class="w-full border-slate-300 rounded-lg text-sm px-3 py-2.5 border focus:ring-primary focus:border-primary" placeholder="Company name" />
+                    <FormInput v-model="form.company_name" type="text" placeholder="Company name" />
                     <p v-if="errors.company_name" class="text-xs text-red-500 mt-1">{{ errors.company_name[0] }}</p>
                 </div>
 
                 <!-- Address -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Address</label>
-                    <input v-model="form.address" type="text" class="w-full border-slate-300 rounded-lg text-sm px-3 py-2.5 border focus:ring-primary focus:border-primary" placeholder="Street address" />
+                    <FormInput v-model="form.address" type="text" placeholder="Street address" />
                 </div>
 
                 <!-- City / State / Zip -->
                 <div class="grid grid-cols-3 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">City</label>
-                        <input v-model="form.city" type="text" class="w-full border-slate-300 rounded-lg text-sm px-3 py-2.5 border focus:ring-primary focus:border-primary" />
+                        <FormInput v-model="form.city" type="text" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">State</label>
-                        <input v-model="form.state" type="text" class="w-full border-slate-300 rounded-lg text-sm px-3 py-2.5 border focus:ring-primary focus:border-primary" maxlength="10" />
+                        <FormInput v-model="form.state" type="text" maxlength="10" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">ZIP</label>
-                        <input v-model="form.zip" type="text" class="w-full border-slate-300 rounded-lg text-sm px-3 py-2.5 border focus:ring-primary focus:border-primary" maxlength="20" />
+                        <FormInput v-model="form.zip" type="text" maxlength="20" />
                     </div>
                 </div>
 
@@ -394,22 +392,22 @@ function deleteCompany(company: Company) {
                 <div class="grid grid-cols-3 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Contact Person</label>
-                        <input v-model="form.contact" type="text" class="w-full border-slate-300 rounded-lg text-sm px-3 py-2.5 border focus:ring-primary focus:border-primary" />
+                        <FormInput v-model="form.contact" type="text" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                        <input v-model="form.phone" type="text" class="w-full border-slate-300 rounded-lg text-sm px-3 py-2.5 border focus:ring-primary focus:border-primary" />
+                        <FormInput v-model="form.phone" type="text" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Fax</label>
-                        <input v-model="form.fax" type="text" class="w-full border-slate-300 rounded-lg text-sm px-3 py-2.5 border focus:ring-primary focus:border-primary" />
+                        <FormInput v-model="form.fax" type="text" />
                     </div>
                 </div>
 
                 <!-- Email -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input v-model="form.email" type="email" class="w-full border-slate-300 rounded-lg text-sm px-3 py-2.5 border focus:ring-primary focus:border-primary" placeholder="contact@company.com" />
+                    <FormInput v-model="form.email" type="email" placeholder="contact@company.com" />
                     <p v-if="errors.email" class="text-xs text-red-500 mt-1">{{ errors.email[0] }}</p>
                     <p v-if="modalMode === 'edit'" class="text-xs text-amber-600 mt-1">
                         Changing the email will update all linked driver employment records.
@@ -418,17 +416,18 @@ function deleteCompany(company: Company) {
             </div>
 
             <div class="sticky bottom-0 bg-white px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-                <button @click="showModal = false" class="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors font-medium">
+                <Button variant="outline-secondary" @click="showModal = false">
                     Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                     @click="saveForm"
+                    variant="primary"
                     :disabled="saving"
-                    class="px-4 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors font-medium disabled:opacity-60 flex items-center gap-2"
+                    class="flex items-center gap-2"
                 >
                     <Lucide v-if="saving" icon="Loader" class="w-4 h-4 animate-spin" />
                     {{ saving ? 'Saving…' : (modalMode === 'create' ? 'Create Company' : 'Save Changes') }}
-                </button>
+                </Button>
             </div>
         </Dialog.Panel>
     </Dialog>

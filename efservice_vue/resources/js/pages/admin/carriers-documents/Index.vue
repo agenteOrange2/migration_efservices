@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { Head, Link, router } from '@inertiajs/vue3'
+import { ref, watch } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import { FormInput, FormSelect } from '@/components/Base/Form'
 import RazeLayout from '@/layouts/RazeLayout.vue'
+
+declare function route(name: string, params?: any): string
+
+defineOptions({ layout: RazeLayout })
 
 interface CarrierDoc {
     id: number
@@ -18,46 +22,82 @@ interface CarrierDoc {
     approved: number
     total: number
 }
+interface PaginationLink { url: string | null; label: string; active: boolean }
+interface Paginated {
+    data: CarrierDoc[]
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+    from: number | null
+    to: number | null
+    links: PaginationLink[]
+}
 
 const props = defineProps<{
-    carriers: CarrierDoc[]
+    carriers: Paginated
+    stats: { total: number; complete: number; in_progress: number; none: number }
+    filters: { search: string; status: string; per_page: number }
 }>()
 
-defineOptions({ layout: RazeLayout })
+// ─── Filter state ─────────────────────────────────────────────────────────────
+const search   = ref(props.filters.search)
+const status   = ref(props.filters.status)
+const perPage  = ref(props.filters.per_page)
 
-const search = ref('')
-const statusFilter = ref('')
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 
-const filtered = computed(() => {
-    let result = props.carriers
-    if (search.value) {
-        const q = search.value.toLowerCase()
-        result = result.filter(c => c.name.toLowerCase().includes(q) || c.mc_number?.toLowerCase().includes(q) || c.dot_number?.toLowerCase().includes(q))
-    }
-    if (statusFilter.value) {
-        result = result.filter(c => c.document_status === statusFilter.value)
-    }
-    return result
+function applyFilters(resetPage = true) {
+    router.get(route('admin.carriers-documents.index'), {
+        search:   search.value || undefined,
+        status:   status.value || undefined,
+        per_page: perPage.value !== 15 ? perPage.value : undefined,
+        page:     resetPage ? undefined : props.carriers.current_page,
+    }, { preserveScroll: true, replace: true })
+}
+
+watch(search, () => {
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => applyFilters(), 400)
 })
 
-function progressColor(pct: number): string {
+watch([status, perPage], () => applyFilters())
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function progressColor(pct: number) {
     if (pct >= 100) return 'bg-emerald-500'
-    if (pct >= 50) return 'bg-amber-500'
+    if (pct >= 50)  return 'bg-amber-500'
     return 'bg-red-500'
 }
 
-function statusBadge(status: string): string {
-    if (status === 'active') return 'bg-emerald-100 text-emerald-700'
-    if (status === 'pending') return 'bg-amber-100 text-amber-700'
+function statusBadge(s: string) {
+    if (s === 'active')  return 'bg-emerald-100 text-emerald-700'
+    if (s === 'pending') return 'bg-amber-100 text-amber-700'
     return 'bg-red-100 text-red-700'
+}
+
+function statusLabel(s: string) {
+    if (s === 'active')  return 'Complete'
+    if (s === 'pending') return 'In Progress'
+    return 'None'
+}
+
+// ─── Export PDF URL ───────────────────────────────────────────────────────────
+function exportPdfUrl() {
+    const params = new URLSearchParams()
+    if (search.value)  params.set('search', search.value)
+    if (status.value)  params.set('status', status.value)
+    return route('admin.carriers-documents.export-pdf') + (params.toString() ? '?' + params.toString() : '')
 }
 </script>
 
 <template>
     <Head title="Carriers Documents Progress" />
 
-    <div class="grid grid-cols-12 gap-x-6 gap-y-10">
+    <div class="grid grid-cols-12 gap-x-6 gap-y-6">
         <div class="col-span-12">
+
+            <!-- Header -->
             <div class="box box--stacked p-6 mb-6">
                 <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
@@ -66,49 +106,79 @@ function statusBadge(status: string): string {
                         </div>
                         <div>
                             <h1 class="text-2xl font-bold text-slate-800">Carriers Documents</h1>
-                            <p class="text-slate-500">Review and manage document compliance for all carriers</p>
+                            <p class="text-slate-500 text-sm">Review and manage document compliance for all carriers</p>
                         </div>
                     </div>
-                    <Link :href="route('admin.carriers.index')" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">
-                        <Lucide icon="ArrowLeft" class="w-4 h-4" /> Back to Carriers
-                    </Link>
+                    <div class="flex items-center gap-2">
+                        <a :href="exportPdfUrl()" target="_blank"
+                            class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
+                            <Lucide icon="FileDown" class="w-4 h-4" /> Export PDF
+                        </a>
+                        <Link :href="route('admin.carriers.index')"
+                            class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition text-sm">
+                            <Lucide icon="ArrowLeft" class="w-4 h-4" /> Back to Carriers
+                        </Link>
+                    </div>
                 </div>
             </div>
 
             <!-- Stats -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div class="box box--stacked p-4">
-                    <div class="text-2xl font-bold text-slate-800">{{ carriers.length }}</div>
-                    <div class="text-xs text-slate-500">Total Carriers</div>
+                <div class="box box--stacked p-4 flex items-center gap-3">
+                    <div class="p-2.5 bg-slate-100 rounded-lg"><Lucide icon="Building2" class="w-5 h-5 text-slate-600" /></div>
+                    <div>
+                        <div class="text-2xl font-bold text-slate-800">{{ stats.total }}</div>
+                        <div class="text-xs text-slate-500">Total Carriers</div>
+                    </div>
                 </div>
-                <div class="box box--stacked p-4">
-                    <div class="text-2xl font-bold text-emerald-600">{{ carriers.filter(c => c.document_status === 'active').length }}</div>
-                    <div class="text-xs text-slate-500">Complete</div>
+                <div class="box box--stacked p-4 flex items-center gap-3">
+                    <div class="p-2.5 bg-emerald-100 rounded-lg"><Lucide icon="CheckCircle" class="w-5 h-5 text-emerald-600" /></div>
+                    <div>
+                        <div class="text-2xl font-bold text-emerald-600">{{ stats.complete }}</div>
+                        <div class="text-xs text-slate-500">Complete</div>
+                    </div>
                 </div>
-                <div class="box box--stacked p-4">
-                    <div class="text-2xl font-bold text-amber-600">{{ carriers.filter(c => c.document_status === 'pending').length }}</div>
-                    <div class="text-xs text-slate-500">In Progress</div>
+                <div class="box box--stacked p-4 flex items-center gap-3">
+                    <div class="p-2.5 bg-amber-100 rounded-lg"><Lucide icon="Clock" class="w-5 h-5 text-amber-600" /></div>
+                    <div>
+                        <div class="text-2xl font-bold text-amber-600">{{ stats.in_progress }}</div>
+                        <div class="text-xs text-slate-500">In Progress</div>
+                    </div>
                 </div>
-                <div class="box box--stacked p-4">
-                    <div class="text-2xl font-bold text-red-600">{{ carriers.filter(c => c.document_status === 'inactive').length }}</div>
-                    <div class="text-xs text-slate-500">No Documents</div>
+                <div class="box box--stacked p-4 flex items-center gap-3">
+                    <div class="p-2.5 bg-red-100 rounded-lg"><Lucide icon="FolderX" class="w-5 h-5 text-red-500" /></div>
+                    <div>
+                        <div class="text-2xl font-bold text-red-600">{{ stats.none }}</div>
+                        <div class="text-xs text-slate-500">No Documents</div>
+                    </div>
                 </div>
             </div>
 
+            <!-- Table card -->
             <div class="box box--stacked p-0">
+
+                <!-- Filters bar -->
                 <div class="flex flex-col sm:flex-row gap-3 p-5 border-b border-slate-200/60">
                     <div class="relative flex-1">
                         <Lucide icon="Search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <FormInput v-model="search" type="text" placeholder="Search by name, MC or DOT..." class="pl-10" />
+                        <FormInput v-model="search" type="text" placeholder="Search by name, MC, DOT or EIN..." class="pl-10" />
                     </div>
-                    <FormSelect v-model="statusFilter" class="w-full sm:w-44">
+                    <FormSelect v-model="status" class="w-full sm:w-44">
                         <option value="">All Status</option>
                         <option value="active">Complete</option>
                         <option value="pending">In Progress</option>
                         <option value="inactive">No Documents</option>
                     </FormSelect>
+                    <FormSelect v-model.number="perPage" class="w-full sm:w-32">
+                        <option :value="10">10 / page</option>
+                        <option :value="15">15 / page</option>
+                        <option :value="25">25 / page</option>
+                        <option :value="50">50 / page</option>
+                        <option :value="100">100 / page</option>
+                    </FormSelect>
                 </div>
 
+                <!-- Table -->
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead>
@@ -122,43 +192,82 @@ function statusBadge(status: string): string {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="c in filtered" :key="c.id" class="border-b border-slate-100 hover:bg-slate-50/50 transition">
+                            <tr v-for="c in carriers.data" :key="c.id"
+                                class="border-b border-slate-100 hover:bg-slate-50/50 transition">
                                 <td class="px-5 py-4 font-medium text-slate-700">{{ c.name }}</td>
-                                <td class="px-5 py-4 text-sm text-slate-600">
-                                    <div v-if="c.mc_number">MC: {{ c.mc_number }}</div>
-                                    <div v-if="c.dot_number">DOT: {{ c.dot_number }}</div>
+                                <td class="px-5 py-4 text-sm text-slate-500">
+                                    <div v-if="c.mc_number" class="font-mono text-xs">MC: {{ c.mc_number }}</div>
+                                    <div v-if="c.dot_number" class="font-mono text-xs">DOT: {{ c.dot_number }}</div>
                                 </td>
-                                <td class="px-5 py-4 text-sm text-slate-600">{{ c.membership_name ?? '-' }}</td>
+                                <td class="px-5 py-4 text-sm text-slate-600">{{ c.membership_name ?? '—' }}</td>
                                 <td class="px-5 py-4 w-48">
                                     <div class="flex items-center gap-3">
                                         <div class="flex-1">
                                             <div class="w-full bg-slate-100 rounded-full h-2">
-                                                <div :class="progressColor(c.completion_percentage)" class="h-2 rounded-full transition-all" :style="{ width: c.completion_percentage + '%' }"></div>
+                                                <div :class="progressColor(c.completion_percentage)"
+                                                    class="h-2 rounded-full transition-all"
+                                                    :style="{ width: c.completion_percentage + '%' }"></div>
                                             </div>
                                         </div>
-                                        <span class="text-xs font-medium text-slate-600 whitespace-nowrap">{{ c.approved }}/{{ c.total }}</span>
+                                        <span class="text-xs font-medium text-slate-600 whitespace-nowrap">
+                                            {{ c.approved }}/{{ c.total }}
+                                        </span>
                                     </div>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="statusBadge(c.document_status)">
-                                        {{ c.document_status === 'active' ? 'Complete' : c.document_status === 'pending' ? 'In Progress' : 'None' }}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                        :class="statusBadge(c.document_status)">
+                                        {{ statusLabel(c.document_status) }}
                                     </span>
                                 </td>
                                 <td class="px-5 py-4 text-center">
-                                    <Link :href="route('admin.carriers-documents.carrier', c.slug)" class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 text-sm transition">
-                                        <Lucide icon="FileSearch" class="w-3 h-3" /> Review
+                                    <Link :href="route('admin.carriers-documents.carrier', c.slug)"
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 text-sm transition">
+                                        <Lucide icon="FileSearch" class="w-3.5 h-3.5" /> Review
                                     </Link>
                                 </td>
                             </tr>
-                            <tr v-if="filtered.length === 0">
-                                <td colspan="6" class="px-5 py-12 text-center text-slate-400">
+                            <tr v-if="carriers.data.length === 0">
+                                <td colspan="6" class="px-5 py-14 text-center text-slate-400">
                                     <Lucide icon="Inbox" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                                    <p>No carriers found</p>
+                                    <p class="font-medium">No carriers found</p>
+                                    <p v-if="search || status" class="text-xs mt-1">Try clearing the filters</p>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination footer -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-4 border-t border-slate-100 bg-slate-50/50">
+                    <!-- Showing info -->
+                    <p class="text-sm text-slate-500">
+                        <template v-if="carriers.total > 0">
+                            Showing <span class="font-medium text-slate-700">{{ carriers.from }}</span>
+                            to <span class="font-medium text-slate-700">{{ carriers.to }}</span>
+                            of <span class="font-medium text-slate-700">{{ carriers.total }}</span> carriers
+                        </template>
+                        <template v-else>No results</template>
+                    </p>
+
+                    <!-- Page links -->
+                    <div v-if="carriers.last_page > 1" class="flex items-center gap-1">
+                        <template v-for="link in carriers.links" :key="link.label">
+                            <span v-if="!link.url"
+                                class="px-2.5 py-1.5 rounded text-xs text-slate-300"
+                                v-html="link.label">
+                            </span>
+                            <Link v-else :href="link.url"
+                                class="px-2.5 py-1.5 rounded text-xs transition"
+                                :class="link.active
+                                    ? 'bg-primary text-white font-semibold'
+                                    : 'text-slate-600 hover:bg-slate-100'"
+                                v-html="link.label">
+                            </Link>
+                        </template>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>

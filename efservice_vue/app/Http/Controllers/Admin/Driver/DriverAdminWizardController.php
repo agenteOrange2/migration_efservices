@@ -646,8 +646,8 @@ class DriverAdminWizardController extends Controller
             'licenses.*.restrictions'      => 'nullable|string|max:255',
             'licenses.*.endorsements'      => 'nullable|array',
             'licenses.*.endorsements.*'    => 'integer|exists:license_endorsements,id',
-            'license_front'                => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
-            'license_back'                 => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'license_front_*'              => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'license_back_*'               => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
             // Driving experience
             'experiences'                  => 'nullable|array',
             'experiences.*.equipment_type' => 'required|string|max:100',
@@ -697,26 +697,21 @@ class DriverAdminWizardController extends Controller
             if ($license && !empty($licenseData['endorsements'])) {
                 $license->endorsements()->sync($licenseData['endorsements']);
             }
-        }
 
-        // License photos (only for first/primary license)
-        $primaryLicense = $driver->licenses()->where('is_primary', true)->first()
-            ?? $driver->licenses()->first();
-
-        if ($primaryLicense) {
-            if ($request->hasFile('license_front')) {
-                $ext = $request->file('license_front')->getClientOriginalExtension() ?: 'jpg';
-                $primaryLicense->clearMediaCollection('license_front');
-                $primaryLicense->addMedia($request->file('license_front'))
-                    ->usingFileName('front.' . $ext)
-                    ->toMediaCollection('license_front');
-            }
-            if ($request->hasFile('license_back')) {
-                $ext = $request->file('license_back')->getClientOriginalExtension() ?: 'jpg';
-                $primaryLicense->clearMediaCollection('license_back');
-                $primaryLicense->addMedia($request->file('license_back'))
-                    ->usingFileName('back.' . $ext)
-                    ->toMediaCollection('license_back');
+            // License images per license
+            if ($license) {
+                if ($request->hasFile("license_front_{$index}")) {
+                    $file = $request->file("license_front_{$index}");
+                    $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                    $license->clearMediaCollection('license_front');
+                    $license->addMedia($file)->usingFileName('front.' . $ext)->toMediaCollection('license_front');
+                }
+                if ($request->hasFile("license_back_{$index}")) {
+                    $file = $request->file("license_back_{$index}");
+                    $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                    $license->clearMediaCollection('license_back');
+                    $license->addMedia($file)->usingFileName('back.' . $ext)->toMediaCollection('license_back');
+                }
             }
         }
 
@@ -1305,6 +1300,9 @@ class DriverAdminWizardController extends Controller
 
         // Regenerate DOT Policy PDF with the certification signature
         $this->regenerateDotPolicyWithSignature($driver, $signature);
+
+        // Generate all application PDFs (individual steps + combined + criminal history)
+        app(\App\Services\ApplicationPdfService::class)->generate($driver, $signature);
     }
 
     private function regenerateW9WithSignature(UserDriverDetail $driver, string $signature): void

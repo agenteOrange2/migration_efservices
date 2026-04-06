@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Carrier;
 use App\Models\CarrierDocument;
 use App\Models\DocumentType;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -27,28 +28,111 @@ class CarrierDocumentController extends Controller
         $this->documentRepository = $documentRepository;
     }
 
-    public function listCarriersForDocuments(): Response
+    public function listCarriersForDocuments(Request $request): Response
     {
-        $carriers = Carrier::with(['documents', 'membership'])->get()->map(function ($carrier) {
+        $search  = $request->input('search', '');
+        $status  = $request->input('status', '');
+        $perPage = (int) $request->input('per_page', 15);
+        $perPage = in_array($perPage, [10, 15, 25, 50, 100]) ? $perPage : 15;
+
+        $query = Carrier::with(['documents', 'membership']);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('mc_number', 'like', "%{$search}%")
+                  ->orWhere('dot_number', 'like', "%{$search}%")
+                  ->orWhere('ein_number', 'like', "%{$search}%");
+            });
+        }
+
+        $paginated = $query->orderBy('name')->paginate($perPage)->withQueryString();
+
+        $carriers = $paginated->getCollection()->map(function ($carrier) use ($status) {
             $progress = $this->documentRepository->calculateDocumentProgress($carrier);
+            $docStatus = $progress['status'];
+            if ($status && $docStatus !== $status) return null;
             return [
-                'id' => $carrier->id,
-                'name' => $carrier->name,
-                'slug' => $carrier->slug,
-                'mc_number' => $carrier->mc_number,
-                'dot_number' => $carrier->dot_number,
-                'status' => $carrier->status,
-                'membership_name' => $carrier->membership?->name,
+                'id'                    => $carrier->id,
+                'name'                  => $carrier->name,
+                'slug'                  => $carrier->slug,
+                'mc_number'             => $carrier->mc_number,
+                'dot_number'            => $carrier->dot_number,
+                'status'                => $carrier->status,
+                'membership_name'       => $carrier->membership?->name,
                 'completion_percentage' => round($progress['percentage'], 1),
-                'document_status' => $progress['status'],
-                'approved' => $progress['approved'],
-                'total' => $progress['total'],
+                'document_status'       => $docStatus,
+                'approved'              => $progress['approved'],
+                'total'                 => $progress['total'],
             ];
+        })->filter()->values();
+
+        // Rebuild pagination with filtered collection
+        $paginated->setCollection($carriers);
+
+        // Stats (always from full set)
+        $allCarriers = Carrier::with(['documents', 'membership'])->get()->map(function ($c) {
+            $p = $this->documentRepository->calculateDocumentProgress($c);
+            return ['document_status' => $p['status']];
         });
 
+        $stats = [
+            'total'      => $allCarriers->count(),
+            'complete'   => $allCarriers->where('document_status', 'active')->count(),
+            'in_progress'=> $allCarriers->where('document_status', 'pending')->count(),
+            'none'       => $allCarriers->where('document_status', 'inactive')->count(),
+        ];
+
         return Inertia::render('admin/carriers-documents/Index', [
-            'carriers' => $carriers,
+            'carriers'   => $paginated,
+            'stats'      => $stats,
+            'filters'    => ['search' => $search, 'status' => $status, 'per_page' => $perPage],
         ]);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $search = $request->input('search', '');
+        $status = $request->input('status', '');
+
+        $query = Carrier::with(['documents', 'membership']);
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('mc_number', 'like', "%{$search}%")
+                  ->orWhere('dot_number', 'like', "%{$search}%");
+            });
+        }
+
+        $carriers = $query->orderBy('name')->get()->map(function ($carrier) use ($status) {
+            $progress = $this->documentRepository->calculateDocumentProgress($carrier);
+            $docStatus = $progress['status'];
+            if ($status && $docStatus !== $status) return null;
+            return [
+                'name'                  => $carrier->name,
+                'mc_number'             => $carrier->mc_number,
+                'dot_number'            => $carrier->dot_number,
+                'membership_name'       => $carrier->membership?->name,
+                'completion_percentage' => round($progress['percentage'], 1),
+                'document_status'       => $docStatus,
+                'approved'              => $progress['approved'],
+                'total'                 => $progress['total'],
+            ];
+        })->filter()->values();
+
+        $total    = $carriers->count();
+        $complete = $carriers->where('document_status', 'active')->count();
+        $pending  = $carriers->where('document_status', 'pending')->count();
+        $none     = $carriers->where('document_status', 'inactive')->count();
+
+        $pdf = Pdf::loadView('pdf.carriers-documents', [
+            'carriers'     => $carriers,
+            'generated_at' => now()->format('m/d/Y H:i:s'),
+            'stats'        => compact('total', 'complete', 'pending', 'none'),
+            'filters'      => compact('search', 'status'),
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('carriers-documents-' . now()->format('Y-m-d') . '.pdf');
     }
 
     public function index(Carrier $carrier): Response

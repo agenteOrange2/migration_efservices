@@ -17,13 +17,14 @@ class DriverCourse extends Model implements HasMedia
 
     protected $fillable = [
         'user_driver_detail_id',
-        'organization_name',        
+        'organization_name',
         'city',
         'state',
         'certification_date',
         'experience',
         'years_experience',
         'expiration_date',
+        'status',
     ];
 
     protected $casts = [

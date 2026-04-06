@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin\Driver;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\Driver\DriverApplication;
 use App\Models\Carrier;
+use App\Models\MigrationRecord;
 use App\Models\UserDriverDetail;
+use App\Services\Driver\StepCompletionCalculator;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -89,6 +92,7 @@ class DriverListController extends Controller
             'user:id,name,email',
             'carrier:id,name,address,dot_number,mc_number,state',
             'application.addresses',
+            'application.details',
             'licenses.endorsements',
             'medicalQualification',
             'experiences',
@@ -102,6 +106,12 @@ class DriverListController extends Controller
             'testings',
             'inspections.vehicle',
             'vehicleAssignments.vehicle',
+            'fmcsrData',
+            'criminalHistory',
+            'certification',
+            'companyPolicy',
+            'w9Form',
+            'media',
         ]);
 
         $driverData = $this->buildDriverShowData($driver);
@@ -147,7 +157,7 @@ class DriverListController extends Controller
             ->with('success', 'Driver has been deactivated.');
     }
 
-    public function downloadDocuments(UserDriverDetail $driver): StreamedResponse|\Illuminate\Http\RedirectResponse
+    public function downloadDocuments(UserDriverDetail $driver): \Symfony\Component\HttpFoundation\BinaryFileResponse|StreamedResponse|\Illuminate\Http\RedirectResponse
     {
         $zipFileName = 'driver_' . $driver->id . '_documents_' . date('Y-m-d') . '.zip';
         $zipPath = storage_path('app/temp/' . $zipFileName);
@@ -161,24 +171,134 @@ class DriverListController extends Controller
             return redirect()->route('admin.drivers.show', $driver)->with('error', 'Could not create ZIP file');
         }
 
-        $driver->load(['licenses', 'medicalQualification', 'trainingSchools', 'application']);
+        $driver->load([
+            'licenses',
+            'medicalQualification',
+            'trainingSchools',
+            'courses',
+            'accidents',
+            'trafficConvictions',
+            'testings',
+            'employmentCompanies',
+            'application',
+            'w9Form',
+            'media',
+        ]);
 
+        // Licenses
         if ($driver->licenses) {
             foreach ($driver->licenses as $license) {
-                $this->addMediaToZip($zip, $license, 'license_front', 'Licenses/License_' . ($license->license_number ?? '') . '_Front');
-                $this->addMediaToZip($zip, $license, 'license_back', 'Licenses/License_' . ($license->license_number ?? '') . '_Back');
+                $slug = $license->license_number ?? $license->id;
+                $this->addMediaToZip($zip, $license, 'license_front', "Licenses/License_{$slug}_Front");
+                $this->addMediaToZip($zip, $license, 'license_back', "Licenses/License_{$slug}_Back");
+                $this->addMediaToZip($zip, $license, 'license_documents', "Licenses/License_{$slug}_Documents");
             }
         }
 
+        // Medical
         if ($driver->medicalQualification) {
-            $this->addMediaToZip($zip, $driver->medicalQualification, 'medical_card', 'Medical/Medical_Card');
-            $this->addMediaToZip($zip, $driver->medicalQualification, 'social_security_card', 'Medical/Social_Security_Card');
+            $med = $driver->medicalQualification;
+            $this->addMediaToZip($zip, $med, 'medical_card', 'Medical/Medical_Card');
+            $this->addMediaToZip($zip, $med, 'social_security_card', 'Medical/Social_Security_Card');
+            $this->addMediaToZip($zip, $med, 'medical_certificate', 'Medical/Certificate');
+            $this->addMediaToZip($zip, $med, 'test_results', 'Medical/Test_Results');
+            $this->addMediaToZip($zip, $med, 'additional_documents', 'Medical/Additional_Documents');
+            $this->addMediaToZip($zip, $med, 'medical_documents', 'Medical/Medical_Documents');
         }
 
-        if ($driver->application && $driver->application->hasMedia('application_pdf')) {
-            $pdf = $driver->application->getFirstMedia('application_pdf');
-            if ($pdf && file_exists($pdf->getPath())) {
-                $zip->addFile($pdf->getPath(), 'Application/Complete_Application.pdf');
+        // Training Schools
+        if ($driver->trainingSchools) {
+            foreach ($driver->trainingSchools as $i => $school) {
+                $slug = $school->school_name ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $school->school_name) : "School_{$i}";
+                $this->addMediaToZip($zip, $school, 'school_certificates', "Training/{$slug}_Certificates");
+            }
+        }
+
+        // Courses
+        if ($driver->courses) {
+            foreach ($driver->courses as $i => $course) {
+                $slug = $course->organization_name ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $course->organization_name) : "Course_{$i}";
+                $this->addMediaToZip($zip, $course, 'course_certificates', "Courses/{$slug}_Certificates");
+            }
+        }
+
+        // Accidents
+        if ($driver->accidents) {
+            foreach ($driver->accidents as $i => $accident) {
+                $this->addMediaToZip($zip, $accident, 'accident-images', "Accidents/Accident_{$i}_Images");
+            }
+        }
+
+        // Testing documents
+        if ($driver->testings) {
+            foreach ($driver->testings as $i => $test) {
+                $this->addMediaToZip($zip, $test, 'drug_test_pdf', "Testing/Test_{$i}_Drug_Test");
+                $this->addMediaToZip($zip, $test, 'test_results', "Testing/Test_{$i}_Results");
+                $this->addMediaToZip($zip, $test, 'test_certificates', "Testing/Test_{$i}_Certificates");
+                $this->addMediaToZip($zip, $test, 'test_authorization', "Testing/Test_{$i}_Authorization");
+                $this->addMediaToZip($zip, $test, 'document_attachments', "Testing/Test_{$i}_Attachments");
+            }
+        }
+
+        // Employment verification documents
+        if ($driver->employmentCompanies) {
+            foreach ($driver->employmentCompanies as $i => $emp) {
+                $this->addMediaToZip($zip, $emp, 'employment_verification_documents', "Employment/Company_{$i}_Verification");
+            }
+        }
+
+        // Traffic violations
+        if ($driver->trafficConvictions) {
+            foreach ($driver->trafficConvictions as $i => $conviction) {
+                $this->addMediaToZip($zip, $conviction, 'traffic_images', "Traffic_Violations/Conviction_{$i}_Images");
+            }
+        }
+
+        // Driver-level documents
+        $this->addMediaToZip($zip, $driver, 'driving_records', 'Driving_Records/Record');
+        $this->addMediaToZip($zip, $driver, 'criminal_records', 'Criminal_Records/Record');
+        $this->addMediaToZip($zip, $driver, 'medical_records', 'Medical_Records/Record');
+        $this->addMediaToZip($zip, $driver, 'clearing_house', 'Clearing_House/Document');
+        $this->addMediaToZip($zip, $driver, 'w9_documents', 'W9_Documents/W9');
+        $this->addMediaToZip($zip, $driver, 'dot_policy_documents', 'Dot_Policy_Documents/Policy');
+
+        // W9 form PDF (filesystem path)
+        if ($driver->w9Form && ! empty($driver->w9Form->pdf_path)) {
+            $w9Path = storage_path('app/public/' . ltrim($driver->w9Form->pdf_path, '/'));
+            if (! file_exists($w9Path)) {
+                $w9Path = public_path($driver->w9Form->pdf_path);
+            }
+            if (file_exists($w9Path)) {
+                $zip->addFile($w9Path, 'W9_Documents/W9_Form.pdf');
+            }
+        }
+
+        // Application PDF
+        if ($driver->application) {
+            // Compiled full PDF (media library)
+            if ($driver->application->hasMedia('application_pdf')) {
+                $pdf = $driver->application->getFirstMedia('application_pdf');
+                if ($pdf && file_exists($pdf->getPath())) {
+                    $zip->addFile($pdf->getPath(), 'Complete_Application/Application.pdf');
+                }
+            }
+            // Individual application forms (filesystem pdf_path)
+            if (! empty($driver->application->pdf_path)) {
+                $appPdfPath = storage_path('app/public/' . ltrim($driver->application->pdf_path, '/'));
+                if (file_exists($appPdfPath)) {
+                    $zip->addFile($appPdfPath, 'Individual_Application_Forms/Application_Form.pdf');
+                }
+            }
+        }
+
+        // Lease agreements (filesystem)
+        $leaseDir = storage_path("app/public/driver/{$driver->id}/vehicle_verifications");
+        if (is_dir($leaseDir)) {
+            $leaseFiles = glob($leaseDir . '/*');
+            foreach ($leaseFiles as $file) {
+                if (is_file($file)) {
+                    $zip->addFile($file, 'Lease_Agreements/' . basename($file));
+                }
             }
         }
 
@@ -222,7 +342,7 @@ class DriverListController extends Controller
             'hire_date'                     => $driver->hire_date?->format('Y-m-d'),
             'termination_date'              => $driver->termination_date?->format('Y-m-d'),
             'notes'                         => $driver->notes,
-            'completion_percentage'         => $driver->completion_percentage ?? 0,
+            'completion_percentage'         => (int) round(app(StepCompletionCalculator::class)->calculateTotalCompletion($driver->id)),
             // Emergency contact
             'emergency_contact_name'        => $driver->emergency_contact_name,
             'emergency_contact_phone'       => $driver->emergency_contact_phone,
@@ -293,15 +413,24 @@ class DriverListController extends Controller
         if ($driver->medicalQualification) {
             $m = $driver->medicalQualification;
             $medExpiry = $m->medical_card_expiration_date;
-            $medStatus = $medExpiry ? ($medExpiry->isFuture() ? ($medExpiry->diffInDays(now()) <= 30 ? 'expiring_soon' : 'valid') : 'expired') : 'unknown';
+            $medStatus = $medExpiry ? ($medExpiry->isFuture() ? ($medExpiry->diffInDays(now()) <= 90 ? 'expiring_soon' : 'valid') : 'expired') : 'unknown';
+            $ssn = $m->social_security_number;
+            $ssnMasked = $ssn ? 'XXX-XX-' . substr($ssn, -4) : null;
+            $medicalRecords = $driver->getMedia('medical_records')->map(fn ($doc) => [
+                'name' => $doc->file_name,
+                'url'  => $doc->getUrl(),
+                'size' => $doc->human_readable_size,
+            ])->values()->all();
             $medical = [
                 'medical_card_expiration_date' => $medExpiry?->format('Y-m-d'),
                 'medical_examiner_name'        => $m->medical_examiner_name,
-                'medical_examiner_registry'    => $m->medical_examiner_registry ?? null,
+                'medical_examiner_registry'    => $m->medical_examiner_registry_number ?? null,
                 'medical_status'               => $medStatus,
+                'ssn_masked'                   => $ssnMasked,
                 'medical_card_url'             => $m->getFirstMediaUrl('medical_card') ?: null,
                 'social_security_card_url'     => $m->getFirstMediaUrl('social_security_card') ?: null,
                 'medical_certificate_url'      => $m->getFirstMediaUrl('medical_certificate') ?: null,
+                'medical_records'              => $medicalRecords,
             ];
         }
 
@@ -310,7 +439,7 @@ class DriverListController extends Controller
         if ($driver->employmentCompanies) {
             foreach ($driver->employmentCompanies as $ec) {
                 $employment[] = [
-                    'company_name'              => $ec->company?->name ?? null,
+                    'company_name'              => $ec->company?->company_name ?? null,
                     'company_address'           => $ec->company?->address ?? null,
                     'company_phone'             => $ec->company?->phone ?? null,
                     'positions_held'            => $ec->positions_held ?? null,
@@ -331,20 +460,17 @@ class DriverListController extends Controller
 
         // Related Employments
         $relatedEmployments = $driver->relatedEmployments?->map(fn ($re) => [
-            'period'       => $re->period ?? null,
             'position'     => $re->position ?? null,
-            'work_position'=> $re->work_position ?? null,
             'comments'     => $re->comments ?? null,
-            'from_date'    => $re->from_date?->format('Y-m-d') ?? null,
-            'to_date'      => $re->to_date?->format('Y-m-d') ?? null,
+            'from_date'    => $re->start_date?->format('Y-m-d') ?? null,
+            'to_date'      => $re->end_date?->format('Y-m-d') ?? null,
         ])->toArray() ?? [];
 
         // Unemployment Periods
         $unemploymentPeriods = $driver->unemploymentPeriods?->map(fn ($up) => [
-            'from_date'   => $up->from_date?->format('Y-m-d') ?? null,
-            'to_date'     => $up->to_date?->format('Y-m-d') ?? null,
-            'comments'    => $up->comments ?? null,
-            'type'        => $up->type ?? null,
+            'from_date' => $up->start_date?->format('Y-m-d') ?? null,
+            'to_date'   => $up->end_date?->format('Y-m-d') ?? null,
+            'comments'  => $up->comments ?? null,
         ])->toArray() ?? [];
 
         // Training Schools
@@ -352,12 +478,13 @@ class DriverListController extends Controller
         if ($driver->trainingSchools) {
             foreach ($driver->trainingSchools as $ts) {
                 $trainingSchools[] = [
-                    'name'            => $ts->name ?? $ts->school_name ?? null,
-                    'location'        => $ts->location ?? null,
-                    'from_date'       => $ts->from_date?->format('Y-m-d') ?? null,
-                    'to_date'         => $ts->to_date?->format('Y-m-d') ?? null,
-                    'graduated'       => $ts->graduated ?? null,
-                    'subject_fmcsr'   => $ts->subject_fmcsr ?? null,
+                    'name'            => $ts->school_name ?? null,
+                    'city'            => $ts->city ?? null,
+                    'state'           => $ts->state ?? null,
+                    'from_date'       => $ts->date_start?->format('Y-m-d') ?? null,
+                    'to_date'         => $ts->date_end?->format('Y-m-d') ?? null,
+                    'graduated'       => $ts->graduated ?? false,
+                    'subject_fmcsr'   => $ts->subject_to_safety_regulations ?? false,
                     'certificate_url' => $ts->getFirstMediaUrl('school_certificates') ?: null,
                 ];
             }
@@ -441,6 +568,83 @@ class DriverListController extends Controller
             }
         }
 
+        // FMCSR Data
+        $fmcsrData = $driver->fmcsrData ? [
+            'is_disqualified'        => $driver->fmcsrData->is_disqualified ?? false,
+            'disqualified_details'   => $driver->fmcsrData->disqualified_details ?? null,
+            'is_license_suspended'   => $driver->fmcsrData->is_license_suspended ?? false,
+            'suspension_details'     => $driver->fmcsrData->suspension_details ?? null,
+            'is_license_denied'      => $driver->fmcsrData->is_license_denied ?? false,
+            'denial_details'         => $driver->fmcsrData->denial_details ?? null,
+            'has_positive_drug_test' => $driver->fmcsrData->has_positive_drug_test ?? false,
+            'has_duty_offenses'      => $driver->fmcsrData->has_duty_offenses ?? false,
+            'offense_details'        => $driver->fmcsrData->offense_details ?? null,
+            'consent_driving_record' => $driver->fmcsrData->consent_driving_record ?? false,
+        ] : null;
+
+        // Criminal History
+        $criminalHistory = $driver->criminalHistory ? [
+            'has_criminal_charges'  => $driver->criminalHistory->has_criminal_charges ?? false,
+            'has_felony_conviction' => $driver->criminalHistory->has_felony_conviction ?? false,
+            'has_minister_permit'   => $driver->criminalHistory->has_minister_permit ?? false,
+            'fcra_consent'          => $driver->criminalHistory->fcra_consent ?? false,
+        ] : null;
+
+        // HOS (Hours of Service) Data
+        $hosData = [
+            'cycle_type'               => $driver->hos_cycle_type ?? '70_8',
+            'change_requested'         => $driver->hos_cycle_change_requested ?? false,
+            'change_requested_to'      => $driver->hos_cycle_change_requested_to ?? null,
+            'change_requested_at'      => $driver->hos_cycle_change_requested_at?->format('Y-m-d H:i'),
+            'change_approved_at'       => $driver->hos_cycle_change_approved_at?->format('Y-m-d H:i'),
+        ];
+
+        // Wizard Steps (using StepCompletionCalculator)
+        $wizardSummary = app(StepCompletionCalculator::class)->getCompletionSummary($driver->id);
+        $stepLabels = [
+            1  => 'General Information',
+            2  => 'Address',
+            3  => 'Application Details',
+            4  => 'Licenses',
+            5  => 'Medical',
+            6  => 'Training Schools',
+            7  => 'Traffic Violations',
+            8  => 'Accidents',
+            9  => 'FMCSR',
+            10 => 'Work History',
+            11 => 'Company Policy',
+            12 => 'Criminal History',
+            13 => 'W-9 Form',
+            14 => 'Certification',
+            15 => 'Confirmation',
+        ];
+        $wizardSteps = collect($wizardSummary['steps'] ?? [])->map(fn ($s, $step) => [
+            'step'       => $step,
+            'label'      => $stepLabels[$step] ?? "Step {$step}",
+            'status'     => $s['status'],
+            'percentage' => $s['percentage'],
+        ])->values()->all();
+
+        // Migration History
+        $migrationHistory = MigrationRecord::where('driver_user_id', $driver->user_id)
+            ->with(['sourceCarrier:id,name', 'targetCarrier:id,name', 'migratedByUser:id,name'])
+            ->latest('migrated_at')
+            ->get()
+            ->map(fn ($m) => [
+                'id'              => $m->id,
+                'migrated_at'     => $m->migrated_at->format('m/d/Y H:i'),
+                'migrated_at_raw' => $m->migrated_at->toIso8601String(),
+                'source_carrier'  => $m->sourceCarrier?->name ?? 'Unknown',
+                'target_carrier'  => $m->targetCarrier?->name ?? 'Unknown',
+                'performed_by'    => $m->migratedByUser?->name ?? 'System',
+                'reason'          => $m->reason,
+                'notes'           => $m->notes,
+                'status'          => $m->status,
+                'can_rollback'    => $m->canRollback(),
+                'rolled_back_at'  => $m->rolled_back_at?->format('m/d/Y H:i'),
+                'rollback_reason' => $m->rollback_reason,
+            ])->all();
+
         $documentsByCategory = $this->buildDocumentsByCategory($driver);
         $stats = $this->buildDriverStats($driver, $documentsByCategory);
 
@@ -458,6 +662,12 @@ class DriverListController extends Controller
                 'testings'            => $testings,
                 'inspections'         => $inspections,
                 'vehicle_assignments' => $vehicleAssignments,
+                'fmcsr_data'          => $fmcsrData,
+                'criminal_history'    => $criminalHistory,
+                'hos_data'            => $hosData,
+                'wizard_steps'        => $wizardSteps,
+                'wizard_total_pct'    => (int) round($wizardSummary['total_percentage'] ?? 0),
+                'migration_history'   => $migrationHistory,
                 'accidents'           => $driver->accidents?->map(fn ($a) => [
                     'accident_date'       => $a->accident_date?->format('Y-m-d'),
                     'nature_of_accident'  => $a->nature_of_accident ?? null,
@@ -483,107 +693,219 @@ class DriverListController extends Controller
 
     protected function buildDocumentsByCategory(UserDriverDetail $driver): array
     {
-        $categories = [
-            'license' => [],
-            'medical' => [],
-            'training_schools' => [],
-            'courses' => [],
-            'accidents' => [],
-            'traffic' => [],
-            'inspections' => [],
-            'testing' => [],
-            'records' => [],
-            'certification' => [],
+        $h = fn ($m) => [
+            'name'         => $m->file_name,
+            'url'          => $m->getUrl(),
+            'size'         => $this->formatFileSize($m->size),
+            'date'         => $m->created_at->format('Y-m-d'),
+            'related_info' => '',
         ];
 
+        $categories = [
+            'license'                          => [],
+            'medical'                          => [],
+            'training_schools'                 => [],
+            'courses'                          => [],
+            'accidents'                        => [],
+            'traffic'                          => [],
+            'inspections'                      => [],
+            'testing'                          => [],
+            'records'                          => [],
+            'application_forms'                => [],
+            'employment_verification'          => [],
+            'employment_verification_attempts' => [],
+            'w9_documents'                     => [],
+            'dot_policy_documents'             => [],
+            'certification'                    => [],
+        ];
+
+        // ── Licenses ──────────────────────────────────────────────────────────
         foreach ($driver->licenses ?? [] as $lic) {
+            $label = 'License ' . ($lic->license_number ?? '');
             foreach (['license_front', 'license_back', 'license_documents'] as $col) {
                 foreach ($lic->getMedia($col) as $m) {
-                    $categories['license'][] = [
-                        'name' => $m->file_name,
-                        'url' => $m->getUrl(),
-                        'size' => $this->formatFileSize($m->size),
-                        'date' => $m->created_at->format('Y-m-d'),
-                        'related_info' => 'License ' . ($lic->license_number ?? ''),
-                    ];
+                    $row = $h($m);
+                    $row['related_info'] = $label;
+                    $categories['license'][] = $row;
                 }
             }
         }
 
+        // ── Medical ───────────────────────────────────────────────────────────
         if ($driver->medicalQualification) {
-            foreach (['medical_card', 'social_security_card', 'medical_certificate'] as $col) {
+            foreach (['medical_card', 'social_security_card', 'medical_certificate', 'test_results', 'additional_documents', 'medical_documents'] as $col) {
                 foreach ($driver->medicalQualification->getMedia($col) as $m) {
-                    $categories['medical'][] = [
-                        'name' => $m->file_name,
-                        'url' => $m->getUrl(),
-                        'size' => $this->formatFileSize($m->size),
-                        'date' => $m->created_at->format('Y-m-d'),
-                        'related_info' => 'Medical',
-                    ];
+                    $row = $h($m);
+                    $row['related_info'] = 'Medical';
+                    $categories['medical'][] = $row;
                 }
             }
         }
 
-        foreach ($driver->getMedia('driving_records') as $m) {
-            $categories['records'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => 'Driving Record'];
-        }
-        foreach ($driver->getMedia('medical_records') as $m) {
-            $categories['records'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => 'Medical Record'];
-        }
-        foreach ($driver->getMedia('criminal_records') as $m) {
-            $categories['records'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => 'Criminal Record'];
-        }
-        foreach ($driver->getMedia('clearing_house') as $m) {
-            $categories['records'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => 'Clearing House'];
-        }
-
+        // ── Training Schools ──────────────────────────────────────────────────
         foreach ($driver->trainingSchools ?? [] as $ts) {
             foreach ($ts->getMedia('school_certificates') as $m) {
-                $categories['training_schools'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => $ts->name ?? 'Training'];
+                $row = $h($m);
+                $row['related_info'] = $ts->school_name ?? 'Training';
+                $categories['training_schools'][] = $row;
             }
         }
 
+        // ── Courses ───────────────────────────────────────────────────────────
         foreach ($driver->courses ?? [] as $c) {
             foreach ($c->getMedia('course_certificates') as $m) {
-                $categories['courses'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => $c->organization_name ?? 'Course'];
+                $row = $h($m);
+                $row['related_info'] = $c->organization_name ?? 'Course';
+                $categories['courses'][] = $row;
             }
         }
 
+        // ── Accidents ─────────────────────────────────────────────────────────
         foreach ($driver->accidents ?? [] as $a) {
             foreach ($a->getMedia('accident-images') as $m) {
-                $categories['accidents'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => 'Accident'];
+                $row = $h($m);
+                $row['related_info'] = 'Accident ' . ($a->accident_date?->format('m/d/Y') ?? '');
+                $categories['accidents'][] = $row;
             }
         }
 
+        // ── Traffic Convictions ───────────────────────────────────────────────
         foreach ($driver->trafficConvictions ?? [] as $tc) {
             foreach ($tc->getMedia('traffic_images') as $m) {
-                $categories['traffic'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => 'Traffic'];
+                $row = $h($m);
+                $row['related_info'] = 'Traffic Conviction';
+                $categories['traffic'][] = $row;
             }
         }
 
-        foreach ($driver->testings ?? [] as $t) {
-            foreach (['drug_test_pdf', 'test_results', 'test_certificates'] as $col) {
-                foreach ($t->getMedia($col) as $m) {
-                    $categories['testing'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => 'Testing'];
-                }
-            }
-        }
-
+        // ── Inspections ───────────────────────────────────────────────────────
         foreach ($driver->inspections ?? [] as $i) {
             foreach ($i->getMedia('inspection_documents') as $m) {
-                $categories['inspections'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => 'Inspection'];
+                $row = $h($m);
+                $row['related_info'] = 'Inspection ' . ($i->inspection_date?->format('m/d/Y') ?? '');
+                $categories['inspections'][] = $row;
             }
         }
 
-        if ($driver->application) {
-            foreach (['application_pdf', 'application_documents'] as $col) {
-                foreach ($driver->application->getMedia($col) as $m) {
-                    $categories['certification'][] = ['name' => $m->file_name, 'url' => $m->getUrl(), 'size' => $this->formatFileSize($m->size), 'date' => $m->created_at->format('Y-m-d'), 'related_info' => 'Application'];
+        // ── Testing ───────────────────────────────────────────────────────────
+        foreach ($driver->testings ?? [] as $t) {
+            $typeLabel = $t->test_type ? str_replace('_', ' ', ucfirst($t->test_type)) : 'Test';
+            $dateLabel = $t->test_date?->format('m/d/Y') ?? '';
+            foreach (['drug_test_pdf', 'test_results', 'test_certificates', 'test_authorization', 'document_attachments'] as $col) {
+                foreach ($t->getMedia($col) as $m) {
+                    $row = $h($m);
+                    $row['related_info'] = trim("{$typeLabel} - {$dateLabel}");
+                    $row['type'] = match($col) {
+                        'drug_test_pdf'       => 'Drug Test',
+                        'test_results'        => 'Test Attachment',
+                        'test_certificates'   => 'Certificate',
+                        'test_authorization'  => 'Authorization',
+                        'document_attachments'=> 'Attachment',
+                        default               => 'Testing',
+                    };
+                    $categories['testing'][] = $row;
                 }
             }
         }
 
-        return $categories;
+        // ── Records (MVR, criminal, medical, clearing house) ──────────────────
+        foreach ($driver->getMedia('driving_records') as $m) {
+            $row = $h($m); $row['related_info'] = 'Driving Record';
+            $categories['records'][] = $row;
+        }
+        foreach ($driver->getMedia('medical_records') as $m) {
+            $row = $h($m); $row['related_info'] = 'Medical Record';
+            $categories['records'][] = $row;
+        }
+        foreach ($driver->getMedia('criminal_records') as $m) {
+            $row = $h($m); $row['related_info'] = 'Criminal Record';
+            $categories['records'][] = $row;
+        }
+        foreach ($driver->getMedia('clearing_house') as $m) {
+            $row = $h($m); $row['related_info'] = 'Clearing House';
+            $categories['records'][] = $row;
+        }
+
+        // ── Application Forms ─────────────────────────────────────────────────
+        if ($driver->application) {
+            foreach ($driver->application->getMedia('application_pdf') as $m) {
+                $row = $h($m); $row['related_info'] = 'Complete Application';
+                $categories['application_forms'][] = $row;
+            }
+        }
+        foreach ($driver->getMedia('application_forms') as $m) {
+            $row = $h($m); $row['related_info'] = 'Application Form';
+            $categories['application_forms'][] = $row;
+        }
+        foreach ($driver->getMedia('individual_forms') as $m) {
+            $row = $h($m); $row['related_info'] = 'Individual Form';
+            $categories['application_forms'][] = $row;
+        }
+        foreach ($driver->getMedia('signed_application') as $m) {
+            $row = $h($m); $row['related_info'] = 'Signed Application';
+            $categories['application_forms'][] = $row;
+        }
+        foreach ($driver->getMedia('contract_documents') as $m) {
+            $row = $h($m); $row['related_info'] = 'Contract';
+            $categories['application_forms'][] = $row;
+        }
+        foreach ($driver->getMedia('lease_agreement') as $m) {
+            $row = $h($m); $row['related_info'] = 'Lease Agreement';
+            $categories['application_forms'][] = $row;
+        }
+
+        // ── Certification (driver app certification + Spatie certification model) ──
+        if ($driver->certification) {
+            foreach ($driver->certification->getMedia('certification_documents') as $m) {
+                $row = $h($m); $row['related_info'] = 'Certification';
+                $categories['certification'][] = $row;
+            }
+        }
+
+        // ── Employment Verification ───────────────────────────────────────────
+        foreach ($driver->employmentCompanies ?? [] as $ec) {
+            $companyName = $ec->company?->company_name ?? 'Company';
+            foreach ($ec->getMedia('employment_verification_documents') as $m) {
+                $row = $h($m);
+                $row['related_info'] = 'Manual Upload';
+                $row['type']         = 'Employment verification';
+                $row['company']      = $companyName;
+                $categories['employment_verification'][] = $row;
+            }
+            foreach ($ec->getMedia('signature') as $m) {
+                $row = $h($m);
+                $row['related_info'] = 'Email Verified';
+                $row['type']         = 'Employment verification email';
+                $row['company']      = $companyName;
+                $categories['employment_verification'][] = $row;
+            }
+        }
+
+        // ── Employment Verification Attempts (on driver itself) ───────────────
+        foreach ($driver->getMedia('employment_verification_attempts') as $i => $m) {
+            $row = $h($m);
+            $row['related_info'] = 'Manual Upload';
+            $row['type']         = 'Employment verification attempt';
+            $row['company']      = 'Attempt #' . ($i + 1);
+            $categories['employment_verification_attempts'][] = $row;
+        }
+
+        // ── W-9 ───────────────────────────────────────────────────────────────
+        foreach ($driver->getMedia('w9_documents') as $m) {
+            $row = $h($m); $row['related_info'] = 'W-9 Tax Form';
+            $row['type'] = 'W9';
+            $categories['w9_documents'][] = $row;
+        }
+
+        // ── DOT Drug & Alcohol Policy ─────────────────────────────────────────
+        foreach ($driver->getMedia('dot_policy_documents') as $m) {
+            $row = $h($m); $row['related_info'] = 'DOT Drug & Alcohol Policy';
+            $row['type'] = 'Dot policy';
+            $categories['dot_policy_documents'][] = $row;
+        }
+
+        // Remove empty categories so the frontend only shows what exists
+        return array_filter($categories, fn ($docs) => count($docs) > 0);
     }
 
     protected function buildDriverStats(UserDriverDetail $driver, array $documentsByCategory): array

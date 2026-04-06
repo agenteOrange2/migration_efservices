@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import Lucide from '@/components/Base/Lucide'
+import Button from '@/components/Base/Button'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 defineOptions({ layout: RazeLayout })
@@ -21,6 +22,7 @@ const props = defineProps<{
         status: number
         show_in_register: number
         created_at: string
+        image_url?: string | null
     }
     carriers: {
         data: Array<{
@@ -29,6 +31,10 @@ const props = defineProps<{
             slug: string
             mc_number: string | null
             status: number
+            drivers_count: number
+            vehicles_count: number
+            contact_email: string | null
+            logo_url: string | null
         }>
         links: any[]
         current_page: number
@@ -46,6 +52,12 @@ function formatPrice(value: number | null): string {
     if (value === null || value === undefined) return '-'
     return `$${Number(value).toFixed(2)}`
 }
+
+const usageRows = [
+    { label: 'Carriers', current: props.stats.total_carriers, max: props.membership.max_carrier, color: 'bg-primary' },
+    { label: 'Drivers', current: props.stats.total_drivers, max: props.membership.max_drivers, color: 'bg-info' },
+    { label: 'Vehicles', current: props.stats.total_vehicles, max: props.membership.max_vehicles, color: 'bg-warning' },
+]
 </script>
 
 <template>
@@ -53,29 +65,41 @@ function formatPrice(value: number | null): string {
 
     <div class="grid grid-cols-12 gap-x-6 gap-y-8">
         <div class="col-span-12">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-3">
-                    <Link :href="route('admin.memberships.index')" class="p-2 rounded-lg hover:bg-slate-100 transition">
-                        <Lucide icon="ArrowLeft" class="w-5 h-5 text-slate-600" />
-                    </Link>
-                    <div>
-                        <h1 class="text-2xl font-bold text-slate-800">{{ membership.name }}</h1>
-                        <p class="text-sm text-slate-500">{{ membership.description }}</p>
+            <div class="box box--stacked p-6">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="h-16 w-16 rounded-2xl overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center">
+                            <img v-if="membership.image_url" :src="membership.image_url" :alt="membership.name" class="h-full w-full object-cover" />
+                            <Lucide v-else icon="BadgeDollarSign" class="w-8 h-8 text-primary" />
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-slate-800">{{ membership.name }}</h1>
+                            <p class="text-sm text-slate-500">{{ membership.description }}</p>
+                        </div>
                     </div>
-                </div>
-                <div class="flex gap-2">
-                    <Link :href="route('admin.memberships.edit', membership.id)" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
-                        <Lucide icon="PenLine" class="w-4 h-4" /> Edit
-                    </Link>
+
+                    <div class="flex gap-3">
+                        <Link :href="route('admin.memberships.index')">
+                            <Button variant="outline-secondary" class="flex items-center gap-2">
+                                <Lucide icon="ArrowLeft" class="w-4 h-4" />
+                                Back to Memberships
+                            </Button>
+                        </Link>
+                        <Link :href="route('admin.memberships.edit', membership.id)">
+                            <Button variant="primary" class="flex items-center gap-2">
+                                <Lucide icon="PenLine" class="w-4 h-4" />
+                                Edit Membership
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Stats Cards -->
         <div class="col-span-12 grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="box box--stacked p-5">
                 <div class="flex items-center gap-3">
-                    <div class="p-2 bg-blue-100 rounded-lg"><Lucide icon="Building2" class="w-5 h-5 text-blue-600" /></div>
+                    <div class="p-2 bg-primary/10 rounded-lg"><Lucide icon="Building2" class="w-5 h-5 text-primary" /></div>
                     <div>
                         <div class="text-2xl font-bold text-slate-800">{{ stats.total_carriers }}</div>
                         <div class="text-xs text-slate-500">Total Carriers</div>
@@ -84,7 +108,7 @@ function formatPrice(value: number | null): string {
             </div>
             <div class="box box--stacked p-5">
                 <div class="flex items-center gap-3">
-                    <div class="p-2 bg-emerald-100 rounded-lg"><Lucide icon="CheckCircle" class="w-5 h-5 text-emerald-600" /></div>
+                    <div class="p-2 bg-success/10 rounded-lg"><Lucide icon="CheckCircle" class="w-5 h-5 text-success" /></div>
                     <div>
                         <div class="text-2xl font-bold text-slate-800">{{ stats.active_carriers }}</div>
                         <div class="text-xs text-slate-500">Active Carriers</div>
@@ -93,7 +117,7 @@ function formatPrice(value: number | null): string {
             </div>
             <div class="box box--stacked p-5">
                 <div class="flex items-center gap-3">
-                    <div class="p-2 bg-purple-100 rounded-lg"><Lucide icon="Users" class="w-5 h-5 text-purple-600" /></div>
+                    <div class="p-2 bg-info/10 rounded-lg"><Lucide icon="Users" class="w-5 h-5 text-info" /></div>
                     <div>
                         <div class="text-2xl font-bold text-slate-800">{{ stats.total_drivers }}</div>
                         <div class="text-xs text-slate-500">Total Drivers</div>
@@ -102,7 +126,7 @@ function formatPrice(value: number | null): string {
             </div>
             <div class="box box--stacked p-5">
                 <div class="flex items-center gap-3">
-                    <div class="p-2 bg-amber-100 rounded-lg"><Lucide icon="Truck" class="w-5 h-5 text-amber-600" /></div>
+                    <div class="p-2 bg-warning/10 rounded-lg"><Lucide icon="Truck" class="w-5 h-5 text-warning" /></div>
                     <div>
                         <div class="text-2xl font-bold text-slate-800">{{ stats.total_vehicles }}</div>
                         <div class="text-xs text-slate-500">Total Vehicles</div>
@@ -111,74 +135,96 @@ function formatPrice(value: number | null): string {
             </div>
         </div>
 
-        <!-- Plan Details -->
-        <div class="col-span-12 lg:col-span-4">
-            <div class="box box--stacked p-6 space-y-5">
-                <h3 class="text-lg font-semibold text-slate-700">Plan Details</h3>
-
-                <div class="space-y-3">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">Type</span>
-                        <span class="font-medium" :class="membership.pricing_type === 'plan' ? 'text-blue-600' : 'text-purple-600'">
-                            {{ membership.pricing_type === 'plan' ? 'Bundle' : 'Individual' }}
+        <div class="col-span-12 lg:col-span-4 space-y-6">
+            <div class="box box--stacked overflow-hidden">
+                <div class="px-5 py-4 border-b border-slate-200/60">
+                    <h3 class="text-lg font-medium text-slate-700 flex items-center gap-2">
+                        <Lucide icon="DollarSign" class="w-5 h-5 text-primary" />
+                        Pricing
+                    </h3>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
+                        <span class="text-slate-600">Pricing Type</span>
+                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium" :class="membership.pricing_type === 'plan' ? 'bg-primary/10 text-primary' : 'bg-info/10 text-info'">
+                            {{ membership.pricing_type === 'plan' ? 'Plan' : 'Individual' }}
                         </span>
                     </div>
 
                     <template v-if="membership.pricing_type === 'plan'">
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-500">Price</span>
-                            <span class="font-bold text-lg text-slate-800">{{ formatPrice(membership.price) }}</span>
+                        <div class="flex items-center justify-between rounded-xl border border-success/20 bg-success/5 px-4 py-4">
+                            <span class="text-slate-600">Plan Price</span>
+                            <span class="text-[22px] font-semibold text-success">{{ formatPrice(membership.price) }}</span>
                         </div>
                     </template>
+
                     <template v-else>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-500">Carrier</span>
-                            <span class="font-semibold text-slate-700">{{ formatPrice(membership.carrier_price) }}</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-500">Driver</span>
-                            <span class="font-semibold text-slate-700">{{ formatPrice(membership.driver_price) }}</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-500">Vehicle</span>
-                            <span class="font-semibold text-slate-700">{{ formatPrice(membership.vehicle_price) }}</span>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
+                                <span class="text-slate-600">Carrier Price</span>
+                                <span class="font-semibold text-slate-800">{{ formatPrice(membership.carrier_price) }}</span>
+                            </div>
+                            <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
+                                <span class="text-slate-600">Driver Price</span>
+                                <span class="font-semibold text-slate-800">{{ formatPrice(membership.driver_price) }}</span>
+                            </div>
+                            <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
+                                <span class="text-slate-600">Vehicle Price</span>
+                                <span class="font-semibold text-slate-800">{{ formatPrice(membership.vehicle_price) }}</span>
+                            </div>
                         </div>
                     </template>
                 </div>
+            </div>
 
-                <div class="border-t border-slate-200/60 pt-4 space-y-3">
-                    <h4 class="text-sm font-semibold text-slate-600">Limits</h4>
-                    <div v-for="item in [
-                        { label: 'Users', max: membership.max_carrier, current: stats.total_carriers, color: 'bg-blue-500' },
-                        { label: 'Drivers', max: membership.max_drivers, current: stats.total_drivers, color: 'bg-purple-500' },
-                        { label: 'Vehicles', max: membership.max_vehicles, current: stats.total_vehicles, color: 'bg-amber-500' }
-                    ]" :key="item.label" class="space-y-1">
-                        <div class="flex justify-between text-xs text-slate-500">
-                            <span>{{ item.label }}</span>
-                            <span>{{ item.current }} / {{ item.max }}</span>
+            <div class="box box--stacked overflow-hidden">
+                <div class="px-5 py-4 border-b border-slate-200/60">
+                    <h3 class="text-lg font-medium text-slate-700 flex items-center gap-2">
+                        <Lucide icon="Gauge" class="w-5 h-5 text-primary" />
+                        Plan Limits
+                    </h3>
+                </div>
+                <div class="p-5 space-y-5">
+                    <div v-for="item in usageRows" :key="item.label" class="space-y-2">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-slate-600">{{ item.label }}</span>
+                            <span class="text-slate-700">{{ item.current }} / {{ item.max }}</span>
                         </div>
-                        <div class="w-full bg-slate-100 rounded-full h-2">
-                            <div :class="item.color" class="h-2 rounded-full transition-all" :style="{ width: Math.min((item.current / item.max) * 100, 100) + '%' }"></div>
+                        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                            <div :class="item.color" class="h-full rounded-full transition-all" :style="{ width: Math.min((item.current / item.max) * 100, 100) + '%' }"></div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="border-t border-slate-200/60 pt-4 space-y-2">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">Status</span>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="membership.status ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
+            <div class="box box--stacked overflow-hidden">
+                <div class="px-5 py-4 border-b border-slate-200/60">
+                    <h3 class="text-lg font-medium text-slate-700 flex items-center gap-2">
+                        <Lucide icon="Settings2" class="w-5 h-5 text-primary" />
+                        Settings
+                    </h3>
+                </div>
+                <div class="p-5 space-y-3">
+                    <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
+                        <span class="text-slate-600">Status</span>
+                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium" :class="membership.status ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
                             {{ membership.status ? 'Active' : 'Inactive' }}
                         </span>
                     </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">Registration</span>
-                        <span class="text-slate-700">{{ membership.show_in_register ? 'Visible' : 'Hidden' }}</span>
+                    <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
+                        <span class="text-slate-600">Show in Register</span>
+                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium" :class="membership.show_in_register ? 'bg-success/10 text-success' : 'bg-slate-200 text-slate-600'">
+                            {{ membership.show_in_register ? 'Yes' : 'No' }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
+                        <span class="text-slate-600">Created</span>
+                        <span class="text-slate-800">{{ new Date(membership.created_at).toLocaleDateString() }}</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Carriers Table -->
         <div class="col-span-12 lg:col-span-8">
             <div class="box box--stacked">
                 <div class="p-5 border-b border-slate-200/60">
@@ -189,17 +235,39 @@ function formatPrice(value: number | null): string {
                         <thead>
                             <tr class="bg-slate-50/80">
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Contact</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">MC Number</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase text-center">Drivers</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase text-center">Vehicles</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Status</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="carrier in carriers.data" :key="carrier.id" class="border-b border-slate-100 hover:bg-slate-50/50">
-                                <td class="px-5 py-4 font-medium text-slate-700">{{ carrier.name }}</td>
-                                <td class="px-5 py-4 text-sm text-slate-600">{{ carrier.mc_number ?? '-' }}</td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="carrier.status === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                            <img v-if="carrier.logo_url" :src="carrier.logo_url" :alt="carrier.name" class="w-full h-full object-cover" />
+                                            <Lucide v-else icon="Building2" class="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div class="font-medium text-slate-700">{{ carrier.name }}</div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-4 text-sm text-slate-600">{{ carrier.contact_email ?? '-' }}</td>
+                                <td class="px-5 py-4 text-sm text-slate-600">{{ carrier.mc_number ?? '-' }}</td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                        {{ carrier.drivers_count }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-4 text-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning">
+                                        {{ carrier.vehicles_count }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="carrier.status === 1 ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-500'">
                                         {{ carrier.status === 1 ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
@@ -210,7 +278,7 @@ function formatPrice(value: number | null): string {
                                 </td>
                             </tr>
                             <tr v-if="carriers.data.length === 0">
-                                <td colspan="4" class="px-5 py-12 text-center text-slate-400">
+                                <td colspan="7" class="px-5 py-12 text-center text-slate-400">
                                     <Lucide icon="Inbox" class="w-10 h-10 mx-auto mb-2 text-slate-300" />
                                     <p>No carriers using this plan yet</p>
                                 </td>

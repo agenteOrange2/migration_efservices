@@ -44,6 +44,7 @@ const menu: SideMenuSection[] = [
             { icon: 'Eye', route_name: 'admin.inspections.index', title: 'Inspections' },
             { icon: 'School', route_name: 'admin.training-schools.index', title: 'Driving Schools' },
             { icon: 'GraduationCap', route_name: 'admin.trainings.index', title: 'Trainings' },
+            { icon: 'BarChart3', route_name: 'admin.training-dashboard.index', title: 'Training Dashboard' },
             { icon: 'ClipboardList', route_name: 'admin.training-assignments.index', title: 'Training Assignments' },
             { icon: 'ShieldCheck', route_name: 'admin.courses.index', title: 'Courses' },
             { icon: 'Archive', route_name: 'admin.drivers.archived.index', title: 'Archived Drivers' },

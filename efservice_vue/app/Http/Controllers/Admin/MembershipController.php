@@ -82,23 +82,34 @@ class MembershipController extends Controller
 
     public function show(Membership $membership): Response
     {
-        $allCarriers = $membership->carriers()->get();
+        $allCarriers = $membership->carriers()
+            ->with(['users:users.id,email', 'media'])
+            ->withCount(['userDrivers', 'vehicles'])
+            ->get();
 
         $stats = [
             'total_carriers' => $allCarriers->count(),
             'active_carriers' => $allCarriers->where('status', 1)->count(),
-            'total_drivers' => 0,
-            'total_vehicles' => 0,
+            'total_drivers' => (int) $allCarriers->sum('user_drivers_count'),
+            'total_vehicles' => (int) $allCarriers->sum('vehicles_count'),
         ];
 
-        foreach ($allCarriers as $carrier) {
-            $stats['total_drivers'] += $carrier->userDrivers()->count();
-            $stats['total_vehicles'] += $carrier->vehicles()->count();
-        }
-
         $carriers = $membership->carriers()
-            ->select(['id', 'name', 'slug', 'status', 'id_plan', 'created_at'])
-            ->paginate(10);
+            ->with(['users:users.id,email', 'media'])
+            ->withCount(['userDrivers', 'vehicles'])
+            ->select(['id', 'name', 'slug', 'mc_number', 'status', 'id_plan', 'created_at'])
+            ->paginate(10)
+            ->through(fn ($carrier) => [
+                'id' => $carrier->id,
+                'name' => $carrier->name,
+                'slug' => $carrier->slug,
+                'mc_number' => $carrier->mc_number,
+                'status' => $carrier->status,
+                'drivers_count' => $carrier->user_drivers_count,
+                'vehicles_count' => $carrier->vehicles_count,
+                'contact_email' => $carrier->users->first()?->email,
+                'logo_url' => $carrier->getFirstMediaUrl('logo_carrier') ?: null,
+            ]);
 
         $membershipData = $membership->only([
             'id', 'name', 'description', 'pricing_type', 'price',
