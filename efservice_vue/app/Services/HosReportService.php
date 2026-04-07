@@ -704,8 +704,10 @@ class HosReportService
      * @param int|null $filterCarrierId
      * @return Collection
      */
-    protected function getDriversForFilter(?int $carrierId, ?int $filterCarrierId): Collection
+    protected function getDriversForFilter(?int $carrierId, string|int|null $filterCarrierId): Collection
     {
+        $filterCarrierId = ($filterCarrierId !== null && $filterCarrierId !== '') ? (int) $filterCarrierId : null;
+
         $query = UserDriverDetail::with('user')
             ->where('status', UserDriverDetail::STATUS_ACTIVE);
 

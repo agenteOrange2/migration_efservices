@@ -1,0 +1,30 @@
+<script setup lang="ts">
+import { Head, Link, router } from '@inertiajs/vue3'
+import { computed, reactive } from 'vue'
+import Button from '@/components/Base/Button'
+import FormInput from '@/components/Base/Form/FormInput.vue'
+import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
+import Lucide from '@/components/Base/Lucide'
+import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
+import RazeLayout from '@/layouts/RazeLayout.vue'
+import ReportHero from './components/ReportHero.vue'
+import ReportPagination from './components/ReportPagination.vue'
+import ReportStats from './components/ReportStats.vue'
+import { pickerOptions, statusTone, type PaginationLink } from './components/reportUtils'
+declare function route(name: string, params?: any): string
+defineOptions({ layout: RazeLayout })
+interface Row { id: number; trip_number: string; carrier_name: string | null; driver_name: string; vehicle_label: string; origin: string; destination: string; scheduled_start: string | null; scheduled_end: string | null; status: string; violations_count: number }
+const props = defineProps<{ filters: { carrier_id: string; driver_id: string; status: string; date_from: string; date_to: string; per_page: number }; trips: { data: Row[]; links: PaginationLink[]; total: number }; stats: { total_trips: number; completed_trips: number; in_progress_trips: number; trips_with_violations: number; completion_rate: number }; carriers: { id: number; name: string }[]; drivers: { id: number; name: string }[]; statuses: { value: string; label: string }[]; canFilterCarriers: boolean }>()
+const filters = reactive({ ...props.filters })
+const statCards = computed(() => [{ label: 'Total Trips', value: props.stats.total_trips, icon: 'MapPin' }, { label: 'Completed', value: props.stats.completed_trips, icon: 'BadgeCheck' }, { label: 'In Progress', value: props.stats.in_progress_trips, icon: 'LoaderCircle' }, { label: 'With Violations', value: props.stats.trips_with_violations, icon: 'AlertTriangle' }])
+function applyFilters() { router.get(route('admin.reports.trips'), { carrier_id: filters.carrier_id || undefined, driver_id: filters.driver_id || undefined, status: filters.status || undefined, date_from: filters.date_from || undefined, date_to: filters.date_to || undefined }, { preserveState: true, preserveScroll: true, replace: true }) }
+</script>
+<template>
+    <Head title="Trips Report" />
+    <div class="grid grid-cols-12 gap-6">
+        <div class="col-span-12"><ReportHero title="Trips Report" subtitle="Trip activity, status, planned schedule, and violation markers." icon="MapPin"><template #actions><Button as="a" :href="route('admin.reports.trips-pdf', { ...filters })" variant="outline-secondary" class="gap-2"><Lucide icon="Download" class="h-4 w-4" />Export PDF</Button></template></ReportHero></div>
+        <div class="col-span-12"><ReportStats :cards="statCards" /></div>
+        <div class="col-span-12"><div class="box box--stacked p-5"><div class="mb-4 text-sm font-medium text-slate-600">Completion rate: <span class="text-primary">{{ props.stats.completion_rate }}%</span></div><div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"><TomSelect v-if="canFilterCarriers" v-model="filters.carrier_id"><option value="">All Carriers</option><option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option></TomSelect><TomSelect v-model="filters.driver_id"><option value="">All Drivers</option><option v-for="driver in drivers" :key="driver.id" :value="String(driver.id)">{{ driver.name }}</option></TomSelect><TomSelect v-model="filters.status"><option value="">All Statuses</option><option v-for="status in statuses" :key="status.value" :value="status.value">{{ status.label }}</option></TomSelect><Litepicker v-model="filters.date_from" :options="pickerOptions" /><Litepicker v-model="filters.date_to" :options="pickerOptions" /><div class="flex gap-3 xl:col-span-2"><Button variant="primary" class="w-full" @click="applyFilters">Apply</Button><Button variant="outline-secondary" class="w-full" @click="filters.carrier_id=''; filters.driver_id=''; filters.status=''; filters.date_from=''; filters.date_to=''; applyFilters()">Reset</Button></div></div></div></div>
+        <div class="col-span-12"><div class="box box--stacked overflow-hidden"><div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200 text-sm"><thead class="bg-slate-50"><tr><th class="px-5 py-3 text-left font-semibold text-slate-600">Trip</th><th class="px-5 py-3 text-left font-semibold text-slate-600">Driver / Carrier</th><th class="px-5 py-3 text-left font-semibold text-slate-600">Route</th><th class="px-5 py-3 text-left font-semibold text-slate-600">Schedule</th><th class="px-5 py-3 text-left font-semibold text-slate-600">Status</th></tr></thead><tbody class="divide-y divide-slate-100 bg-white"><tr v-for="row in trips.data" :key="row.id"><td class="px-5 py-4"><Link :href="route('admin.reports.trip-details', row.id)" class="font-medium text-primary hover:underline">{{ row.trip_number }}</Link><div class="text-xs text-slate-500">{{ row.vehicle_label }}</div></td><td class="px-5 py-4 text-slate-600"><div>{{ row.driver_name }}</div><div class="text-xs text-slate-500">{{ row.carrier_name || 'N/A' }}</div></td><td class="px-5 py-4 text-slate-600"><div>{{ row.origin }}</div><div class="text-xs text-slate-500">{{ row.destination }}</div></td><td class="px-5 py-4 text-slate-600"><div>{{ row.scheduled_start || 'N/A' }}</div><div class="text-xs text-slate-500">{{ row.scheduled_end || 'N/A' }}</div></td><td class="px-5 py-4"><span class="rounded-full px-3 py-1 text-xs font-medium" :class="statusTone(row.status)">{{ row.status }}</span><div class="mt-2 text-xs text-slate-500">{{ row.violations_count }} violations</div></td></tr><tr v-if="!trips.data.length"><td colspan="5" class="px-5 py-10 text-center text-slate-500">No trips matched the current filters.</td></tr></tbody></table></div><div class="border-t border-slate-100 p-4"><ReportPagination :links="trips.links" /></div></div></div>
+    </div>
+</template>

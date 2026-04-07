@@ -9,9 +9,14 @@ use App\Http\Controllers\Admin\SafetyDataSystemController;
 use App\Http\Controllers\Admin\TrainingDashboardController;
 use App\Http\Controllers\Admin\TrainingAssignmentsController;
 use App\Http\Controllers\Admin\TrainingsController;
+use App\Http\Controllers\Admin\TripController;
+use App\Http\Controllers\Admin\HosController;
+use App\Http\Controllers\Admin\HosDocumentController;
+use App\Http\Controllers\Admin\AdminDriverHosController;
 use App\Http\Controllers\Admin\UserCarrierController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CompanyController;
+use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\Driver\AccidentsController;
 use App\Http\Controllers\Admin\Driver\DriverAdminWizardController;
 use App\Http\Controllers\Admin\Driver\ArchivedDriversController;
@@ -161,6 +166,50 @@ Route::resource('vehicle-makes', VehicleMakeController::class)->only(['index', '
 Route::resource('vehicle-types', VehicleTypeController::class)->only(['index', 'store', 'update', 'destroy'])->names('vehicle-types');
 Route::get('training-dashboard', [TrainingDashboardController::class, 'index'])->name('training-dashboard.index');
 Route::get('training-dashboard/export', [TrainingDashboardController::class, 'export'])->name('training-dashboard.export');
+Route::prefix('trips')->name('trips.')->group(function () {
+    Route::get('/', [TripController::class, 'index'])->name('index');
+    Route::get('statistics', [TripController::class, 'statistics'])->name('statistics');
+    Route::get('create', [TripController::class, 'create'])->name('create');
+    Route::post('/', [TripController::class, 'store'])->name('store');
+    Route::get('carrier-data', [TripController::class, 'getCarrierData'])->name('carrier.data');
+    Route::get('{trip}', [TripController::class, 'show'])->name('show');
+    Route::get('{trip}/edit', [TripController::class, 'edit'])->name('edit');
+    Route::put('{trip}', [TripController::class, 'update'])->name('update');
+    Route::delete('{trip}', [TripController::class, 'destroy'])->name('destroy');
+    Route::post('{trip}/force-start', [TripController::class, 'forceStart'])->name('force-start');
+    Route::post('{trip}/force-pause', [TripController::class, 'forcePause'])->name('force-pause');
+    Route::post('{trip}/force-resume', [TripController::class, 'forceResume'])->name('force-resume');
+    Route::post('{trip}/force-end', [TripController::class, 'forceEnd'])->name('force-end');
+});
+Route::prefix('hos')->name('hos.')->group(function () {
+    Route::get('/', [HosController::class, 'index'])->name('dashboard');
+    Route::get('carrier/{carrier}', [HosController::class, 'carrierDetail'])->name('carrier.detail');
+    Route::get('driver/{driver}', [HosController::class, 'driverLog'])->name('driver.log');
+    Route::put('entries/{entry}', [HosController::class, 'updateEntry'])->name('entries.update');
+    Route::delete('entries/{entry}', [HosController::class, 'deleteEntry'])->name('entries.destroy');
+    Route::post('entries/bulk-delete', [HosController::class, 'bulkDeleteEntries'])->name('entries.bulk-destroy');
+    Route::get('violations', [HosController::class, 'violations'])->name('violations');
+    Route::get('violations/{violation}', [HosController::class, 'violationShow'])->name('violations.show');
+    Route::post('violations/{violation}/acknowledge', [HosController::class, 'violationAcknowledge'])->name('violations.acknowledge');
+    Route::post('violations/{violation}/forgive', [HosController::class, 'violationForgive'])->name('violations.forgive');
+    Route::prefix('documents')->name('documents.')->group(function () {
+        Route::get('/', [HosDocumentController::class, 'index'])->name('index');
+        Route::post('generate-daily-log', [HosDocumentController::class, 'generateDailyLog'])->name('generate-daily-log');
+        Route::post('generate-monthly-summary', [HosDocumentController::class, 'generateMonthlySummary'])->name('generate-monthly-summary');
+        Route::post('generate-fmcsa-monthly', [HosDocumentController::class, 'generateDocumentMonthly'])->name('generate-fmcsa-monthly');
+        Route::get('bulk-download', [HosDocumentController::class, 'bulkDownload'])->name('bulk-download');
+        Route::post('bulk-destroy', [HosDocumentController::class, 'bulkDestroy'])->name('bulk-destroy');
+        Route::get('{media}/download', [HosDocumentController::class, 'download'])->name('download');
+        Route::get('{media}/preview', [HosDocumentController::class, 'preview'])->name('preview');
+        Route::delete('{media}', [HosDocumentController::class, 'destroy'])->name('destroy');
+    });
+});
+Route::prefix('drivers/hos')->name('drivers.hos.')->group(function () {
+    Route::get('/', [AdminDriverHosController::class, 'index'])->name('index');
+    Route::put('{driver}', [AdminDriverHosController::class, 'update'])->name('update');
+    Route::post('{driver}/approve', [AdminDriverHosController::class, 'approveRequest'])->name('approve');
+    Route::post('{driver}/reject', [AdminDriverHosController::class, 'rejectRequest'])->name('reject');
+});
 Route::prefix('trainings')->name('trainings.')->group(function () {
     Route::delete('media/{media}', [TrainingsController::class, 'destroyMedia'])->name('media.destroy');
     Route::get('{training}/assign', [TrainingAssignmentsController::class, 'createForTraining'])->name('assign.form');
@@ -368,7 +417,48 @@ Route::prefix('companies')->name('companies.')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Reports
+|--------------------------------------------------------------------------
+*/
+Route::prefix('reports')->name('reports.')->group(function () {
+    Route::get('/', [ReportsController::class, 'index'])->name('index');
+    Route::get('active-drivers', [ReportsController::class, 'activeDrivers'])->name('active-drivers');
+    Route::get('active-drivers/pdf', [ReportsController::class, 'activeDriversPdf'])->name('active-drivers-pdf');
+    Route::get('inactive-drivers', [ReportsController::class, 'inactiveDrivers'])->name('inactive-drivers');
+    Route::get('inactive-drivers/pdf', [ReportsController::class, 'inactiveDriversPdf'])->name('inactive-drivers-pdf');
+    Route::get('driver-prospects', [ReportsController::class, 'driverProspects'])->name('driver-prospects');
+    Route::get('driver-prospects/pdf', [ReportsController::class, 'driverProspectsPdf'])->name('driver-prospects-pdf');
+    Route::get('equipment-list', [ReportsController::class, 'equipmentList'])->name('equipment-list');
+    Route::get('equipment-list/pdf', [ReportsController::class, 'equipmentListPdf'])->name('equipment-list-pdf');
+    Route::get('carrier-documents', [ReportsController::class, 'carrierDocuments'])->name('carrier-documents');
+    Route::get('carrier-documents/pdf', [ReportsController::class, 'carrierDocumentsPdf'])->name('carrier-documents-pdf');
+    Route::get('download-carrier-documents/{carrier}', [ReportsController::class, 'downloadCarrierDocuments'])->name('download-carrier-documents');
+    Route::get('accidents', [ReportsController::class, 'accidents'])->name('accidents');
+    Route::get('register-accident', [ReportsController::class, 'registerAccident'])->name('register-accident');
+    Route::post('store-accident', [ReportsController::class, 'storeAccident'])->name('store-accident');
+    Route::get('accidents-list', [ReportsController::class, 'accidentsList'])->name('accidents-list');
+    Route::get('maintenances', [ReportsController::class, 'maintenances'])->name('maintenances');
+    Route::get('maintenances/pdf', [ReportsController::class, 'maintenancesPdf'])->name('maintenances-pdf');
+    Route::get('emergency-repairs', [ReportsController::class, 'emergencyRepairs'])->name('emergency-repairs');
+    Route::get('emergency-repairs/pdf', [ReportsController::class, 'emergencyRepairsPdf'])->name('emergency-repairs-pdf');
+    Route::get('trainings', [ReportsController::class, 'trainings'])->name('trainings');
+    Route::get('trainings/pdf', [ReportsController::class, 'trainingsPdf'])->name('trainings-pdf');
+    Route::get('trips', [ReportsController::class, 'trips'])->name('trips');
+    Route::get('trips/pdf', [ReportsController::class, 'tripsPdf'])->name('trips-pdf');
+    Route::get('trips/{trip}', [ReportsController::class, 'tripDetails'])->name('trip-details');
+    Route::get('hos', [ReportsController::class, 'hos'])->name('hos');
+    Route::get('hos/pdf', [ReportsController::class, 'hosPdf'])->name('hos-pdf');
+    Route::get('hos/{driver}', [ReportsController::class, 'hosDetails'])->name('hos-details');
+    Route::get('violations', [ReportsController::class, 'violations'])->name('violations');
+    Route::get('violations/pdf', [ReportsController::class, 'violationsPdf'])->name('violations-pdf');
+    Route::get('violations/{violation}', [ReportsController::class, 'violationDetails'])->name('violation-details');
+    Route::get('migrations', [ReportsController::class, 'migrations'])->name('migrations');
+});
+Route::get('api/active-drivers-by-carrier/{carrierId}', [ReportsController::class, 'getActiveDriversByCarrier'])->name('api.active-drivers-by-carrier');
+
+/*
+|--------------------------------------------------------------------------
 | Admin Management (will be migrated in later phases)
 |--------------------------------------------------------------------------
 */
-// TODO: Vehicles, HOS, Messages, Reports, Roles, etc.
+// TODO: Messages, Roles, etc.
