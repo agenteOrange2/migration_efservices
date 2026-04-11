@@ -48,10 +48,27 @@ defineProps<{
     record: RecordPayload
     carriers: CarrierOption[]
     drivers: DriverOption[]
+    carrier?: CarrierOption | null
+    routeNames?: {
+        index: string
+        store: string
+        update: string
+        show?: string
+        documentsShow: string
+    }
+    isCarrierContext?: boolean
 }>()
 </script>
 
 <template>
     <Head title="Edit Medical Record" />
-    <Form mode="edit" :record="record" :carriers="carriers" :drivers="drivers" />
+    <Form
+        mode="edit"
+        :record="record"
+        :carriers="carriers"
+        :drivers="drivers"
+        :carrier="carrier"
+        :route-names="routeNames"
+        :is-carrier-context="isCarrierContext"
+    />
 </template>

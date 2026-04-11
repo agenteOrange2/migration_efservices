@@ -4,11 +4,15 @@ import { computed, ref, watch } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import Button from '@/components/Base/Button'
 import { Dialog } from '@/components/Base/Headless'
+import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
+import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
+
+const lpOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 
 interface CarrierOption {
     id: number
@@ -45,13 +49,30 @@ interface LicensePayload {
     back_url: string | null
 }
 
-const props = defineProps<{
+interface LicenseRouteNames {
+    index: string
+    update: string
+    documentsShow: string
+}
+
+const props = withDefaults(defineProps<{
     license: LicensePayload
     carriers: CarrierOption[]
     drivers: DriverOption[]
     states: Record<string, string>
     endorsements: EndorsementOption[]
-}>()
+    carrier?: CarrierOption | null
+    routeNames?: LicenseRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    carrier: null,
+    routeNames: () => ({
+        index: 'admin.licenses.index',
+        update: 'admin.licenses.update',
+        documentsShow: 'admin.licenses.documents.show',
+    }),
+    isCarrierContext: false,
+})
 
 const selectedCarrierId = ref(props.license.carrier_id ? String(props.license.carrier_id) : '')
 
@@ -107,7 +128,7 @@ function submit() {
     form.transform(data => ({
         ...data,
         _method: 'put',
-    })).post(route('admin.licenses.update', props.license.id), {
+    })).post(route(props.routeNames.update, props.license.id), {
         forceFormData: true,
     })
 }
@@ -123,7 +144,7 @@ function openPreview(url: string | null, title: string) {
 </script>
 
 <template>
-    <Head title="Edit License" />
+    <Head :title="isCarrierContext ? 'Edit Carrier License' : 'Edit License'" />
 
     <div class="grid grid-cols-12 gap-y-8 gap-x-6">
         <div class="col-span-12">
@@ -135,11 +156,13 @@ function openPreview(url: string | null, title: string) {
                         </div>
                         <div>
                             <h1 class="text-2xl font-bold text-slate-800">Edit License</h1>
-                            <p class="text-slate-500">Update {{ props.license.license_number }} for {{ props.license.driver_name }}.</p>
+                            <p class="text-slate-500">
+                                {{ isCarrierContext ? 'Update the license assigned to your driver.' : `Update ${props.license.license_number} for ${props.license.driver_name}.` }}
+                            </p>
                         </div>
                     </div>
 
-                    <Link :href="route('admin.licenses.index')">
+                    <Link :href="route(routeNames.index)">
                         <Button variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back to Licenses
@@ -158,28 +181,31 @@ function openPreview(url: string | null, title: string) {
                     </h2>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                        <div v-if="!isCarrierContext">
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
-                            <select v-model="selectedCarrierId" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2">
+                            <TomSelect v-model="selectedCarrierId">
                                 <option value="">Select carrier</option>
                                 <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">
                                     {{ carrier.name }}
                                 </option>
-                            </select>
+                            </TomSelect>
+                        </div>
+
+                        <div v-else class="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                            <p class="text-xs font-medium uppercase tracking-[0.2em] text-primary/70">Carrier</p>
+                            <p class="mt-1 font-semibold text-slate-800">{{ carrier?.name ?? 'Current carrier' }}</p>
                         </div>
 
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
-                            <select
+                            <TomSelect
                                 v-model="form.user_driver_detail_id"
-                                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"
-                                :class="form.errors.user_driver_detail_id ? 'border-red-400' : ''"
                             >
                                 <option value="">Select driver</option>
                                 <option v-for="driver in filteredDrivers" :key="driver.id" :value="String(driver.id)">
                                     {{ driver.name }}
                                 </option>
-                            </select>
+                            </TomSelect>
                             <p v-if="form.errors.user_driver_detail_id" class="text-red-500 text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
                         </div>
                     </div>
@@ -200,26 +226,26 @@ function openPreview(url: string | null, title: string) {
 
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">License Class <span class="text-red-500">*</span></label>
-                            <select v-model="form.license_class" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" :class="form.errors.license_class ? 'border-red-400' : ''">
+                            <TomSelect v-model="form.license_class">
                                 <option value="A">Class A</option>
                                 <option value="B">Class B</option>
                                 <option value="C">Class C</option>
-                            </select>
+                            </TomSelect>
                             <p v-if="form.errors.license_class" class="text-red-500 text-xs mt-1">{{ form.errors.license_class }}</p>
                         </div>
 
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">State of Issue <span class="text-red-500">*</span></label>
-                            <select v-model="form.state_of_issue" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" :class="form.errors.state_of_issue ? 'border-red-400' : ''">
+                            <TomSelect v-model="form.state_of_issue">
                                 <option value="">Select state</option>
                                 <option v-for="(label, code) in states" :key="code" :value="code">{{ label }}</option>
-                            </select>
+                            </TomSelect>
                             <p v-if="form.errors.state_of_issue" class="text-red-500 text-xs mt-1">{{ form.errors.state_of_issue }}</p>
                         </div>
 
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Expiration Date <span class="text-red-500">*</span></label>
-                            <input v-model="form.expiration_date" type="date" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" :class="form.errors.expiration_date ? 'border-red-400' : ''" />
+                            <Litepicker v-model="form.expiration_date" :options="lpOptions" />
                             <p v-if="form.errors.expiration_date" class="text-red-500 text-xs mt-1">{{ form.errors.expiration_date }}</p>
                         </div>
                     </div>
@@ -295,7 +321,7 @@ function openPreview(url: string | null, title: string) {
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.licenses.index')">
+                    <Link :href="route(routeNames.index)">
                         <Button variant="outline-secondary" type="button">Cancel</Button>
                     </Link>
                     <Button type="submit" variant="primary" :disabled="form.processing">
@@ -314,7 +340,7 @@ function openPreview(url: string | null, title: string) {
 
                 <div class="space-y-3 text-sm">
                     <Link
-                        :href="route('admin.licenses.documents.show', license.id)"
+                        :href="route(routeNames.documentsShow, license.id)"
                         class="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-primary hover:bg-primary/10"
                     >
                         <span>Manage all documents</span>

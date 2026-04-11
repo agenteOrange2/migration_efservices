@@ -26,16 +26,40 @@ interface TrainingRow {
     documents_count: number
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     trainings: { data: TrainingRow[]; links: PaginationLink[]; total: number; last_page: number }
     filters: { search: string; status: string; content_type: string; sort: string; direction: string }
     stats: { total: number; active: number; inactive: number; assignments: number }
-}>()
+    routeNames?: {
+        index: string
+        create: string
+        show: string
+        edit: string
+        destroy: string
+        assignSelect?: string
+        assignForm?: string
+        dashboard?: string
+        assignmentsIndex?: string
+    }
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.trainings.index',
+        create: 'admin.trainings.create',
+        show: 'admin.trainings.show',
+        edit: 'admin.trainings.edit',
+        destroy: 'admin.trainings.destroy',
+        assignForm: 'admin.trainings.assign.form',
+        dashboard: 'admin.training-dashboard.index',
+        assignmentsIndex: 'admin.training-assignments.index',
+    }),
+    isCarrierContext: false,
+})
 
 const filters = reactive({ ...props.filters })
 
 function applyFilters() {
-    router.get(route('admin.trainings.index'), {
+    router.get(route(props.routeNames?.index ?? 'admin.trainings.index'), {
         search: filters.search || undefined,
         status: filters.status || undefined,
         content_type: filters.content_type || undefined,
@@ -55,7 +79,7 @@ function resetFilters() {
 
 function deleteTraining(training: TrainingRow) {
     if (!confirm(`Delete "${training.title}"?`)) return
-    router.delete(route('admin.trainings.destroy', training.id), { preserveScroll: true })
+    router.delete(route(props.routeNames?.destroy ?? 'admin.trainings.destroy', training.id), { preserveScroll: true })
 }
 
 function contentTypeClass(type: string) {
@@ -83,19 +107,25 @@ function contentTypeClass(type: string) {
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.training-dashboard.index')">
+                        <Link v-if="props.routeNames?.dashboard" :href="route(props.routeNames.dashboard)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="BarChart3" class="w-4 h-4" />
                                 Dashboard
                             </Button>
                         </Link>
-                        <Link :href="route('admin.training-assignments.index')">
+                        <Link v-if="props.routeNames?.assignmentsIndex" :href="route(props.routeNames.assignmentsIndex)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ClipboardList" class="w-4 h-4" />
                                 Assignments
                             </Button>
                         </Link>
-                        <Link :href="route('admin.trainings.create')">
+                        <Link v-if="props.routeNames?.assignSelect && props.isCarrierContext" :href="route(props.routeNames.assignSelect)">
+                            <Button variant="outline-secondary" class="flex items-center gap-2">
+                                <Lucide icon="UserPlus" class="w-4 h-4" />
+                                Assign Training
+                            </Button>
+                        </Link>
+                        <Link :href="route(props.routeNames?.create ?? 'admin.trainings.create')">
                             <Button variant="primary" class="flex items-center gap-2">
                                 <Lucide icon="Plus" class="w-4 h-4" />
                                 Create Training
@@ -203,13 +233,13 @@ function contentTypeClass(type: string) {
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link :href="route('admin.trainings.show', training.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View">
+                                        <Link :href="route(props.routeNames?.show ?? 'admin.trainings.show', training.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="route('admin.trainings.assign.form', training.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Assign">
+                                        <Link v-if="props.routeNames?.assignForm" :href="route(props.routeNames.assignForm, training.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Assign">
                                             <Lucide icon="UserPlus" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="route('admin.trainings.edit', training.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit">
+                                        <Link :href="route(props.routeNames?.edit ?? 'admin.trainings.edit', training.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
                                         <button type="button" @click="deleteTraining(training)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">

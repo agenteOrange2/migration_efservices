@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watchEffect } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
@@ -10,6 +10,9 @@ const props = defineProps<{
     carriers: { id: number; name: string }[]
     drivers: { id: number; carrier_id: number | null; carrier_name?: string | null; name: string; email?: string | null }[]
     trainingLocked?: boolean
+    carrier?: { id: number; name: string } | null
+    isCarrierContext?: boolean
+    carrierLocked?: boolean
 }>()
 
 const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
@@ -17,6 +20,12 @@ const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 const filteredDrivers = computed(() => {
     if (!props.form.carrier_id) return props.drivers
     return props.drivers.filter((driver) => String(driver.carrier_id ?? '') === String(props.form.carrier_id))
+})
+
+watchEffect(() => {
+    if ((props.isCarrierContext || props.carrierLocked) && props.carrier?.id && String(props.form.carrier_id) !== String(props.carrier.id)) {
+        props.form.carrier_id = String(props.carrier.id)
+    }
 })
 </script>
 
@@ -38,12 +47,18 @@ const filteredDrivers = computed(() => {
                     <p v-if="form.errors.training_id" class="text-red-500 text-xs mt-1">{{ form.errors.training_id }}</p>
                 </div>
 
-                <div>
+                <div v-if="!props.carrierLocked">
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier</label>
                     <TomSelect v-model="form.carrier_id">
                         <option value="">All carriers</option>
                         <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                     </TomSelect>
+                </div>
+
+                <div v-else class="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+                    <div class="text-xs font-medium uppercase tracking-wide text-primary/80">Carrier</div>
+                    <div class="mt-1 text-sm font-semibold text-slate-800">{{ props.carrier?.name ?? 'Assigned carrier' }}</div>
+                    <div class="mt-1 text-xs text-slate-500">Only drivers from your carrier are available for this assignment.</div>
                 </div>
 
                 <div class="md:col-span-2">

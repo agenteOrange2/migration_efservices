@@ -55,7 +55,40 @@ interface Driver {
 interface Stats { total_documents: number; licenses_count: number; medical_status: string; medical_expiration: string | null; records_uploaded: number; testing_count: number; testing_status: string; vehicles_count: number; vehicles_status: string }
 interface DocItem { name: string; url: string; size: string; date: string; related_info: string; type?: string; company?: string }
 
-const props = defineProps<{ driver: Driver; documentsByCategory: Record<string, DocItem[]>; stats: Stats }>()
+interface DriverShowRouteNames {
+    index: string
+    edit?: string
+    documentsDownload?: string
+    activate?: string
+    deactivate?: string
+    migrationWizard?: string
+}
+
+const props = withDefaults(defineProps<{
+    driver: Driver
+    documentsByCategory: Record<string, DocItem[]>
+    stats: Stats
+    routeNames?: DriverShowRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.drivers.index',
+        documentsDownload: 'admin.drivers.documents.download',
+        activate: 'admin.drivers.activate',
+        deactivate: 'admin.drivers.deactivate',
+        migrationWizard: 'admin.drivers.migration.wizard',
+    }),
+    isCarrierContext: false,
+})
+
+const routeNames = computed(() => props.routeNames)
+const isCarrierContext = computed(() => props.isCarrierContext)
+
+function namedRoute(name: keyof DriverShowRouteNames, params?: any) {
+    const routeName = props.routeNames[name]
+
+    return routeName ? route(routeName, params) : '#'
+}
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const activeTab = ref('general')
@@ -155,12 +188,12 @@ const isActive = computed(() => props.driver.effective_status === 'active')
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 function activateDriver() {
-    if (confirm(`Activate driver "${props.driver.full_name}"?`))
-        router.put(route('admin.drivers.activate', props.driver.id), {}, { preserveScroll: true })
+    if (props.routeNames.activate && confirm(`Activate driver "${props.driver.full_name}"?`))
+        router.put(route(props.routeNames.activate, props.driver.id), {}, { preserveScroll: true })
 }
 function deactivateDriver() {
-    if (confirm(`Deactivate driver "${props.driver.full_name}"?`))
-        router.put(route('admin.drivers.deactivate', props.driver.id), {}, { preserveScroll: true })
+    if (props.routeNames.deactivate && confirm(`Deactivate driver "${props.driver.full_name}"?`))
+        router.put(route(props.routeNames.deactivate, props.driver.id), {}, { preserveScroll: true })
 }
 
 // ─── Migration Wizard ─────────────────────────────────────────────────────────
@@ -336,24 +369,29 @@ function submitRollback() {
                     </div>
                     <!-- Actions -->
                     <div class="flex flex-wrap gap-2">
-                        <Link :href="route('admin.drivers.index')">
+                        <Link :href="namedRoute('index')">
                             <Button variant="outline-secondary" size="sm" class="flex items-center gap-1.5">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" /> Back
                             </Button>
                         </Link>
-                        <button v-if="!isActive" @click="activateDriver"
+                        <Link v-if="routeNames.edit" :href="namedRoute('edit', driver.id)">
+                            <Button variant="outline-secondary" size="sm" class="flex items-center gap-1.5">
+                                <Lucide icon="Pencil" class="w-4 h-4" /> Edit
+                            </Button>
+                        </Link>
+                        <button v-if="routeNames.activate && !isActive" @click="activateDriver"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition">
                             <Lucide icon="UserCheck" class="w-4 h-4" /> Activate
                         </button>
-                        <button v-else @click="deactivateDriver"
+                        <button v-else-if="routeNames.deactivate && isActive" @click="deactivateDriver"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition">
                             <Lucide icon="UserMinus" class="w-4 h-4" /> Deactivate
                         </button>
-                        <a v-if="stats.total_documents > 0" :href="route('admin.drivers.documents.download', driver.id)"
+                        <a v-if="routeNames.documentsDownload && stats.total_documents > 0" :href="namedRoute('documentsDownload', driver.id)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition">
                             <Lucide icon="Download" class="w-4 h-4" /> Download Docs
                         </a>
-                        <Link v-if="isActive" :href="route('admin.drivers.migration.wizard', driver.id)"
+                        <Link v-if="routeNames.migrationWizard && isActive && !isCarrierContext" :href="namedRoute('migrationWizard', driver.id)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition">
                             <Lucide icon="ArrowRightLeft" class="w-4 h-4" /> Migrate Carrier
                         </Link>

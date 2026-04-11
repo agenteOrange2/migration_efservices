@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Lucide from '@/components/Base/Lucide'
+import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 
 const props = defineProps<{
     form: any
@@ -35,21 +36,21 @@ function onFilesChange(event: Event) {
 
                 <div>
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">Content Type <span class="text-red-500">*</span></label>
-                    <select v-model="form.content_type" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <TomSelect v-model="form.content_type">
                         <option value="">Select type</option>
                         <option value="file">File</option>
                         <option value="video">Video</option>
                         <option value="url">URL</option>
-                    </select>
+                    </TomSelect>
                     <p v-if="form.errors.content_type" class="text-red-500 text-xs mt-1">{{ form.errors.content_type }}</p>
                 </div>
 
                 <div>
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">Status <span class="text-red-500">*</span></label>
-                    <select v-model="form.status" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <TomSelect v-model="form.status">
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
-                    </select>
+                    </TomSelect>
                     <p v-if="form.errors.status" class="text-red-500 text-xs mt-1">{{ form.errors.status }}</p>
                 </div>
 

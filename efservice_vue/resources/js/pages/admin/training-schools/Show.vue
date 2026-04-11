@@ -8,7 +8,14 @@ declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
 
-const props = defineProps<{
+interface TrainingSchoolRouteNames {
+    index: string
+    show: string
+    edit: string
+    documentsShow: string
+}
+
+const props = withDefaults(defineProps<{
     school: {
         id: number
         school_name: string
@@ -26,7 +33,19 @@ const props = defineProps<{
         carrier: { id: number; name: string } | null
         documents: { id: number; file_name: string; file_type: string; size_label: string; preview_url: string; created_at_display: string | null }[]
     }
-}>()
+    routeNames?: TrainingSchoolRouteNames
+}>(), {
+    routeNames: () => ({
+        index: 'admin.training-schools.index',
+        show: 'admin.training-schools.show',
+        edit: 'admin.training-schools.edit',
+        documentsShow: 'admin.training-schools.documents.show',
+    }),
+})
+
+function namedRoute(name: keyof TrainingSchoolRouteNames, params?: any) {
+    return route(props.routeNames[name], params)
+}
 </script>
 
 <template>
@@ -41,19 +60,19 @@ const props = defineProps<{
                         <p class="text-sm text-slate-500 mt-0.5">{{ [school.city, school.state].filter(Boolean).join(', ') || 'Training school details' }}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.training-schools.documents.show', school.id)">
+                        <Link :href="namedRoute('documentsShow', school.id)">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="Files" class="w-4 h-4" />
                                 Documents
                             </Button>
                         </Link>
-                        <Link :href="route('admin.training-schools.edit', school.id)">
+                        <Link :href="namedRoute('edit', school.id)">
                             <Button variant="primary" class="flex items-center gap-2">
                                 <Lucide icon="PenLine" class="w-4 h-4" />
                                 Edit
                             </Button>
                         </Link>
-                        <Link :href="route('admin.training-schools.index')">
+                        <Link :href="namedRoute('index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back
@@ -115,13 +134,13 @@ const props = defineProps<{
                         <Lucide icon="Paperclip" class="w-4 h-4 text-primary" />
                         Documents
                     </h2>
-                    <Link :href="route('admin.training-schools.documents.show', school.id)" class="text-sm text-primary hover:underline">Open documents view</Link>
+                    <Link :href="namedRoute('documentsShow', school.id)" class="text-sm text-primary hover:underline">Open documents view</Link>
                 </div>
                 <div v-if="school.documents.length" class="space-y-2">
                     <div v-for="document in school.documents" :key="document.id" class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
                         <div class="min-w-0">
                             <a :href="document.preview_url" target="_blank" class="block truncate text-sm font-medium text-primary hover:underline">{{ document.file_name }}</a>
-                            <p class="text-xs text-slate-500">{{ document.size_label }} · {{ document.created_at_display }}</p>
+                            <p class="text-xs text-slate-500">{{ document.size_label }} - {{ document.created_at_display }}</p>
                         </div>
                         <a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition">
                             <Lucide icon="Eye" class="w-4 h-4" />

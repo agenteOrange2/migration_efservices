@@ -55,7 +55,19 @@ interface DriverBase {
     photo_url: string | null
 }
 
-const props = defineProps<{
+interface WizardRouteNames {
+    index: string
+    create: string
+    store: string
+    edit: string
+    updateStep: string
+    employmentSearchCompanies: string
+    employmentSendEmail: string
+    employmentResendEmail: string
+    employmentMarkEmailStatus: string
+}
+
+const props = withDefaults(defineProps<{
     driver: DriverBase | null
     stepData: Record<string, any> | null
     carriers: { id: number; name: string }[]
@@ -68,10 +80,29 @@ const props = defineProps<{
     referralSources: Record<string, string>
     endorsements: { id: number; code: string; name: string }[]
     equipmentTypes: Record<string, string>
-}>()
+    carrierLocked?: boolean
+    routeNames?: WizardRouteNames
+}>(), {
+    carrierLocked: false,
+    routeNames: () => ({
+        index: 'admin.drivers.index',
+        create: 'admin.drivers.wizard.create',
+        store: 'admin.drivers.wizard.store',
+        edit: 'admin.drivers.wizard.edit',
+        updateStep: 'admin.drivers.wizard.update-step',
+        employmentSearchCompanies: 'admin.drivers.employment.search-companies',
+        employmentSendEmail: 'admin.drivers.employment.send-email',
+        employmentResendEmail: 'admin.drivers.employment.resend-email',
+        employmentMarkEmailStatus: 'admin.drivers.employment.mark-email-status',
+    }),
+})
 
 const page = usePage()
 const errors = computed(() => (page.props as any).errors ?? {})
+
+function namedRoute(name: keyof WizardRouteNames, params?: any) {
+    return route(props.routeNames[name], params)
+}
 
 const isEditMode = computed(() => !!props.driver)
 const currentStep = ref(props.initialStep ?? props.driver?.current_step ?? 1)
@@ -174,9 +205,9 @@ function submitStep1() {
 
     if (isEditMode.value) {
         data.append('_method', 'PUT')
-        router.post(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 1 }), data)
+        router.post(namedRoute('updateStep', { driver: props.driver!.id, step: 1 }), data)
     } else {
-        router.post(route('admin.drivers.wizard.store'), data)
+        router.post(namedRoute('store'), data)
     }
 }
 
@@ -225,7 +256,7 @@ function submitStep2() {
     step2Errors.value = errs
     if (errs.length) return
 
-    router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 2 }), {
+    router.put(namedRoute('updateStep', { driver: props.driver!.id, step: 2 }), {
         address_line1:    step2.address_line1,
         address_line2:    step2.address_line2,
         city:             step2.city,
@@ -322,7 +353,7 @@ function submitStep3() {
         data.new_vehicle_location                = v.location
         data.new_vehicle_notes                   = v.notes
     }
-    router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 3 }), data)
+    router.put(namedRoute('updateStep', { driver: props.driver!.id, step: 3 }), data)
 }
 
 // ------------------------------------------------------------------
@@ -410,7 +441,7 @@ function submitStep4() {
         data.append(`experiences[${i}][requires_cdl]`, e.requires_cdl ? '1' : '0')
     })
     data.append('_method', 'PUT')
-    router.post(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 4 }), data)
+    router.post(namedRoute('updateStep', { driver: props.driver!.id, step: 4 }), data)
 }
 
 // ------------------------------------------------------------------
@@ -443,7 +474,7 @@ function submitStep5() {
     if (step5.medical_card)         data.append('medical_card',         step5.medical_card)
     if (step5.social_security_card) data.append('social_security_card', step5.social_security_card)
     data.append('_method', 'PUT')
-    router.post(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 5 }), data)
+    router.post(namedRoute('updateStep', { driver: props.driver!.id, step: 5 }), data)
 }
 
 // ------------------------------------------------------------------
@@ -538,7 +569,7 @@ function submitStep6() {
         }
     })
     data.append('_method', 'PUT')
-    router.post(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 6 }), data)
+    router.post(namedRoute('updateStep', { driver: props.driver!.id, step: 6 }), data)
 }
 
 // ------------------------------------------------------------------
@@ -582,7 +613,7 @@ function submitStep7() {
         if ((c as any).image_file) data.append(`conviction_images[${i}]`, (c as any).image_file)
     })
     data.append('_method', 'PUT')
-    router.post(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 7 }), data)
+    router.post(namedRoute('updateStep', { driver: props.driver!.id, step: 7 }), data)
 }
 
 // ------------------------------------------------------------------
@@ -628,7 +659,7 @@ function submitStep8() {
         if ((a as any).image_file) data.append(`accident_images[${i}]`, (a as any).image_file)
     })
     data.append('_method', 'PUT')
-    router.post(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 8 }), data)
+    router.post(namedRoute('updateStep', { driver: props.driver!.id, step: 8 }), data)
 }
 
 // ------------------------------------------------------------------
@@ -660,7 +691,7 @@ function submitStep9() {
     if (!step9.consent_driving_record) errs.push('You must consent to the check of your driving record.')
     step9Errors.value = errs
     if (errs.length) return
-    router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 9 }), { ...step9 })
+    router.put(namedRoute('updateStep', { driver: props.driver!.id, step: 9 }), { ...step9 })
 }
 
 // ------------------------------------------------------------------
@@ -783,7 +814,7 @@ function submitStep10() {
         alert('You must confirm that the information above is correct and contains no missing information.')
         return
     }
-    router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 10 }), {
+    router.put(namedRoute('updateStep', { driver: props.driver!.id, step: 10 }), {
         companies:               step10.companies,
         unemployment_periods:    step10.has_unemployment_periods ? step10.unemployment_periods : [],
         related_employments:     step10.related_employments,
@@ -807,7 +838,7 @@ function onSearchInput() {
     searchTimer = setTimeout(async () => {
         try {
             const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? ''
-            const url = `/admin/drivers/employment/search-companies?q=${encodeURIComponent(companySearchTerm.value)}`
+            const url = `${namedRoute('employmentSearchCompanies')}?q=${encodeURIComponent(companySearchTerm.value)}`
             const res = await fetch(url, {
                 headers: {
                     'Accept': 'application/json',
@@ -898,7 +929,7 @@ async function sendEmail(company: any) {
     if (!company.id) { alert('Save the record first before sending email.'); return }
     emailLoading.value[company.id] = true
     try {
-        const res = await axios.post(route('admin.drivers.employment.send-email', { driver: props.driver!.id, company: company.id }))
+        const res = await axios.post(namedRoute('employmentSendEmail', { driver: props.driver!.id, company: company.id }))
         company.email_sent = true
     } catch (e: any) {
         alert(e.response?.data?.message ?? 'Failed to send email.')
@@ -910,7 +941,7 @@ async function resendEmail(company: any) {
     if (!company.id) { alert('Save the record first.'); return }
     emailLoading.value[company.id] = true
     try {
-        await axios.post(route('admin.drivers.employment.resend-email', { driver: props.driver!.id, company: company.id }))
+        await axios.post(namedRoute('employmentResendEmail', { driver: props.driver!.id, company: company.id }))
         company.email_sent = true
     } catch (e: any) {
         alert(e.response?.data?.message ?? 'Failed to resend email.')
@@ -921,7 +952,7 @@ async function resendEmail(company: any) {
 async function toggleEmailSent(company: any, sent: boolean) {
     if (!company.id) return
     try {
-        await axios.post(route('admin.drivers.employment.mark-email-status', { driver: props.driver!.id, company: company.id }), { sent })
+        await axios.post(namedRoute('employmentMarkEmailStatus', { driver: props.driver!.id, company: company.id }), { sent })
         company.email_sent = sent
     } catch {}
 }
@@ -955,7 +986,7 @@ function submitStep11() {
     if (!step11.fmcsa_clearinghouse_consent) errs.push('You must consent to FMCSA Clearinghouse queries.')
     step11Errors.value = errs
     if (errs.length) return
-    router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 11 }), {
+    router.put(namedRoute('updateStep', { driver: props.driver!.id, step: 11 }), {
         consent_all_policies_attached: step11.consent_all_policies_attached,
         substance_testing_consent:     step11.substance_testing_consent,
         authorization_consent:         step11.authorization_consent,
@@ -993,7 +1024,7 @@ function submitStep12() {
     if (!step12.background_info_consent) errs.push('You must certify that the information is correct.')
     step12Errors.value = errs
     if (errs.length) return
-    router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 12 }), {
+    router.put(namedRoute('updateStep', { driver: props.driver!.id, step: 12 }), {
         has_criminal_charges:    step12.has_criminal_charges,
         has_felony_conviction:   step12.has_felony_conviction,
         has_minister_permit:     step12.has_minister_permit,
@@ -1041,7 +1072,7 @@ function submitStep13() {
     if (!step13.tin.trim()) errs.push('TIN is required.')
     step13Errors.value = errs
     if (errs.length) return
-    router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 13 }), { ...step13 })
+    router.put(namedRoute('updateStep', { driver: props.driver!.id, step: 13 }), { ...step13 })
 }
 
 function onTinInput(e: Event) {
@@ -1124,7 +1155,7 @@ function submitStep14() {
     if (!step14.is_accepted) errs.push('You must certify that all information is true and complete.')
     step14Errors.value = errs
     if (errs.length) return
-    router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 14 }), {
+    router.put(namedRoute('updateStep', { driver: props.driver!.id, step: 14 }), {
         signature:   step14.signature,
         is_accepted: step14.is_accepted,
     })
@@ -1142,7 +1173,7 @@ const step15 = reactive({
 
 function submitStep15() {
     if (!step15.is_complete) return
-    router.put(route('admin.drivers.wizard.update-step', { driver: props.driver!.id, step: 15 }), {})
+    router.put(namedRoute('updateStep', { driver: props.driver!.id, step: 15 }), {})
 }
 
 </script>
@@ -1161,7 +1192,7 @@ function submitStep15() {
                     {{ driver!.name }} {{ driver!.last_name }} &bull; {{ driver!.carrier_name }}
                 </p>
             </div>
-            <a :href="route('admin.drivers.index')" class="flex items-center gap-1 text-slate-500 hover:text-slate-700 text-sm">
+            <a :href="namedRoute('index')" class="flex items-center gap-1 text-slate-500 hover:text-slate-700 text-sm">
                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                 Back to Drivers
             </a>
@@ -1214,7 +1245,7 @@ function submitStep15() {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium mb-1">Carrier <span class="text-danger">*</span></label>
-                        <TomSelect v-model="step1.carrier_id" :disabled="!!props.selectedCarrierId && !isEditMode">
+                        <TomSelect v-model="step1.carrier_id" :disabled="props.carrierLocked || (!!props.selectedCarrierId && !isEditMode)">
                             <option v-for="c in props.carriers" :key="c.id" :value="c.id">{{ c.name }}</option>
                         </TomSelect>
                         <p v-if="props.selectedCarrierId && !isEditMode" class="text-xs text-slate-400 mt-1">

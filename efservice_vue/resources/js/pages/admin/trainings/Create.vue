@@ -9,6 +9,41 @@ declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
 
+interface TrainingRouteNames {
+    index: string
+    store: string
+    show: string
+    edit: string
+    update: string
+    destroy: string
+    mediaDestroy: string
+    assignSelect?: string
+    assignForm?: string
+    assign?: string
+    dashboard?: string
+    assignmentsIndex?: string
+}
+
+const props = withDefaults(defineProps<{
+    routeNames?: TrainingRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.trainings.index',
+        store: 'admin.trainings.store',
+        show: 'admin.trainings.show',
+        edit: 'admin.trainings.edit',
+        update: 'admin.trainings.update',
+        destroy: 'admin.trainings.destroy',
+        mediaDestroy: 'admin.trainings.media.destroy',
+        assignForm: 'admin.trainings.assign.form',
+        assign: 'admin.trainings.assign',
+        dashboard: 'admin.training-dashboard.index',
+        assignmentsIndex: 'admin.training-assignments.index',
+    }),
+    isCarrierContext: false,
+})
+
 const form = useForm({
     title: '',
     description: '',
@@ -20,7 +55,7 @@ const form = useForm({
 })
 
 function submit() {
-    form.post(route('admin.trainings.store'), { forceFormData: true })
+    form.post(route(props.routeNames.store), { forceFormData: true })
 }
 </script>
 
@@ -33,9 +68,9 @@ function submit() {
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h1 class="text-xl font-bold text-slate-800">Create Training</h1>
-                        <p class="text-sm text-slate-500 mt-0.5">Add a new training for drivers.</p>
+                        <p class="text-sm text-slate-500 mt-0.5">{{ props.isCarrierContext ? 'Add a training that your team can assign to drivers.' : 'Add a new training for drivers.' }}</p>
                     </div>
-                    <Link :href="route('admin.trainings.index')">
+                    <Link :href="route(props.routeNames.index)">
                         <Button variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back to Trainings
@@ -50,7 +85,7 @@ function submit() {
                 <Form :form="form" />
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.trainings.index')">
+                    <Link :href="route(props.routeNames.index)">
                         <Button type="button" variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="X" class="w-4 h-4" />
                             Cancel

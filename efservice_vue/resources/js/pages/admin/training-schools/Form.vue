@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
+import { FormInput } from '@/components/Base/Form'
 import Lucide from '@/components/Base/Lucide'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     form: any
     carriers: { id: number; name: string }[]
     drivers: { id: number; carrier_id: number | null; carrier_name?: string | null; name: string; email?: string | null }[]
     states: Record<string, string>
     skillOptions: Record<string, string>
     existingDocuments?: { id: number; file_name: string; file_type: string; size_label: string; preview_url: string; created_at_display: string | null }[]
-}>()
+    carrier?: { id: number; name: string } | null
+    isCarrierContext?: boolean
+}>(), {
+    existingDocuments: () => [],
+    carrier: null,
+    isCarrierContext: false,
+})
 
 const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 
@@ -19,6 +26,12 @@ const filteredDrivers = computed(() => {
     if (!props.form.carrier_id) return props.drivers
     return props.drivers.filter((driver) => String(driver.carrier_id ?? '') === String(props.form.carrier_id))
 })
+
+watch(() => props.carrier, (carrier) => {
+    if (props.isCarrierContext && carrier) {
+        props.form.carrier_id = String(carrier.id)
+    }
+}, { immediate: true })
 
 function onDocumentsChange(event: Event) {
     const input = event.target as HTMLInputElement
@@ -35,7 +48,7 @@ function onDocumentsChange(event: Event) {
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div v-if="!props.isCarrierContext">
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
                     <TomSelect v-model="form.carrier_id">
                         <option value="">Select carrier</option>
@@ -44,12 +57,17 @@ function onDocumentsChange(event: Event) {
                     <p v-if="form.errors.carrier_id" class="text-red-500 text-xs mt-1">{{ form.errors.carrier_id }}</p>
                 </div>
 
+                <div v-else class="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                    <p class="text-xs font-medium uppercase tracking-[0.2em] text-primary/70">Carrier</p>
+                    <p class="mt-1 font-semibold text-slate-800">{{ props.carrier?.name ?? 'Current carrier' }}</p>
+                </div>
+
                 <div>
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
                     <TomSelect v-model="form.user_driver_detail_id">
                         <option value="">Select driver</option>
                         <option v-for="driver in filteredDrivers" :key="driver.id" :value="String(driver.id)">
-                            {{ driver.name }}{{ driver.carrier_name ? ` · ${driver.carrier_name}` : '' }}
+                            {{ driver.name }}{{ !props.isCarrierContext && driver.carrier_name ? ` - ${driver.carrier_name}` : '' }}
                         </option>
                     </TomSelect>
                     <p v-if="form.errors.user_driver_detail_id" class="text-red-500 text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
@@ -66,13 +84,13 @@ function onDocumentsChange(event: Event) {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">School Name <span class="text-red-500">*</span></label>
-                    <input v-model="form.school_name" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Enter school name" />
+                    <FormInput v-model="form.school_name" type="text" placeholder="Enter school name" />
                     <p v-if="form.errors.school_name" class="text-red-500 text-xs mt-1">{{ form.errors.school_name }}</p>
                 </div>
 
                 <div>
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">City <span class="text-red-500">*</span></label>
-                    <input v-model="form.city" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Enter city" />
+                    <FormInput v-model="form.city" type="text" placeholder="Enter city" />
                     <p v-if="form.errors.city" class="text-red-500 text-xs mt-1">{{ form.errors.city }}</p>
                 </div>
 
@@ -162,7 +180,7 @@ function onDocumentsChange(event: Event) {
                     <div v-for="document in existingDocuments" :key="document.id" class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                         <div class="min-w-0">
                             <a :href="document.preview_url" target="_blank" class="block truncate text-sm font-medium text-primary hover:underline">{{ document.file_name }}</a>
-                            <p class="text-xs text-slate-500">{{ document.size_label }} · {{ document.created_at_display }}</p>
+                            <p class="text-xs text-slate-500">{{ document.size_label }} - {{ document.created_at_display }}</p>
                         </div>
                     </div>
                 </div>

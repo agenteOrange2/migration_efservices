@@ -11,7 +11,7 @@ declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     training: {
         id: number
         title: string
@@ -32,7 +32,38 @@ const props = defineProps<{
         drivers: { id: number; carrier_id: number | null; carrier_name?: string | null; name: string; email?: string | null }[]
         selectedTraining: { id: number; title: string }
     }
-}>()
+    routeNames?: {
+        index: string
+        show: string
+        edit: string
+        mediaDestroy: string
+        assignForm?: string
+        assign?: string
+        assignmentsIndex?: string
+    }
+    assignmentRouteNames?: {
+        store: string
+        index: string
+    }
+    carrier?: { id: number; name: string } | null
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.trainings.index',
+        show: 'admin.trainings.show',
+        edit: 'admin.trainings.edit',
+        mediaDestroy: 'admin.trainings.media.destroy',
+        assignForm: 'admin.trainings.assign.form',
+        assign: 'admin.trainings.assign',
+        assignmentsIndex: 'admin.training-assignments.index',
+    }),
+    assignmentRouteNames: () => ({
+        store: 'admin.trainings.assign',
+        index: 'admin.training-assignments.index',
+    }),
+    carrier: null,
+    isCarrierContext: false,
+})
 
 const assignModalOpen = ref(false)
 const assignmentForm = useForm({
@@ -46,11 +77,11 @@ const assignmentForm = useForm({
 
 function deleteDocument(documentId: number) {
     if (!confirm('Delete this file?')) return
-    router.delete(route('admin.trainings.media.destroy', documentId), { preserveScroll: true })
+    router.delete(route(props.routeNames?.mediaDestroy ?? 'admin.trainings.media.destroy', documentId), { preserveScroll: true })
 }
 
 function submitAssignment() {
-    assignmentForm.post(route('admin.trainings.assign', props.training.id), {
+    assignmentForm.post(route(props.assignmentRouteNames?.store ?? props.routeNames?.assign ?? 'admin.trainings.assign', props.training.id), {
         preserveScroll: true,
         onSuccess: () => {
             assignModalOpen.value = false
@@ -92,25 +123,25 @@ function assignmentStatusClass(status: string) {
                             <Lucide icon="UserPlus" class="w-4 h-4" />
                             Assign Drivers
                         </Button>
-                        <Link :href="route('admin.trainings.assign.form', training.id)">
+                        <Link v-if="props.routeNames?.assignForm" :href="route(props.routeNames.assignForm, training.id)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ExternalLink" class="w-4 h-4" />
                                 Open Assign Page
                             </Button>
                         </Link>
-                        <Link :href="route('admin.training-assignments.index', { training_id: training.id })">
+                        <Link v-if="props.routeNames?.assignmentsIndex" :href="route(props.routeNames.assignmentsIndex, { training_id: training.id })">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ClipboardList" class="w-4 h-4" />
                                 View Assignments
                             </Button>
                         </Link>
-                        <Link :href="route('admin.trainings.edit', training.id)">
+                        <Link :href="route(props.routeNames?.edit ?? 'admin.trainings.edit', training.id)">
                             <Button variant="primary" class="flex items-center gap-2">
                                 <Lucide icon="PenLine" class="w-4 h-4" />
                                 Edit
                             </Button>
                         </Link>
-                        <Link :href="route('admin.trainings.index')">
+                        <Link :href="route(props.routeNames?.index ?? 'admin.trainings.index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back
@@ -171,7 +202,7 @@ function assignmentStatusClass(status: string) {
                         <Lucide icon="Users" class="w-4 h-4 text-primary" />
                         Recent Assignments
                     </h2>
-                    <Link :href="route('admin.training-assignments.index', { training_id: training.id })" class="text-sm text-primary hover:underline">
+                    <Link v-if="props.routeNames?.assignmentsIndex" :href="route(props.routeNames.assignmentsIndex, { training_id: training.id })" class="text-sm text-primary hover:underline">
                         View all
                     </Link>
                 </div>
@@ -191,7 +222,7 @@ function assignmentStatusClass(status: string) {
                             <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="assignmentStatusClass(assignment.status)">
                                 {{ assignment.status_label }}
                             </span>
-                            <Link :href="route('admin.training-assignments.show', assignment.id)" class="p-1.5 text-slate-400 hover:text-primary transition">
+                            <Link v-if="props.routeNames?.assignmentsIndex" :href="route('admin.training-assignments.show', assignment.id)" class="p-1.5 text-slate-400 hover:text-primary transition">
                                 <Lucide icon="Eye" class="w-4 h-4" />
                             </Link>
                         </div>
@@ -279,6 +310,9 @@ function assignmentStatusClass(status: string) {
                         :carriers="assignmentFormOptions.carriers"
                         :drivers="assignmentFormOptions.drivers"
                         :training-locked="true"
+                        :carrier="props.carrier"
+                        :is-carrier-context="props.isCarrierContext"
+                        :carrier-locked="props.isCarrierContext"
                     />
 
                     <div class="flex justify-end gap-3">

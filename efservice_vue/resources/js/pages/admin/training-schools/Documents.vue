@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { reactive } from 'vue'
 import Button from '@/components/Base/Button'
+import { FormInput } from '@/components/Base/Form'
 import Lucide from '@/components/Base/Lucide'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
@@ -34,25 +35,50 @@ interface DocumentRow {
     preview_url: string
 }
 
-const props = defineProps<{
+interface TrainingSchoolDocumentsRouteNames {
+    index: string
+    show: string
+    edit: string
+    documentsIndex: string
+    documentsShow: string
+    mediaDestroy: string
+}
+
+const props = withDefaults(defineProps<{
     documents: { data: DocumentRow[]; links: PaginationLink[]; total: number; last_page: number }
     filters: { search_term: string; carrier_filter: string; school_filter: string; date_from: string; date_to: string; file_type: string }
     carriers: { id: number; name: string }[]
     schools: { id: number; school_name: string; carrier_name: string | null }[]
     school: { id: number; school_name: string; driver_name: string; carrier_name: string | null } | null
     stats: { total: number; pdf: number; images: number; docs: number }
-}>()
+    routeNames?: TrainingSchoolDocumentsRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.training-schools.index',
+        show: 'admin.training-schools.show',
+        edit: 'admin.training-schools.edit',
+        documentsIndex: 'admin.training-schools.documents.index',
+        documentsShow: 'admin.training-schools.documents.show',
+        mediaDestroy: 'admin.training-schools.media.destroy',
+    }),
+    isCarrierContext: false,
+})
 
 const filters = reactive({ ...props.filters })
 
+function namedRoute(name: keyof TrainingSchoolDocumentsRouteNames, params?: any) {
+    return route(props.routeNames[name], params)
+}
+
 function applyFilters() {
     const target = props.school
-        ? route('admin.training-schools.documents.show', props.school.id)
-        : route('admin.training-schools.documents.index')
+        ? namedRoute('documentsShow', props.school.id)
+        : namedRoute('documentsIndex')
 
     router.get(target, {
         search_term: filters.search_term || undefined,
-        carrier_filter: !props.school ? filters.carrier_filter || undefined : undefined,
+        carrier_filter: !props.school && !props.isCarrierContext ? filters.carrier_filter || undefined : undefined,
         school_filter: !props.school ? filters.school_filter || undefined : undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -62,7 +88,7 @@ function applyFilters() {
 
 function resetFilters() {
     filters.search_term = ''
-    filters.carrier_filter = ''
+    filters.carrier_filter = props.isCarrierContext ? props.filters.carrier_filter ?? '' : ''
     filters.school_filter = props.school ? String(props.school.id) : ''
     filters.date_from = ''
     filters.date_to = ''
@@ -72,7 +98,7 @@ function resetFilters() {
 
 function deleteDocument(document: DocumentRow) {
     if (!confirm(`Delete "${document.file_name}"?`)) return
-    router.delete(route('admin.training-schools.media.destroy', document.id), { preserveScroll: true })
+    router.delete(namedRoute('mediaDestroy', document.id), { preserveScroll: true })
 }
 </script>
 
@@ -90,18 +116,18 @@ function deleteDocument(document: DocumentRow) {
                         <div>
                             <h1 class="text-2xl font-bold text-slate-800">{{ school ? 'Training School Documents' : 'All Training School Documents' }}</h1>
                             <p class="text-slate-500">
-                                {{ school ? `${school.school_name} · ${school.driver_name}` : 'Review every training school document in one place.' }}
+                                {{ school ? `${school.school_name} - ${school.driver_name}` : 'Review every training school document in one place.' }}
                             </p>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link v-if="school" :href="route('admin.training-schools.show', school.id)">
+                        <Link v-if="school" :href="namedRoute('show', school.id)">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="Eye" class="w-4 h-4" />
                                 View School
                             </Button>
                         </Link>
-                        <Link :href="route('admin.training-schools.index')">
+                        <Link :href="namedRoute('index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back to Training Schools
@@ -134,10 +160,10 @@ function deleteDocument(document: DocumentRow) {
                 <div class="grid grid-cols-1 lg:grid-cols-6 gap-4">
                     <div class="lg:col-span-2 relative">
                         <Lucide icon="Search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input v-model="filters.search_term" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 pl-10 text-sm" placeholder="Search document, school, driver..." />
+                        <FormInput v-model="filters.search_term" type="text" class="pl-10" placeholder="Search document, school, driver..." />
                     </div>
 
-                    <TomSelect v-if="!school" v-model="filters.carrier_filter">
+                    <TomSelect v-if="!school && !props.isCarrierContext" v-model="filters.carrier_filter">
                         <option value="">All Carriers</option>
                         <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                     </TomSelect>
@@ -145,7 +171,7 @@ function deleteDocument(document: DocumentRow) {
                     <TomSelect v-if="!school" v-model="filters.school_filter">
                         <option value="">All Schools</option>
                         <option v-for="schoolOption in schools" :key="schoolOption.id" :value="String(schoolOption.id)">
-                            {{ schoolOption.school_name }}{{ schoolOption.carrier_name ? ` · ${schoolOption.carrier_name}` : '' }}
+                            {{ schoolOption.school_name }}{{ !props.isCarrierContext && schoolOption.carrier_name ? ` - ${schoolOption.carrier_name}` : '' }}
                         </option>
                     </TomSelect>
 
@@ -185,7 +211,7 @@ function deleteDocument(document: DocumentRow) {
                         <thead>
                             <tr class="bg-slate-50/80">
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Created</th>
-                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
+                                <th v-if="!props.isCarrierContext" class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Driver</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">School</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Document</th>
@@ -195,22 +221,22 @@ function deleteDocument(document: DocumentRow) {
                         <tbody>
                             <tr v-for="document in documents.data" :key="document.id" class="border-b border-slate-100 hover:bg-slate-50/50 transition">
                                 <td class="px-5 py-4 text-sm text-slate-500">{{ document.created_at_display }}</td>
-                                <td class="px-5 py-4 text-sm text-slate-600">{{ document.carrier_name ?? 'N/A' }}</td>
+                                <td v-if="!props.isCarrierContext" class="px-5 py-4 text-sm text-slate-600">{{ document.carrier_name ?? 'N/A' }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-700">{{ document.driver_name }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-700">{{ document.school_name ?? 'N/A' }}</td>
                                 <td class="px-5 py-4">
                                     <a :href="document.preview_url" target="_blank" class="block font-medium text-primary hover:underline">{{ document.file_name }}</a>
-                                    <div class="text-xs text-slate-500 mt-1">{{ document.size_label }} · {{ document.file_type.toUpperCase() }}</div>
+                                    <div class="text-xs text-slate-500 mt-1">{{ document.size_label }} - {{ document.file_type.toUpperCase() }}</div>
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
                                         <a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </a>
-                                        <Link v-if="document.school_id" :href="route('admin.training-schools.show', document.school_id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Open school">
+                                        <Link v-if="document.school_id" :href="namedRoute('show', document.school_id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Open school">
                                             <Lucide icon="GraduationCap" class="w-4 h-4" />
                                         </Link>
-                                        <Link v-if="document.school_id" :href="route('admin.training-schools.edit', document.school_id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit school">
+                                        <Link v-if="document.school_id" :href="namedRoute('edit', document.school_id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit school">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
                                         <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
@@ -221,7 +247,7 @@ function deleteDocument(document: DocumentRow) {
                             </tr>
 
                             <tr v-if="!documents.data.length">
-                                <td colspan="6" class="px-5 py-12 text-center text-slate-400">
+                                <td :colspan="props.isCarrierContext ? 5 : 6" class="px-5 py-12 text-center text-slate-400">
                                     <Lucide icon="FileText" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
                                     <p>No documents found</p>
                                 </td>

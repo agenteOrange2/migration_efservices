@@ -30,6 +30,19 @@ const props = defineProps<{
     drivers: { id: number; carrier_id: number | null; carrier_name?: string | null; name: string; email?: string | null }[]
     states: Record<string, string>
     skillOptions: Record<string, string>
+    carrier?: { id: number; name: string } | null
+    routeNames?: {
+        index: string
+        store: string
+        update: string
+        show: string
+        edit: string
+        destroy: string
+        documentsIndex: string
+        documentsShow: string
+        mediaDestroy: string
+    }
+    isCarrierContext?: boolean
 }>()
 
 const form = useForm({
@@ -53,7 +66,7 @@ function submit() {
         graduated: data.graduated ? 1 : 0,
         subject_to_safety_regulations: data.subject_to_safety_regulations ? 1 : 0,
         performed_safety_functions: data.performed_safety_functions ? 1 : 0,
-    })).put(route('admin.training-schools.update', props.school.id), {
+    })).put(route(props.routeNames?.update ?? 'admin.training-schools.update', props.school.id), {
         forceFormData: true,
     })
 }
@@ -71,13 +84,13 @@ function submit() {
                         <p class="text-sm text-slate-500 mt-0.5">Driver: <span class="font-medium text-slate-700">{{ school.driver_name }}</span></p>
                     </div>
                     <div class="flex items-center gap-3">
-                        <Link :href="route('admin.training-schools.documents.show', school.id)">
+                        <Link :href="route(props.routeNames?.documentsShow ?? 'admin.training-schools.documents.show', school.id)">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="Files" class="w-4 h-4" />
                                 Documents
                             </Button>
                         </Link>
-                        <Link :href="route('admin.training-schools.index')">
+                        <Link :href="route(props.routeNames?.index ?? 'admin.training-schools.index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back
@@ -97,10 +110,12 @@ function submit() {
                     :states="states"
                     :skill-options="skillOptions"
                     :existing-documents="school.documents"
+                    :carrier="props.carrier"
+                    :is-carrier-context="props.isCarrierContext"
                 />
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.training-schools.index')">
+                    <Link :href="route(props.routeNames?.index ?? 'admin.training-schools.index')">
                         <Button type="button" variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="X" class="w-4 h-4" />
                             Cancel

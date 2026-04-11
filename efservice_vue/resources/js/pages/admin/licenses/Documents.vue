@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { reactive } from 'vue'
+import { computed, reactive } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
@@ -36,7 +36,15 @@ interface DocumentRow {
     preview_url: string
 }
 
-const props = defineProps<{
+interface LicenseRouteNames {
+    index: string
+    edit: string
+    documentsIndex: string
+    documentsShow: string
+    mediaDestroy: string
+}
+
+const props = withDefaults(defineProps<{
     documents: {
         data: DocumentRow[]
         links: PaginationLink[]
@@ -60,18 +68,36 @@ const props = defineProps<{
         back: number
         additional: number
     }
-}>()
+    routeNames?: LicenseRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.licenses.index',
+        edit: 'admin.licenses.edit',
+        documentsIndex: 'admin.licenses.documents.index',
+        documentsShow: 'admin.licenses.documents.show',
+        mediaDestroy: 'admin.licenses.media.destroy',
+    }),
+    isCarrierContext: false,
+})
 
 const filters = reactive({ ...props.filters })
+const isCarrierContext = computed(() => props.isCarrierContext)
+
+function namedRoute(name: keyof LicenseRouteNames, params?: any) {
+    const routeName = props.routeNames[name]
+
+    return routeName ? route(routeName, params) : '#'
+}
 
 function applyFilters() {
     const target = props.license
-        ? route('admin.licenses.documents.show', props.license.id)
-        : route('admin.licenses.documents.index')
+        ? namedRoute('documentsShow', props.license.id)
+        : namedRoute('documentsIndex')
 
     router.get(target, {
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: props.isCarrierContext ? undefined : (filters.carrier_filter || undefined),
         license_filter: !props.license ? filters.license_filter || undefined : undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -81,7 +107,7 @@ function applyFilters() {
 
 function resetFilters() {
     filters.search_term = ''
-    filters.carrier_filter = ''
+    filters.carrier_filter = props.isCarrierContext ? props.filters.carrier_filter ?? '' : ''
     filters.license_filter = props.license ? String(props.license.id) : ''
     filters.date_from = ''
     filters.date_to = ''
@@ -92,7 +118,7 @@ function resetFilters() {
 function deleteDocument(document: DocumentRow) {
     if (!confirm(`Delete "${document.file_name}"?`)) return
 
-    router.delete(route('admin.licenses.media.destroy', document.id), {
+    router.delete(namedRoute('mediaDestroy', document.id), {
         preserveScroll: true,
     })
 }
@@ -118,13 +144,13 @@ function deleteDocument(document: DocumentRow) {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link v-if="license" :href="route('admin.licenses.edit', license.id)">
+                        <Link v-if="license" :href="namedRoute('edit', license.id)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="PenLine" class="w-4 h-4" />
                                 Edit License
                             </Button>
                         </Link>
-                        <Link :href="route('admin.licenses.index')">
+                        <Link :href="namedRoute('index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back to Licenses
@@ -160,7 +186,7 @@ function deleteDocument(document: DocumentRow) {
                         <input v-model="filters.search_term" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 pl-10 text-sm" placeholder="Search document, license, driver..." />
                     </div>
 
-                    <TomSelect v-model="filters.carrier_filter">
+                    <TomSelect v-if="!isCarrierContext" v-model="filters.carrier_filter">
                         <option value="">All Carriers</option>
                         <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                     </TomSelect>
@@ -208,7 +234,7 @@ function deleteDocument(document: DocumentRow) {
                         <thead>
                             <tr class="bg-slate-50/80">
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Created</th>
-                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
+                                <th v-if="!isCarrierContext" class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Driver</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">License</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Collection</th>
@@ -219,7 +245,7 @@ function deleteDocument(document: DocumentRow) {
                         <tbody>
                             <tr v-for="document in documents.data" :key="document.id" class="border-b border-slate-100 hover:bg-slate-50/50 transition">
                                 <td class="px-5 py-4 text-sm text-slate-500">{{ document.created_at_display }}</td>
-                                <td class="px-5 py-4 text-sm text-slate-600">{{ document.carrier_name }}</td>
+                                <td v-if="!isCarrierContext" class="px-5 py-4 text-sm text-slate-600">{{ document.carrier_name }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-700">{{ document.driver_name }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-700">{{ document.license_number ?? 'N/A' }}</td>
                                 <td class="px-5 py-4">
@@ -240,10 +266,10 @@ function deleteDocument(document: DocumentRow) {
                                         <a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </a>
-                                        <Link v-if="document.license_id" :href="route('admin.licenses.documents.show', document.license_id)" class="p-1.5 text-slate-400 hover:text-sky-500 transition" title="Open documents">
+                                        <Link v-if="document.license_id" :href="namedRoute('documentsShow', document.license_id)" class="p-1.5 text-slate-400 hover:text-sky-500 transition" title="Open documents">
                                             <Lucide icon="Files" class="w-4 h-4" />
                                         </Link>
-                                        <Link v-if="document.license_id" :href="route('admin.licenses.edit', document.license_id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit license">
+                                        <Link v-if="document.license_id" :href="namedRoute('edit', document.license_id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit license">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
                                         <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
@@ -254,7 +280,7 @@ function deleteDocument(document: DocumentRow) {
                             </tr>
 
                             <tr v-if="!documents.data.length">
-                                <td colspan="7" class="px-5 py-12 text-center text-slate-400">
+                                <td :colspan="isCarrierContext ? 6 : 7" class="px-5 py-12 text-center text-slate-400">
                                     <Lucide icon="FileText" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
                                     <p>No documents found</p>
                                 </td>

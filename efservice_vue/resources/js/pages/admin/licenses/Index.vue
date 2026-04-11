@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import Lucide from '@/components/Base/Lucide'
-import { FormInput, FormSelect } from '@/components/Base/Form'
+import { FormInput } from '@/components/Base/Form'
 import { Dialog } from '@/components/Base/Headless'
+import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
+import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
+
+const lpOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 
 interface PaginationLink {
     url: string | null
@@ -30,7 +34,18 @@ interface LicenseRow {
     carrier: { id: number; name: string } | null
 }
 
-const props = defineProps<{
+interface LicenseRouteNames {
+    index: string
+    create: string
+    show?: string
+    edit: string
+    destroy: string
+    documentsIndex: string
+    documentsShow: string
+    driverShow?: string
+}
+
+const props = withDefaults(defineProps<{
     licenses: {
         data: LicenseRow[]
         links: PaginationLink[]
@@ -48,7 +63,20 @@ const props = defineProps<{
         sort_field: string
         sort_direction: string
     }
-}>()
+    routeNames?: LicenseRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.licenses.index',
+        create: 'admin.licenses.create',
+        edit: 'admin.licenses.edit',
+        destroy: 'admin.licenses.destroy',
+        documentsIndex: 'admin.licenses.documents.index',
+        documentsShow: 'admin.licenses.documents.show',
+        driverShow: 'admin.drivers.show',
+    }),
+    isCarrierContext: false,
+})
 
 const filters = reactive({
     search_term: props.filters.search_term ?? '',
@@ -59,6 +87,19 @@ const filters = reactive({
 })
 const deleteModalOpen = ref(false)
 const selectedLicense = ref<LicenseRow | null>(null)
+const isCarrierContext = computed(() => props.isCarrierContext)
+const routeNames = computed(() => props.routeNames)
+const title = computed(() => props.isCarrierContext ? 'Driver Licenses' : 'Driver Licenses Management')
+const subtitle = computed(() => props.isCarrierContext
+    ? 'Track licenses for the drivers assigned to your carrier account.'
+    : 'Manage and track driver licenses in the Vue admin.')
+const createLabel = computed(() => props.isCarrierContext ? 'Add License' : 'Add New License')
+
+function namedRoute(name: keyof LicenseRouteNames, params?: any) {
+    const routeName = props.routeNames[name]
+
+    return routeName ? route(routeName, params) : '#'
+}
 
 function formatDate(value: string | null) {
     if (!value) return 'N/A'
@@ -66,10 +107,10 @@ function formatDate(value: string | null) {
 }
 
 function applyFilters() {
-    router.get(route('admin.licenses.index'), {
+    router.get(namedRoute('index'), {
         ...filters,
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: props.isCarrierContext ? undefined : (filters.carrier_filter || undefined),
         driver_filter: filters.driver_filter || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -83,7 +124,7 @@ function applyFilters() {
 
 function resetFilters() {
     filters.search_term = ''
-    filters.carrier_filter = ''
+    filters.carrier_filter = props.isCarrierContext ? props.filters.carrier_filter ?? '' : ''
     filters.driver_filter = ''
     filters.date_from = ''
     filters.date_to = ''
@@ -93,10 +134,10 @@ function resetFilters() {
 function sortUrl(field: string) {
     const direction = props.filters.sort_field === field && props.filters.sort_direction === 'asc' ? 'desc' : 'asc'
 
-    return route('admin.licenses.index', {
+    return namedRoute('index', {
         ...filters,
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: props.isCarrierContext ? undefined : (filters.carrier_filter || undefined),
         driver_filter: filters.driver_filter || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -115,7 +156,7 @@ function confirmDelete() {
         return
     }
 
-    router.delete(route('admin.licenses.destroy', selectedLicense.value.id), {
+    router.delete(namedRoute('destroy', selectedLicense.value.id), {
         preserveScroll: true,
         onSuccess: () => {
             deleteModalOpen.value = false
@@ -126,7 +167,7 @@ function confirmDelete() {
 </script>
 
 <template>
-    <Head title="Driver Licenses" />
+    <Head :title="title" />
 
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
@@ -137,25 +178,25 @@ function confirmDelete() {
                             <Lucide icon="CreditCard" class="w-8 h-8 text-primary" />
                         </div>
                         <div>
-                            <h1 class="text-2xl font-bold text-slate-800">Driver Licenses Management</h1>
-                            <p class="text-slate-500">Manage and track driver licenses in the Vue admin.</p>
+                            <h1 class="text-2xl font-bold text-slate-800">{{ title }}</h1>
+                            <p class="text-slate-500">{{ subtitle }}</p>
                         </div>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
                         <Link
-                            :href="route('admin.licenses.documents.index')"
+                            :href="namedRoute('documentsIndex')"
                             class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition"
                         >
                             <Lucide icon="Files" class="w-4 h-4" />
                             Documents
                         </Link>
                         <Link
-                            :href="route('admin.licenses.create')"
+                            :href="namedRoute('create')"
                             class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition"
                         >
                             <Lucide icon="Plus" class="w-4 h-4" />
-                            Add New License
+                            {{ createLabel }}
                         </Link>
                     </div>
                 </div>
@@ -168,23 +209,23 @@ function confirmDelete() {
                         <FormInput v-model="filters.search_term" type="text" class="pl-10" placeholder="Search license, state, driver..." />
                     </div>
 
-                    <FormSelect v-model="filters.carrier_filter">
+                    <TomSelect v-if="!isCarrierContext" v-model="filters.carrier_filter">
                         <option value="">All Carriers</option>
                         <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">
                             {{ carrier.name }}
                         </option>
-                    </FormSelect>
+                    </TomSelect>
 
-                    <FormSelect v-model="filters.driver_filter">
+                    <TomSelect v-model="filters.driver_filter">
                         <option value="">All Drivers</option>
                         <option v-for="driver in drivers" :key="driver.id" :value="String(driver.id)">
                             {{ driver.name }}
                         </option>
-                    </FormSelect>
+                    </TomSelect>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <FormInput v-model="filters.date_from" type="date" />
-                        <FormInput v-model="filters.date_to" type="date" />
+                        <Litepicker v-model="filters.date_from" :options="lpOptions" />
+                        <Litepicker v-model="filters.date_to" :options="lpOptions" />
                     </div>
                 </div>
 
@@ -228,7 +269,7 @@ function confirmDelete() {
                                     </Link>
                                 </th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Driver</th>
-                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
+                                <th v-if="!isCarrierContext" class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">
                                     <Link :href="sortUrl('license_number')" class="inline-flex items-center gap-1 hover:text-slate-700">
                                         License Number
@@ -253,7 +294,7 @@ function confirmDelete() {
                                     <div class="font-medium text-slate-700">{{ license.driver?.name ?? 'N/A' }}</div>
                                     <div class="text-xs text-slate-500">{{ license.driver?.email ?? 'No email' }}</div>
                                 </td>
-                                <td class="px-5 py-4 text-sm text-slate-600">{{ license.carrier?.name ?? 'N/A' }}</td>
+                                <td v-if="!isCarrierContext" class="px-5 py-4 text-sm text-slate-600">{{ license.carrier?.name ?? 'N/A' }}</td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center gap-2">
                                         <span class="font-mono font-medium text-slate-800">{{ license.license_number }}</span>
@@ -271,7 +312,7 @@ function confirmDelete() {
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ formatDate(license.expiration_date) }}</td>
                                 <td class="px-5 py-4 text-center">
                                     <Link
-                                        :href="route('admin.licenses.documents.show', license.id)"
+                                        :href="namedRoute('documentsShow', license.id)"
                                         class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-primary/10 hover:text-primary transition"
                                     >
                                         {{ license.document_count }}
@@ -280,15 +321,23 @@ function confirmDelete() {
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
                                         <Link
-                                            :href="route('admin.licenses.documents.show', license.id)"
+                                            v-if="routeNames.show"
+                                            :href="namedRoute('show', license.id)"
+                                            class="p-1.5 text-slate-400 hover:text-primary transition"
+                                            title="View"
+                                        >
+                                            <Lucide icon="Eye" class="w-4 h-4" />
+                                        </Link>
+                                        <Link
+                                            :href="namedRoute('documentsShow', license.id)"
                                             class="p-1.5 text-slate-400 hover:text-sky-500 transition"
                                             title="Documents"
                                         >
                                             <Lucide icon="Files" class="w-4 h-4" />
                                         </Link>
                                         <Link
-                                            v-if="license.driver"
-                                            :href="route('admin.drivers.show', license.driver.id)"
+                                            v-if="license.driver && routeNames.driverShow"
+                                            :href="namedRoute('driverShow', license.driver.id)"
                                             class="p-1.5 text-slate-400 hover:text-primary transition"
                                             title="View driver"
                                         >
@@ -296,7 +345,7 @@ function confirmDelete() {
                                         </Link>
 
                                         <Link
-                                            :href="route('admin.licenses.edit', license.id)"
+                                            :href="namedRoute('edit', license.id)"
                                             class="p-1.5 text-slate-400 hover:text-amber-500 transition"
                                             title="Edit"
                                         >
@@ -316,7 +365,7 @@ function confirmDelete() {
                             </tr>
 
                             <tr v-if="!licenses.data.length">
-                                <td colspan="8" class="px-5 py-12 text-center text-slate-400">
+                                <td :colspan="isCarrierContext ? 7 : 8" class="px-5 py-12 text-center text-slate-400">
                                     <Lucide icon="CreditCard" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
                                     <p>No license records found</p>
                                 </td>

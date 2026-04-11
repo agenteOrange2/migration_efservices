@@ -9,7 +9,19 @@ declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
 
-const props = defineProps<{
+interface CourseRouteNames {
+    index: string
+    create: string
+    store: string
+    edit: string
+    update: string
+    destroy: string
+    documentsIndex: string
+    documentsShow: string
+    mediaDestroy: string
+}
+
+const props = withDefaults(defineProps<{
     course: {
         id: number
         carrier_id: string
@@ -28,7 +40,24 @@ const props = defineProps<{
     drivers: { id: number; carrier_id: number | null; carrier_name?: string | null; name: string; email?: string | null }[]
     states: Record<string, string>
     organizationOptions: Record<string, string>
-}>()
+    carrier?: { id: number; name: string } | null
+    routeNames?: CourseRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    carrier: null,
+    routeNames: () => ({
+        index: 'admin.courses.index',
+        create: 'admin.courses.create',
+        store: 'admin.courses.store',
+        edit: 'admin.courses.edit',
+        update: 'admin.courses.update',
+        destroy: 'admin.courses.destroy',
+        documentsIndex: 'admin.courses.all-documents',
+        documentsShow: 'admin.courses.documents',
+        mediaDestroy: 'admin.courses.document.delete',
+    }),
+    isCarrierContext: false,
+})
 
 const form = useForm({
     carrier_id: props.course.carrier_id || '',
@@ -48,7 +77,7 @@ function submit() {
     form.transform((data) => ({
         ...data,
         _method: 'put',
-    })).post(route('admin.courses.update', props.course.id))
+    })).post(route(props.routeNames.update, props.course.id))
 }
 </script>
 
@@ -61,16 +90,18 @@ function submit() {
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h1 class="text-xl font-bold text-slate-800">Edit Course</h1>
-                        <p class="text-sm text-slate-500 mt-0.5">Update the selected course or certification record.</p>
+                        <p class="text-sm text-slate-500 mt-0.5">
+                            {{ props.isCarrierContext ? 'Update the selected course or certification record for your driver.' : 'Update the selected course or certification record.' }}
+                        </p>
                     </div>
                     <div class="flex items-center gap-3">
-                        <Link :href="route('admin.courses.documents', props.course.id)">
+                        <Link :href="route(props.routeNames.documentsShow, props.course.id)">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="Files" class="w-4 h-4" />
                                 Documents
                             </Button>
                         </Link>
-                        <Link :href="route('admin.courses.index')">
+                        <Link :href="route(props.routeNames.index)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back
@@ -90,10 +121,12 @@ function submit() {
                     :states="states"
                     :organization-options="organizationOptions"
                     :existing-documents="course.documents"
+                    :carrier="props.carrier"
+                    :is-carrier-context="props.isCarrierContext"
                 />
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.courses.index')">
+                    <Link :href="route(props.routeNames.index)">
                         <Button type="button" variant="outline-secondary">Cancel</Button>
                     </Link>
                     <Button type="submit" variant="primary" :disabled="form.processing">

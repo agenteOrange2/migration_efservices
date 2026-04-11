@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { reactive } from 'vue'
 import Button from '@/components/Base/Button'
+import { FormInput } from '@/components/Base/Form'
 import Lucide from '@/components/Base/Lucide'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
@@ -11,22 +12,47 @@ declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
 
+interface CourseRouteNames {
+    index: string
+    create: string
+    edit: string
+    destroy: string
+    documentsIndex: string
+    documentsShow: string
+}
+
 const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     courses: { data: any[]; links: { url: string | null; label: string; active: boolean }[]; total: number; last_page: number }
     filters: { search_term: string; carrier_filter: string; driver_filter: string; date_from: string; date_to: string; status: string; sort_field: string; sort_direction: string }
-    drivers: { id: number; name: string; carrier_name?: string | null }[]
+    drivers: { id: number; carrier_id?: number | null; name: string; carrier_name?: string | null }[]
     carriers: { id: number; name: string }[]
     stats: { total: number; active: number; inactive: number; documents: number }
-}>()
+    routeNames?: CourseRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.courses.index',
+        create: 'admin.courses.create',
+        edit: 'admin.courses.edit',
+        destroy: 'admin.courses.destroy',
+        documentsIndex: 'admin.courses.all-documents',
+        documentsShow: 'admin.courses.documents',
+    }),
+    isCarrierContext: false,
+})
 
 const filters = reactive({ ...props.filters })
 
+function namedRoute(name: keyof CourseRouteNames, params?: any) {
+    return route(props.routeNames[name], params)
+}
+
 function applyFilters() {
-    router.get(route('admin.courses.index'), {
+    router.get(namedRoute('index'), {
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: !props.isCarrierContext ? filters.carrier_filter || undefined : undefined,
         driver_filter: filters.driver_filter || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -38,7 +64,7 @@ function applyFilters() {
 
 function resetFilters() {
     filters.search_term = ''
-    filters.carrier_filter = ''
+    filters.carrier_filter = props.isCarrierContext ? props.filters.carrier_filter ?? '' : ''
     filters.driver_filter = ''
     filters.date_from = ''
     filters.date_to = ''
@@ -50,7 +76,7 @@ function resetFilters() {
 
 function deleteCourse(course: any) {
     if (!confirm(`Delete "${course.organization_name}"?`)) return
-    router.delete(route('admin.courses.destroy', course.id), { preserveScroll: true })
+    router.delete(namedRoute('destroy', course.id), { preserveScroll: true })
 }
 </script>
 
@@ -71,13 +97,13 @@ function deleteCourse(course: any) {
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.courses.all-documents')">
+                        <Link :href="namedRoute('documentsIndex')">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="Files" class="w-4 h-4" />
                                 All Documents
                             </Button>
                         </Link>
-                        <Link :href="route('admin.courses.create')">
+                        <Link :href="namedRoute('create')">
                             <Button variant="primary" class="flex items-center gap-2">
                                 <Lucide icon="Plus" class="w-4 h-4" />
                                 Add Course
@@ -98,10 +124,10 @@ function deleteCourse(course: any) {
                 <div class="grid grid-cols-1 lg:grid-cols-6 gap-4">
                     <div class="lg:col-span-2 relative">
                         <Lucide icon="Search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input v-model="filters.search_term" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 pl-10 text-sm" placeholder="Search course, city, driver..." />
+                        <FormInput v-model="filters.search_term" type="text" class="pl-10" placeholder="Search course, city, driver..." />
                     </div>
-                    <TomSelect v-model="filters.carrier_filter"><option value="">All Carriers</option><option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option></TomSelect>
-                    <TomSelect v-model="filters.driver_filter"><option value="">All Drivers</option><option v-for="driver in drivers" :key="driver.id" :value="String(driver.id)">{{ driver.name }}{{ driver.carrier_name ? ` - ${driver.carrier_name}` : '' }}</option></TomSelect>
+                    <TomSelect v-if="!props.isCarrierContext" v-model="filters.carrier_filter"><option value="">All Carriers</option><option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option></TomSelect>
+                    <TomSelect v-model="filters.driver_filter"><option value="">All Drivers</option><option v-for="driver in drivers" :key="driver.id" :value="String(driver.id)">{{ driver.name }}{{ !props.isCarrierContext && driver.carrier_name ? ` - ${driver.carrier_name}` : '' }}</option></TomSelect>
                     <Litepicker v-model="filters.date_from" :options="pickerOptions" />
                     <Litepicker v-model="filters.date_to" :options="pickerOptions" />
                 </div>
@@ -125,7 +151,7 @@ function deleteCourse(course: any) {
                         <thead>
                             <tr class="bg-slate-50/80">
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Driver</th>
-                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
+                                <th v-if="!props.isCarrierContext" class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Organization</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Certification</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Expiration</th>
@@ -137,7 +163,7 @@ function deleteCourse(course: any) {
                         <tbody>
                             <tr v-for="course in courses.data" :key="course.id" class="border-b border-slate-100 hover:bg-slate-50/50 transition">
                                 <td class="px-5 py-4"><div class="font-medium text-slate-800">{{ course.driver?.name ?? 'N/A' }}</div><div class="text-xs text-slate-400">{{ course.driver?.email ?? '' }}</div></td>
-                                <td class="px-5 py-4 text-sm text-slate-600">{{ course.carrier?.name ?? 'N/A' }}</td>
+                                <td v-if="!props.isCarrierContext" class="px-5 py-4 text-sm text-slate-600">{{ course.carrier?.name ?? 'N/A' }}</td>
                                 <td class="px-5 py-4"><div class="font-medium text-slate-800">{{ course.organization_name }}</div><div class="text-xs text-slate-400">{{ [course.city, course.state].filter(Boolean).join(', ') || 'N/A' }}</div></td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ course.certification_date ?? 'N/A' }}</td>
                                 <td class="px-5 py-4"><div class="text-sm" :class="course.days_until_expiration !== null && course.days_until_expiration < 0 ? 'text-red-600 font-medium' : course.days_until_expiration !== null && course.days_until_expiration <= 30 ? 'text-amber-600 font-medium' : 'text-slate-600'">{{ course.expiration_date ?? 'N/A' }}</div></td>
@@ -145,14 +171,14 @@ function deleteCourse(course: any) {
                                 <td class="px-5 py-4"><span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{{ course.document_count }} document<span v-if="course.document_count !== 1">s</span></span></td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link v-if="course.driver" :href="route('admin.drivers.course-history', course.driver.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Driver history"><Lucide icon="History" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.courses.documents', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.courses.edit', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                        <Link v-if="course.driver && !props.isCarrierContext" :href="route('admin.drivers.course-history', course.driver.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Driver history"><Lucide icon="History" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('documentsShow', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('edit', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
                                         <button type="button" @click="deleteCourse(course)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
                                     </div>
                                 </td>
                             </tr>
-                            <tr v-if="!courses.data.length"><td colspan="8" class="px-5 py-12 text-center text-slate-400"><Lucide icon="ShieldCheck" class="w-12 h-12 mx-auto mb-3 text-slate-300" /><p>No course records found</p></td></tr>
+                            <tr v-if="!courses.data.length"><td :colspan="props.isCarrierContext ? 7 : 8" class="px-5 py-12 text-center text-slate-400"><Lucide icon="ShieldCheck" class="w-12 h-12 mx-auto mb-3 text-slate-300" /><p>No course records found</p></td></tr>
                         </tbody>
                     </table>
                 </div>

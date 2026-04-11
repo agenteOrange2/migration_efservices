@@ -66,11 +66,11 @@ class DriverLicenseController extends Controller
         }
 
         if ($filters['date_from'] !== '') {
-            $query->whereDate('created_at', '>=', $filters['date_from']);
+            $query->whereDate('created_at', '>=', $this->parseUsDate($filters['date_from']));
         }
 
         if ($filters['date_to'] !== '') {
-            $query->whereDate('created_at', '<=', $filters['date_to']);
+            $query->whereDate('created_at', '<=', $this->parseUsDate($filters['date_to']));
         }
 
         $allowedSortFields = ['created_at', 'license_number', 'expiration_date'];
@@ -129,6 +129,10 @@ class DriverLicenseController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge([
+            'expiration_date' => $this->parseUsDate((string) $request->input('expiration_date')),
+        ]);
+
         $validated = $request->validate([
             'user_driver_detail_id' => 'required|exists:user_driver_details,id',
             'license_number' => 'required|string|max:255',
@@ -181,7 +185,7 @@ class DriverLicenseController extends Controller
                 'license_number' => $license->license_number,
                 'license_class' => $license->license_class,
                 'state_of_issue' => $license->state_of_issue,
-                'expiration_date' => $license->expiration_date?->format('Y-m-d'),
+                'expiration_date' => $license->expiration_date?->format('n/j/Y'),
                 'is_cdl' => (bool) $license->is_cdl,
                 'is_primary' => (bool) $license->is_primary,
                 'endorsement_ids' => $license->endorsements->pluck('id')->all(),
@@ -213,6 +217,10 @@ class DriverLicenseController extends Controller
 
     public function update(Request $request, DriverLicense $license): RedirectResponse
     {
+        $request->merge([
+            'expiration_date' => $this->parseUsDate((string) $request->input('expiration_date')),
+        ]);
+
         $validated = $request->validate([
             'user_driver_detail_id' => 'required|exists:user_driver_details,id',
             'license_number' => 'required|string|max:255',

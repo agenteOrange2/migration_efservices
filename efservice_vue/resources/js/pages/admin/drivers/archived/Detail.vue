@@ -8,8 +8,24 @@ import RazeLayout from '@/layouts/RazeLayout.vue'
 declare function route(name: string, params?: any): string
 defineOptions({ layout: RazeLayout })
 
-const props = defineProps<{ archive: any; sections: any; stats: any }>()
+interface ArchivedDetailRouteNames {
+    index: string
+    download?: string
+}
+
+const props = withDefaults(defineProps<{ archive: any; sections: any; stats: any; routeNames?: ArchivedDetailRouteNames }>(), {
+    routeNames: () => ({
+        index: 'admin.drivers.archived.index',
+    }),
+})
 const activeTab = ref('personal')
+const routeNames = ref(props.routeNames)
+
+function namedRoute(name: keyof ArchivedDetailRouteNames, params?: any) {
+    const routeName = props.routeNames[name]
+
+    return routeName ? route(routeName, params) : '#'
+}
 
 const tabs = [
     { id: 'personal', label: 'Personal', icon: 'User' },
@@ -95,7 +111,10 @@ function formatMigrationValue(key: string, value: unknown) {
                             </div>
                         </div>
                     </div>
-                    <Link :href="route('admin.drivers.archived.index')"><Button variant="outline-secondary" class="flex items-center gap-2"><Lucide icon="ArrowLeft" class="w-4 h-4" />Back to Archived</Button></Link>
+                    <div class="flex flex-wrap gap-2">
+                        <a v-if="routeNames.download" :href="namedRoute('download', archive.id)"><Button variant="primary" class="flex items-center gap-2"><Lucide icon="Download" class="w-4 h-4" />Download Archive</Button></a>
+                        <Link :href="namedRoute('index')"><Button variant="outline-secondary" class="flex items-center gap-2"><Lucide icon="ArrowLeft" class="w-4 h-4" />Back to Archived</Button></Link>
+                    </div>
                 </div>
             </div>
         </div>

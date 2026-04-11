@@ -3,8 +3,12 @@
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CarrierController;
 use App\Http\Controllers\Admin\CarrierDocumentController;
+use App\Http\Controllers\Admin\BulkImportController;
+use App\Http\Controllers\Admin\ContactSubmissionController;
 use App\Http\Controllers\Admin\DocumentTypeController;
+use App\Http\Controllers\Admin\MessagesController;
 use App\Http\Controllers\Admin\MembershipController;
+use App\Http\Controllers\Admin\PlanRequestController;
 use App\Http\Controllers\Admin\SafetyDataSystemController;
 use App\Http\Controllers\Admin\TrainingDashboardController;
 use App\Http\Controllers\Admin\TrainingAssignmentsController;
@@ -209,6 +213,18 @@ Route::prefix('drivers/hos')->name('drivers.hos.')->group(function () {
     Route::put('{driver}', [AdminDriverHosController::class, 'update'])->name('update');
     Route::post('{driver}/approve', [AdminDriverHosController::class, 'approveRequest'])->name('approve');
     Route::post('{driver}/reject', [AdminDriverHosController::class, 'rejectRequest'])->name('reject');
+});
+Route::prefix('contact-submissions')->name('contact-submissions.')->group(function () {
+    Route::get('/', [ContactSubmissionController::class, 'index'])->name('index');
+    Route::get('{contactSubmission}', [ContactSubmissionController::class, 'show'])->name('show');
+    Route::put('{contactSubmission}', [ContactSubmissionController::class, 'update'])->name('update');
+    Route::delete('{contactSubmission}', [ContactSubmissionController::class, 'destroy'])->name('destroy');
+});
+Route::prefix('plan-requests')->name('plan-requests.')->group(function () {
+    Route::get('/', [PlanRequestController::class, 'index'])->name('index');
+    Route::get('{planRequest}', [PlanRequestController::class, 'show'])->name('show');
+    Route::put('{planRequest}', [PlanRequestController::class, 'update'])->name('update');
+    Route::delete('{planRequest}', [PlanRequestController::class, 'destroy'])->name('destroy');
 });
 Route::prefix('trainings')->name('trainings.')->group(function () {
     Route::delete('media/{media}', [TrainingsController::class, 'destroyMedia'])->name('media.destroy');
@@ -455,6 +471,37 @@ Route::prefix('reports')->name('reports.')->group(function () {
     Route::get('migrations', [ReportsController::class, 'migrations'])->name('migrations');
 });
 Route::get('api/active-drivers-by-carrier/{carrierId}', [ReportsController::class, 'getActiveDriversByCarrier'])->name('api.active-drivers-by-carrier');
+
+/*
+|--------------------------------------------------------------------------
+| Bulk Imports
+|--------------------------------------------------------------------------
+*/
+Route::prefix('imports')->name('imports.')->group(function () {
+    Route::get('/', [BulkImportController::class, 'index'])->name('index');
+    Route::get('template/{type}', [BulkImportController::class, 'downloadTemplate'])->name('template');
+    Route::post('preview', [BulkImportController::class, 'preview'])->name('preview');
+    Route::post('execute', [BulkImportController::class, 'execute'])->name('execute');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Messages
+|--------------------------------------------------------------------------
+*/
+Route::prefix('messages')->name('messages.')->group(function () {
+    Route::get('dashboard', [MessagesController::class, 'dashboard'])->name('dashboard');
+    Route::get('create', [MessagesController::class, 'create'])->name('create');
+    Route::post('/', [MessagesController::class, 'store'])->name('store');
+    Route::get('/', [MessagesController::class, 'index'])->name('index');
+    Route::get('{message}', [MessagesController::class, 'show'])->name('show');
+    Route::get('{message}/edit', [MessagesController::class, 'edit'])->name('edit');
+    Route::put('{message}', [MessagesController::class, 'update'])->name('update');
+    Route::delete('{message}', [MessagesController::class, 'destroy'])->name('destroy');
+    Route::post('{message}/duplicate', [MessagesController::class, 'duplicate'])->name('duplicate');
+    Route::post('{message}/resend', [MessagesController::class, 'resend'])->name('resend');
+    Route::delete('{message}/recipients/{recipient}', [MessagesController::class, 'removeRecipient'])->name('remove-recipient');
+});
 
 /*
 |--------------------------------------------------------------------------

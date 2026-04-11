@@ -51,12 +51,31 @@ interface RecordPayload {
     social_security_card_file: FilePayload | null
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     mode: 'create' | 'edit'
     carriers: CarrierOption[]
     drivers: DriverOption[]
     record?: RecordPayload
-}>()
+    carrier?: CarrierOption | null
+    routeNames?: {
+        index: string
+        store: string
+        update: string
+        show?: string
+        documentsShow: string
+    }
+    isCarrierContext?: boolean
+}>(), {
+    carrier: null,
+    routeNames: () => ({
+        index: 'admin.medical-records.index',
+        store: 'admin.medical-records.store',
+        update: 'admin.medical-records.update',
+        show: 'admin.medical-records.show',
+        documentsShow: 'admin.medical-records.documents.show',
+    }),
+    isCarrierContext: false,
+})
 
 function toUsDate(value: string | null | undefined) {
     if (!value) return ''
@@ -65,7 +84,9 @@ function toUsDate(value: string | null | undefined) {
     return parts.length === 3 ? `${parts[1]}/${parts[2]}/${parts[0]}` : ''
 }
 
-const selectedCarrierId = ref(props.record?.carrier_id ? String(props.record.carrier_id) : '')
+const selectedCarrierId = ref(props.isCarrierContext
+    ? String(props.carrier?.id ?? props.record?.carrier_id ?? '')
+    : (props.record?.carrier_id ? String(props.record.carrier_id) : ''))
 const previewOpen = ref(false)
 const previewFile = ref<FilePayload | null>(null)
 
@@ -142,11 +163,11 @@ function isPdf(file: FilePayload | null) {
 function submit() {
     if (props.mode === 'edit' && props.record) {
         form.transform(data => ({ ...data, _method: 'put' }))
-            .post(route('admin.medical-records.update', props.record.id), { forceFormData: true })
+            .post(route(props.routeNames?.update ?? 'admin.medical-records.update', props.record.id), { forceFormData: true })
         return
     }
 
-    form.post(route('admin.medical-records.store'), { forceFormData: true })
+    form.post(route(props.routeNames?.store ?? 'admin.medical-records.store'), { forceFormData: true })
 }
 </script>
 
@@ -164,12 +185,14 @@ function submit() {
                                 {{ mode === 'edit' ? 'Edit Medical Record' : 'Add New Medical Record' }}
                             </h1>
                             <p class="text-slate-500">
-                                {{ mode === 'edit' ? `Update ${record?.driver_name ?? 'driver'} medical details.` : 'Create a medical record in the Vue admin.' }}
+                                {{ mode === 'edit'
+                                    ? `Update ${record?.driver_name ?? 'driver'} medical details.`
+                                    : (isCarrierContext ? 'Create a medical record for one of your drivers.' : 'Create a medical record in the Vue admin.') }}
                             </p>
                         </div>
                     </div>
 
-                    <Link :href="route('admin.medical-records.index')">
+                    <Link :href="route(props.routeNames?.index ?? 'admin.medical-records.index')">
                         <Button variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back to Medical Records
@@ -188,7 +211,7 @@ function submit() {
                     </h2>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                        <div v-if="!props.isCarrierContext">
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
                             <TomSelect v-model="selectedCarrierId">
                                 <option value="">Select carrier</option>
@@ -196,6 +219,11 @@ function submit() {
                                     {{ carrier.name }}
                                 </option>
                             </TomSelect>
+                        </div>
+
+                        <div v-else class="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                            <p class="text-xs font-medium uppercase tracking-[0.2em] text-primary/70">Carrier</p>
+                            <p class="mt-1 font-semibold text-slate-800">{{ carrier?.name ?? 'Current carrier' }}</p>
                         </div>
 
                         <div>
@@ -330,7 +358,7 @@ function submit() {
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.medical-records.index')">
+                    <Link :href="route(props.routeNames?.index ?? 'admin.medical-records.index')">
                         <Button variant="outline-secondary" type="button">Cancel</Button>
                     </Link>
                     <Button type="submit" variant="primary" :disabled="form.processing">
@@ -350,7 +378,7 @@ function submit() {
                 <div class="space-y-3">
                     <Link
                         v-if="record"
-                        :href="route('admin.medical-records.documents.show', record.id)"
+                        :href="route(props.routeNames?.documentsShow ?? 'admin.medical-records.documents.show', record.id)"
                         class="w-full flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary hover:bg-primary/10"
                     >
                         <span>Manage all documents</span>

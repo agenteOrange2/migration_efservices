@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Driver;
 
 use App\Helpers\Constants;
+use App\Http\Controllers\Carrier\Concerns\ResolvesCarrierContext;
 use App\Services\W9PdfService;
 use App\Services\Driver\StepCompletionCalculator;
 use App\Http\Controllers\Controller;
@@ -43,20 +44,29 @@ use Inertia\Response;
 
 class DriverAdminWizardController extends Controller
 {
+    use ResolvesCarrierContext;
+
     // -------------------------------------------------------------------------
     // GET admin/drivers/wizard/create
     // -------------------------------------------------------------------------
     public function create(Request $request): Response
     {
-        $carriers = Carrier::select('id', 'name')->orderBy('name')->get();
+        $isCarrierContext = $this->isCarrierContext($request);
+        $selectedCarrier = $isCarrierContext ? $this->resolveCarrier() : null;
+        $carriers = $isCarrierContext
+            ? collect([['id' => $selectedCarrier->id, 'name' => $selectedCarrier->name]])
+            : Carrier::select('id', 'name')->orderBy('name')->get();
 
-        $selectedCarrierId = $request->integer('carrier_id') ?: null;
+        $selectedCarrierId = $isCarrierContext
+            ? $selectedCarrier?->id
+            : ($request->integer('carrier_id') ?: null);
 
-        return Inertia::render('admin/drivers/wizard/Wizard', [
+        return Inertia::render($this->wizardPage($request), [
             'driver'             => null,
             'stepData'           => null,
             'carriers'           => $carriers,
             'selectedCarrierId'  => $selectedCarrierId,
+            'carrierLocked'      => $isCarrierContext,
             'vehicles'           => [], // No driver yet on create — vehicles load after driver is saved
             'vehicleTypes'       => VehicleType::pluck('name'),
             'usStates'           => Constants::usStates(),
@@ -64,6 +74,7 @@ class DriverAdminWizardController extends Controller
             'referralSources'    => Constants::referralSources(),
             'endorsements'       => LicenseEndorsement::where('is_active', true)->select('id', 'code', 'name')->orderBy('code')->get()->toArray(),
             'equipmentTypes'     => Constants::equipmentTypes(),
+            'routeNames'         => $this->wizardRouteNames($request),
         ]);
     }
 
@@ -72,6 +83,12 @@ class DriverAdminWizardController extends Controller
     // -------------------------------------------------------------------------
     public function store(Request $request)
     {
+        if ($this->isCarrierContext($request)) {
+            $request->merge([
+                'carrier_id' => $this->resolveCarrierId(),
+            ]);
+        }
+
         $validated = $request->validate([
             'carrier_id'       => 'required|exists:carriers,id',
             'name'             => 'required|string|max:255',
@@ -137,7 +154,7 @@ class DriverAdminWizardController extends Controller
         }
 
         return redirect()
-            ->to(route('admin.drivers.wizard.edit', $driver) . '?step=2')
+            ->to(route($this->wizardRouteNames($request)['edit'], $driver) . '?step=2')
             ->with('success', 'Driver created. Continue filling in the remaining steps.');
     }
 
@@ -146,6 +163,10 @@ class DriverAdminWizardController extends Controller
     // -------------------------------------------------------------------------
     public function edit(Request $request, UserDriverDetail $driver): Response
     {
+        if ($this->isCarrierContext($request)) {
+            abort_unless((int) $driver->carrier_id === (int) $this->resolveCarrierId(), 403);
+        }
+
         $driver->load([
             'user',
             'carrier:id,name',
@@ -166,15 +187,20 @@ class DriverAdminWizardController extends Controller
             'application.details',
         ]);
 
-        $carriers = Carrier::select('id', 'name')->orderBy('name')->get();
+        $isCarrierContext = $this->isCarrierContext($request);
+        $selectedCarrier = $isCarrierContext ? $this->resolveCarrier() : null;
+        $carriers = $isCarrierContext
+            ? collect([['id' => $selectedCarrier->id, 'name' => $selectedCarrier->name]])
+            : Carrier::select('id', 'name')->orderBy('name')->get();
 
         $initialStep = max(1, min($request->integer('step', $driver->current_step), 15));
 
-        return Inertia::render('admin/drivers/wizard/Wizard', [
+        return Inertia::render($this->wizardPage($request), [
             'driver'          => $this->formatDriverBase($driver),
             'stepData'        => $this->buildAllStepData($driver),
             'carriers'        => $carriers,
             'initialStep'     => $initialStep,
+            'carrierLocked'   => $isCarrierContext,
             'vehicles'        => $this->loadDriverVehicles($driver->id),
             'vehicleTypes'    => VehicleType::pluck('name'),
             'usStates'        => Constants::usStates(),
@@ -182,6 +208,7 @@ class DriverAdminWizardController extends Controller
             'referralSources' => Constants::referralSources(),
             'endorsements'    => LicenseEndorsement::where('is_active', true)->select('id', 'code', 'name')->orderBy('code')->get()->toArray(),
             'equipmentTypes'  => Constants::equipmentTypes(),
+            'routeNames'      => $this->wizardRouteNames($request),
         ]);
     }
 
@@ -190,6 +217,10 @@ class DriverAdminWizardController extends Controller
     // -------------------------------------------------------------------------
     public function updateStep(Request $request, UserDriverDetail $driver, int $step)
     {
+        if ($this->isCarrierContext($request)) {
+            abort_unless((int) $driver->carrier_id === (int) $this->resolveCarrierId(), 403);
+        }
+
         \Illuminate\Support\Facades\Log::info('UPDATE_STEP_CALLED', [
             'step'      => $step,
             'driver_id' => $driver->id,
@@ -243,8 +274,49 @@ class DriverAdminWizardController extends Controller
         $nextStep = min($step + 1, 15);
 
         return redirect()
-            ->to(route('admin.drivers.wizard.edit', $driver) . "?step={$nextStep}")
+            ->to(route($this->wizardRouteNames($request)['edit'], $driver) . "?step={$nextStep}")
             ->with('success', "Step {$step} saved successfully.");
+    }
+
+    protected function isCarrierContext(Request $request): bool
+    {
+        return str_starts_with((string) $request->route()?->getName(), 'carrier.');
+    }
+
+    protected function wizardPage(Request $request): string
+    {
+        return $this->isCarrierContext($request)
+            ? 'carrier/drivers/Wizard'
+            : 'admin/drivers/wizard/Wizard';
+    }
+
+    protected function wizardRouteNames(Request $request): array
+    {
+        if ($this->isCarrierContext($request)) {
+            return [
+                'index' => 'carrier.drivers.index',
+                'create' => 'carrier.drivers.create',
+                'store' => 'carrier.drivers.store',
+                'edit' => 'carrier.drivers.edit',
+                'updateStep' => 'carrier.drivers.wizard.update-step',
+                'employmentSearchCompanies' => 'carrier.drivers.employment.search-companies',
+                'employmentSendEmail' => 'carrier.drivers.employment.send-email',
+                'employmentResendEmail' => 'carrier.drivers.employment.resend-email',
+                'employmentMarkEmailStatus' => 'carrier.drivers.employment.mark-email-status',
+            ];
+        }
+
+        return [
+            'index' => 'admin.drivers.index',
+            'create' => 'admin.drivers.wizard.create',
+            'store' => 'admin.drivers.wizard.store',
+            'edit' => 'admin.drivers.wizard.edit',
+            'updateStep' => 'admin.drivers.wizard.update-step',
+            'employmentSearchCompanies' => 'admin.drivers.employment.search-companies',
+            'employmentSendEmail' => 'admin.drivers.employment.send-email',
+            'employmentResendEmail' => 'admin.drivers.employment.resend-email',
+            'employmentMarkEmailStatus' => 'admin.drivers.employment.mark-email-status',
+        ];
     }
 
     // =========================================================================

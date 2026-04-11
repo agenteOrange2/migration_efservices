@@ -469,11 +469,9 @@
                         @foreach($tokens as $index => $token)
                         @php
                             $attemptNumber = $index + 1;
-                            // Find PDF by matching token creation time (within 60 seconds)
-                            $tokenTime = $token->created_at;
-                            $attemptPdf = $attemptPdfs->first(function($media) use ($tokenTime) {
-                                $pdfTime = $media->created_at;
-                                return abs($tokenTime->diffInSeconds($pdfTime)) < 60;
+                            // Find PDF by attempt_number custom property (reliable match)
+                            $attemptPdf = $attemptPdfs->first(function($media) use ($attemptNumber) {
+                                return $media->getCustomProperty('attempt_number') == $attemptNumber;
                             });
                         @endphp
                         <tr class="hover:bg-slate-50/50 transition-colors">

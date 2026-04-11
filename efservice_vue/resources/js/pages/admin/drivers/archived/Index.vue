@@ -33,7 +33,13 @@ interface ArchiveRow {
     initials: string
 }
 
-const props = defineProps<{
+interface ArchivedIndexRouteNames {
+    index: string
+    show: string
+    back: string
+}
+
+const props = withDefaults(defineProps<{
     archives: { data: ArchiveRow[]; links: PaginationLink[]; total: number; last_page: number }
     filters: {
         search: string
@@ -48,12 +54,23 @@ const props = defineProps<{
     archiveReasons: { value: string; label: string }[]
     stats: { total: number; migration: number; termination: number; restored: number }
     isSuperadmin: boolean
-}>()
+    routeNames?: ArchivedIndexRouteNames
+}>(), {
+    routeNames: () => ({
+        index: 'admin.drivers.archived.index',
+        show: 'admin.drivers.archived.show',
+        back: 'admin.drivers.index',
+    }),
+})
 
 const filters = reactive({ ...props.filters })
 
+function namedRoute(name: keyof ArchivedIndexRouteNames, params?: any) {
+    return route(props.routeNames[name], params)
+}
+
 function applyFilters() {
-    router.get(route('admin.drivers.archived.index'), {
+    router.get(namedRoute('index'), {
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
         date_from: filters.date_from || undefined,
@@ -102,7 +119,7 @@ function statusBadge(status: string) {
                             <p class="text-slate-500">Historical driver records preserved after migration, termination, or manual archive.</p>
                         </div>
                     </div>
-                    <Link :href="route('admin.drivers.index')">
+                    <Link :href="namedRoute('back')">
                         <Button variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Active Drivers
@@ -224,7 +241,7 @@ function statusBadge(status: string) {
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center">
-                                        <Link :href="route('admin.drivers.archived.show', archive.id)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition">
+                                        <Link :href="namedRoute('show', archive.id)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                             View
                                         </Link>

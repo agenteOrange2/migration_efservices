@@ -3,8 +3,9 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import { computed, reactive, ref } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
-import { FormInput, FormSelect } from '@/components/Base/Form'
+import { FormInput } from '@/components/Base/Form'
 import { Dialog } from '@/components/Base/Headless'
+import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 declare function route(name: string, params?: any): string
@@ -32,7 +33,16 @@ interface MedicalRow {
     carrier: { id: number; name: string } | null
 }
 
-const props = defineProps<{
+interface MedicalRouteNames {
+    index: string
+    create: string
+    show?: string
+    edit: string
+    destroy: string
+    documentsShow: string
+}
+
+const props = withDefaults(defineProps<{
     medicalRecords: {
         data: MedicalRow[]
         links: PaginationLink[]
@@ -57,7 +67,18 @@ const props = defineProps<{
         expiring: number
         expired: number
     }
-}>()
+    routeNames?: MedicalRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.medical-records.index',
+        create: 'admin.medical-records.create',
+        edit: 'admin.medical-records.edit',
+        destroy: 'admin.medical-records.destroy',
+        documentsShow: 'admin.medical-records.documents.show',
+    }),
+    isCarrierContext: false,
+})
 
 const filters = reactive({
     search_term: props.filters.search_term ?? '',
@@ -70,6 +91,12 @@ const filters = reactive({
 
 const deleteModalOpen = ref(false)
 const selectedRecord = ref<MedicalRow | null>(null)
+const isCarrierContext = computed(() => props.isCarrierContext)
+const routeNames = computed(() => props.routeNames)
+const title = computed(() => props.isCarrierContext ? 'Medical Records' : 'Medical Records Management')
+const subtitle = computed(() => props.isCarrierContext
+    ? 'Manage medical records for the drivers assigned to your carrier account.'
+    : 'Manage driver medical records in the Vue admin.')
 
 const tabs = computed(() => ([
     { key: 'all', label: 'Total Records', icon: 'Files', count: props.stats.total, tone: 'text-slate-600 bg-slate-100 border-slate-200' },
@@ -83,11 +110,17 @@ function formatDate(value: string | null) {
     return new Date(`${value}T00:00:00`).toLocaleDateString()
 }
 
+function namedRoute(name: keyof MedicalRouteNames, params?: any) {
+    const routeName = props.routeNames[name]
+
+    return routeName ? route(routeName, params) : '#'
+}
+
 function applyFilters() {
-    router.get(route('admin.medical-records.index'), {
+    router.get(namedRoute('index'), {
         ...filters,
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: props.isCarrierContext ? undefined : (filters.carrier_filter || undefined),
         driver_filter: filters.driver_filter || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -102,7 +135,7 @@ function applyFilters() {
 
 function resetFilters() {
     filters.search_term = ''
-    filters.carrier_filter = ''
+    filters.carrier_filter = props.isCarrierContext ? props.filters.carrier_filter ?? '' : ''
     filters.driver_filter = ''
     filters.date_from = ''
     filters.date_to = ''
@@ -118,10 +151,10 @@ function changeTab(tab: string) {
 function sortUrl(field: string) {
     const direction = props.filters.sort_field === field && props.filters.sort_direction === 'asc' ? 'desc' : 'asc'
 
-    return route('admin.medical-records.index', {
+    return namedRoute('index', {
         ...filters,
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: props.isCarrierContext ? undefined : (filters.carrier_filter || undefined),
         driver_filter: filters.driver_filter || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -139,7 +172,7 @@ function openDeleteModal(record: MedicalRow) {
 function confirmDelete() {
     if (!selectedRecord.value) return
 
-    router.delete(route('admin.medical-records.destroy', selectedRecord.value.id), {
+    router.delete(namedRoute('destroy', selectedRecord.value.id), {
         preserveScroll: true,
         onSuccess: () => {
             deleteModalOpen.value = false
@@ -166,7 +199,7 @@ function statusLabel(status: string) {
 </script>
 
 <template>
-    <Head title="Medical Records" />
+    <Head :title="title" />
 
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
@@ -177,13 +210,13 @@ function statusLabel(status: string) {
                             <Lucide icon="HeartPulse" class="w-8 h-8 text-primary" />
                         </div>
                         <div>
-                            <h1 class="text-2xl font-bold text-slate-800">Medical Records Management</h1>
-                            <p class="text-slate-500">Manage driver medical records in the Vue admin.</p>
+                            <h1 class="text-2xl font-bold text-slate-800">{{ title }}</h1>
+                            <p class="text-slate-500">{{ subtitle }}</p>
                         </div>
                     </div>
 
                     <Link
-                        :href="route('admin.medical-records.create')"
+                        :href="namedRoute('create')"
                         class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition"
                     >
                         <Lucide icon="Plus" class="w-4 h-4" />
@@ -232,19 +265,19 @@ function statusLabel(status: string) {
                         <FormInput v-model="filters.search_term" type="text" class="pl-10" placeholder="Examiner, registry, SSN, driver..." />
                     </div>
 
-                    <FormSelect v-model="filters.carrier_filter">
+                    <TomSelect v-if="!isCarrierContext" v-model="filters.carrier_filter">
                         <option value="">All Carriers</option>
                         <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">
                             {{ carrier.name }}
                         </option>
-                    </FormSelect>
+                    </TomSelect>
 
-                    <FormSelect v-model="filters.driver_filter">
+                    <TomSelect v-model="filters.driver_filter">
                         <option value="">All Drivers</option>
                         <option v-for="driver in drivers" :key="driver.id" :value="String(driver.id)">
                             {{ driver.name }}
                         </option>
-                    </FormSelect>
+                    </TomSelect>
 
                     <div class="grid grid-cols-2 gap-3">
                         <Litepicker v-model="filters.date_from" :options="lpOptions" />
@@ -292,7 +325,7 @@ function statusLabel(status: string) {
                                     </Link>
                                 </th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Driver</th>
-                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
+                                <th v-if="!isCarrierContext" class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carrier</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">
                                     <Link :href="sortUrl('medical_examiner_name')" class="inline-flex items-center gap-1 hover:text-slate-700">
                                         Examiner
@@ -317,7 +350,7 @@ function statusLabel(status: string) {
                                     <div class="font-medium text-slate-700">{{ record.driver?.name ?? 'N/A' }}</div>
                                     <div class="text-xs text-slate-500">{{ record.driver?.email ?? 'No email' }}</div>
                                 </td>
-                                <td class="px-5 py-4 text-sm text-slate-600">{{ record.carrier?.name ?? 'N/A' }}</td>
+                                <td v-if="!isCarrierContext" class="px-5 py-4 text-sm text-slate-600">{{ record.carrier?.name ?? 'N/A' }}</td>
                                 <td class="px-5 py-4">
                                     <div class="font-medium text-slate-800">{{ record.medical_examiner_name || 'N/A' }}</div>
                                     <div class="text-xs text-slate-500">
@@ -332,7 +365,7 @@ function statusLabel(status: string) {
                                 </td>
                                 <td class="px-5 py-4 text-center text-sm font-medium text-slate-700">
                                     <Link
-                                        :href="route('admin.medical-records.documents.show', record.id)"
+                                        :href="namedRoute('documentsShow', record.id)"
                                         class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-primary/10 hover:text-primary transition"
                                     >
                                         {{ record.document_count }}
@@ -340,10 +373,17 @@ function statusLabel(status: string) {
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link :href="route('admin.medical-records.documents.show', record.id)" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-sky-500 hover:border-sky-200 hover:bg-sky-50">
+                                        <Link
+                                            v-if="routeNames.show"
+                                            :href="namedRoute('show', record.id)"
+                                            class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-primary hover:border-primary/30 hover:bg-primary/5"
+                                        >
+                                            <Lucide icon="Eye" class="w-4 h-4" />
+                                        </Link>
+                                        <Link :href="namedRoute('documentsShow', record.id)" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-sky-500 hover:border-sky-200 hover:bg-sky-50">
                                             <Lucide icon="Files" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="route('admin.medical-records.edit', record.id)" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-primary hover:border-primary/30 hover:bg-primary/5">
+                                        <Link :href="namedRoute('edit', record.id)" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-primary hover:border-primary/30 hover:bg-primary/5">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
                                         <button type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50" @click="openDeleteModal(record)">
@@ -354,7 +394,7 @@ function statusLabel(status: string) {
                             </tr>
 
                             <tr v-if="medicalRecords.data.length === 0">
-                                <td colspan="8" class="px-5 py-12 text-center">
+                                <td :colspan="isCarrierContext ? 7 : 8" class="px-5 py-12 text-center">
                                     <div class="flex flex-col items-center gap-3 text-slate-500">
                                         <Lucide icon="HeartCrack" class="w-10 h-10 text-slate-300" />
                                         <div>

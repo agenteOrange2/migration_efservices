@@ -2,9 +2,11 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { reactive } from 'vue'
 import Lucide from '@/components/Base/Lucide'
+import { Dialog } from '@/components/Base/Headless'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 import Button from '@/components/Base/Button'
+import { FormInput } from '@/components/Base/Form'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 declare function route(name: string, params?: any): string
@@ -32,7 +34,14 @@ interface DocumentRow {
     preview_url: string
 }
 
-const props = defineProps<{
+interface MedicalDocumentsRouteNames {
+    index: string
+    edit: string
+    documentsShow: string
+    mediaDestroy: string
+}
+
+const props = withDefaults(defineProps<{
     documents: {
         data: DocumentRow[]
         links: PaginationLink[]
@@ -58,12 +67,28 @@ const props = defineProps<{
         social_security_card: number
         medical_documents: number
     }
-}>()
+    routeNames?: MedicalDocumentsRouteNames
+}>(), {
+    routeNames: () => ({
+        index: 'admin.medical-records.index',
+        edit: 'admin.medical-records.edit',
+        documentsShow: 'admin.medical-records.documents.show',
+        mediaDestroy: 'admin.medical-records.media.destroy',
+    }),
+})
 
 const filters = reactive({ ...props.filters })
+const previewState = reactive<{ open: boolean; document: DocumentRow | null }>({
+    open: false,
+    document: null,
+})
+
+function namedRoute(name: keyof MedicalDocumentsRouteNames, params?: any) {
+    return route(props.routeNames[name], params)
+}
 
 function applyFilters() {
-    router.get(route('admin.medical-records.documents.show', props.record.id), {
+    router.get(namedRoute('documentsShow', props.record.id), {
         search_term: filters.search_term || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -79,12 +104,21 @@ function resetFilters() {
     applyFilters()
 }
 
+function openPreview(document: DocumentRow) {
+    previewState.document = document
+    previewState.open = true
+}
+
 function deleteDocument(document: DocumentRow) {
     if (!confirm(`Delete "${document.file_name}"?`)) return
 
-    router.delete(route('admin.medical-records.media.destroy', document.id), {
+    router.delete(namedRoute('mediaDestroy', document.id), {
         preserveScroll: true,
     })
+}
+
+function isPdf(document: DocumentRow | null) {
+    return !!document?.mime_type?.includes('pdf')
 }
 </script>
 
@@ -101,18 +135,18 @@ function deleteDocument(document: DocumentRow) {
                         </div>
                         <div>
                             <h1 class="text-2xl font-bold text-slate-800">Medical Record Documents</h1>
-                            <p class="text-slate-500">Documents for {{ record.driver_name }}{{ record.social_security_number ? ` · SSN ${record.social_security_number}` : '' }}</p>
+                            <p class="text-slate-500">Documents for {{ record.driver_name }}{{ record.social_security_number ? ` - SSN ${record.social_security_number}` : '' }}</p>
                         </div>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.medical-records.edit', record.id)">
+                        <Link :href="namedRoute('edit', record.id)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="PenLine" class="w-4 h-4" />
                                 Edit Record
                             </Button>
                         </Link>
-                        <Link :href="route('admin.medical-records.index')">
+                        <Link :href="namedRoute('index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back to Medical Records
@@ -146,7 +180,7 @@ function deleteDocument(document: DocumentRow) {
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
                     <div class="lg:col-span-2 relative">
                         <Lucide icon="Search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input v-model="filters.search_term" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 pl-10 text-sm" placeholder="Search document name or type..." />
+                        <FormInput v-model="filters.search_term" type="text" class="pl-10" placeholder="Search document name or type..." />
                     </div>
 
                     <TomSelect v-model="filters.collection">
@@ -199,19 +233,21 @@ function deleteDocument(document: DocumentRow) {
                                     </span>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <a :href="document.preview_url" target="_blank" class="font-medium text-primary hover:text-primary/80">
-                                        {{ document.file_name }}
-                                    </a>
+                                    <button type="button" class="text-left" @click="openPreview(document)">
+                                        <span class="font-medium text-primary hover:text-primary/80">
+                                            {{ document.file_name }}
+                                        </span>
+                                    </button>
                                     <div class="text-xs text-slate-500 mt-1">
-                                        {{ document.size_label }} · {{ document.file_type.toUpperCase() }}
+                                        {{ document.size_label }} - {{ document.file_type.toUpperCase() }}
                                     </div>
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview">
+                                        <button type="button" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview" @click="openPreview(document)">
                                             <Lucide icon="Eye" class="w-4 h-4" />
-                                        </a>
-                                        <Link :href="route('admin.medical-records.edit', record.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit record">
+                                        </button>
+                                        <Link :href="namedRoute('edit', record.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit record">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
                                         <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
@@ -243,4 +279,35 @@ function deleteDocument(document: DocumentRow) {
             </div>
         </div>
     </div>
+
+    <Dialog :open="previewState.open" @close="previewState.open = false" size="xl">
+        <Dialog.Panel class="w-full max-w-[900px] overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-center justify-between border-b border-slate-200 pb-4 mb-5">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-800">{{ previewState.document?.file_name }}</h3>
+                        <p class="text-sm text-slate-500">{{ previewState.document?.collection_label }}</p>
+                    </div>
+                    <button type="button" class="text-slate-400 hover:text-slate-600" @click="previewState.open = false">
+                        <Lucide icon="X" class="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div class="rounded-xl bg-slate-50 border border-slate-200 overflow-hidden min-h-[420px] flex items-center justify-center">
+                    <iframe
+                        v-if="isPdf(previewState.document)"
+                        :src="previewState.document?.preview_url"
+                        class="w-full h-[70vh] bg-white"
+                        title="Document preview"
+                    />
+                    <img
+                        v-else-if="previewState.document?.preview_url"
+                        :src="previewState.document.preview_url"
+                        :alt="previewState.document.file_name"
+                        class="max-h-[70vh] w-auto object-contain"
+                    />
+                </div>
+            </div>
+        </Dialog.Panel>
+    </Dialog>
 </template>

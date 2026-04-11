@@ -21,10 +21,26 @@ interface DriverOption {
 defineProps<{
     carriers: CarrierOption[]
     drivers: DriverOption[]
+    carrier?: CarrierOption | null
+    routeNames?: {
+        index: string
+        store: string
+        update: string
+        show?: string
+        documentsShow: string
+    }
+    isCarrierContext?: boolean
 }>()
 </script>
 
 <template>
     <Head title="Add Medical Record" />
-    <Form mode="create" :carriers="carriers" :drivers="drivers" />
+    <Form
+        mode="create"
+        :carriers="carriers"
+        :drivers="drivers"
+        :carrier="carrier"
+        :route-names="routeNames"
+        :is-carrier-context="isCarrierContext"
+    />
 </template>

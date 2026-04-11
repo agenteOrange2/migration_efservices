@@ -38,8 +38,6 @@ class UserCarriersImport extends BaseImport
                 // Step 1: Create User
                 $user = User::create([
                     'name' => trim($rowData['name'] ?? ''),
-                    'middle_name' => trim($rowData['middle_name'] ?? '') ?: null,
-                    'last_name' => trim($rowData['last_name'] ?? '') ?: null,
                     'email' => strtolower(trim($rowData['email'] ?? '')),
                     'password' => Hash::make($rowData['password'] ?? Str::random(12)),
                     'status' => $this->normalizeUserStatus($rowData['status'] ?? 'active'),

@@ -9,7 +9,22 @@ declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
 
-const props = defineProps<{
+interface TrainingRouteNames {
+    index: string
+    store: string
+    show: string
+    edit: string
+    update: string
+    destroy: string
+    mediaDestroy: string
+    assignSelect?: string
+    assignForm?: string
+    assign?: string
+    dashboard?: string
+    assignmentsIndex?: string
+}
+
+const props = withDefaults(defineProps<{
     training: {
         id: number
         title: string
@@ -20,7 +35,24 @@ const props = defineProps<{
         url: string | null
         documents: { id: number; file_name: string; mime_type?: string | null; size_label: string; preview_url: string; created_at_display: string | null }[]
     }
-}>()
+    routeNames?: TrainingRouteNames
+    isCarrierContext?: boolean
+}>(), {
+    routeNames: () => ({
+        index: 'admin.trainings.index',
+        store: 'admin.trainings.store',
+        show: 'admin.trainings.show',
+        edit: 'admin.trainings.edit',
+        update: 'admin.trainings.update',
+        destroy: 'admin.trainings.destroy',
+        mediaDestroy: 'admin.trainings.media.destroy',
+        assignForm: 'admin.trainings.assign.form',
+        assign: 'admin.trainings.assign',
+        dashboard: 'admin.training-dashboard.index',
+        assignmentsIndex: 'admin.training-assignments.index',
+    }),
+    isCarrierContext: false,
+})
 
 const form = useForm({
     title: props.training.title ?? '',
@@ -33,7 +65,7 @@ const form = useForm({
 })
 
 function submit() {
-    form.put(route('admin.trainings.update', props.training.id), { forceFormData: true })
+    form.put(route(props.routeNames.update, props.training.id), { forceFormData: true })
 }
 </script>
 
@@ -49,13 +81,13 @@ function submit() {
                         <p class="text-sm text-slate-500 mt-0.5">{{ training.title }}</p>
                     </div>
                     <div class="flex items-center gap-3">
-                        <Link :href="route('admin.trainings.show', training.id)">
+                        <Link :href="route(props.routeNames.show, training.id)">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="Eye" class="w-4 h-4" />
                                 View Training
                             </Button>
                         </Link>
-                        <Link :href="route('admin.trainings.index')">
+                        <Link :href="route(props.routeNames.index)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back
@@ -71,7 +103,7 @@ function submit() {
                 <Form :form="form" :existing-documents="training.documents" />
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.trainings.index')">
+                    <Link :href="route(props.routeNames.index)">
                         <Button type="button" variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="X" class="w-4 h-4" />
                             Cancel

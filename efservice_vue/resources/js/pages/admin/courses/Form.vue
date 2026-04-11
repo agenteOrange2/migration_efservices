@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watchEffect } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
@@ -10,6 +10,8 @@ const props = defineProps<{
     drivers: { id: number; carrier_id: number | null; carrier_name?: string | null; name: string; email?: string | null }[]
     states: Record<string, string>
     organizationOptions: Record<string, string>
+    carrier?: { id: number; name: string } | null
+    isCarrierContext?: boolean
     existingDocuments?: { id: number; file_name: string; file_type: string; size_label: string; preview_url: string; created_at_display: string | null }[]
 }>()
 
@@ -18,6 +20,12 @@ const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 const filteredDrivers = computed(() => {
     if (!props.form.carrier_id) return props.drivers
     return props.drivers.filter((driver) => String(driver.carrier_id ?? '') === String(props.form.carrier_id))
+})
+
+watchEffect(() => {
+    if (props.isCarrierContext && props.carrier?.id && String(props.form.carrier_id) !== String(props.carrier.id)) {
+        props.form.carrier_id = String(props.carrier.id)
+    }
 })
 
 function onDocumentsChange(event: Event) {
@@ -35,7 +43,7 @@ function onDocumentsChange(event: Event) {
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div v-if="!props.isCarrierContext">
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier</label>
                     <TomSelect v-model="form.carrier_id">
                         <option value="">Select carrier</option>
@@ -43,12 +51,18 @@ function onDocumentsChange(event: Event) {
                     </TomSelect>
                 </div>
 
+                <div v-else class="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+                    <div class="text-xs font-medium uppercase tracking-wide text-primary/80">Carrier</div>
+                    <div class="mt-1 text-sm font-semibold text-slate-800">{{ props.carrier?.name ?? 'Assigned carrier' }}</div>
+                    <div class="mt-1 text-xs text-slate-500">This record will stay linked to your carrier account.</div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
                     <TomSelect v-model="form.user_driver_detail_id">
                         <option value="">Select driver</option>
                         <option v-for="driver in filteredDrivers" :key="driver.id" :value="String(driver.id)">
-                            {{ driver.name }}{{ driver.carrier_name ? ` - ${driver.carrier_name}` : '' }}
+                            {{ driver.name }}{{ !props.isCarrierContext && driver.carrier_name ? ` - ${driver.carrier_name}` : '' }}
                         </option>
                     </TomSelect>
                     <p v-if="form.errors.user_driver_detail_id" class="text-red-500 text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>

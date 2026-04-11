@@ -29,6 +29,7 @@ class User extends Authenticatable implements HasMedia
         'name',
         'email',
         'password',
+        'status',
     ];
 
     /**
@@ -39,7 +40,6 @@ class User extends Authenticatable implements HasMedia
      */
     protected $guarded = [
         'id',
-        'status',
         'email_verified_at',
         'remember_token',
         'two_factor_secret',
@@ -120,8 +120,8 @@ class User extends Authenticatable implements HasMedia
     // Relación con carriers (managers de carriers)
     public function carriers()
     {
-        return $this->belongsToMany(Carrier::class, 'user_carrier')
-            ->withPivot('phone', 'job_position', 'photo', 'status')
+        return $this->belongsToMany(Carrier::class, 'user_carrier_details')
+            ->withPivot('phone', 'job_position', 'status')
             ->withTimestamps();
     }
 
