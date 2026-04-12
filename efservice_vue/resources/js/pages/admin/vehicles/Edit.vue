@@ -62,7 +62,23 @@ const props = defineProps<{
     statusOptions: Record<string, string>
     states: Record<string, string>
     isSuperadmin?: boolean
+    isCarrierContext?: boolean
+    routeNames?: Partial<{
+        index: string
+        show: string
+        update: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.vehicles.index',
+    show: 'admin.vehicles.show',
+    update: 'admin.vehicles.update',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const form = useForm({
     carrier_id: props.vehicle.carrier_id ?? '',
@@ -114,7 +130,7 @@ function submit() {
         irp_apportioned_plate: data.irp_apportioned_plate ? 1 : 0,
         contract_agreed: data.contract_agreed ? 1 : 0,
         third_party_email_sent: data.third_party_email_sent ? 1 : 0,
-    })).put(route('admin.vehicles.update', props.vehicle.id))
+    })).put(namedRoute('update', props.vehicle.id))
 }
 </script>
 
@@ -136,7 +152,7 @@ function submit() {
                                 Documents
                             </Button>
                         </Link>
-                        <Link :href="route('admin.vehicles.show', vehicle.id)">
+                        <Link :href="namedRoute('show', vehicle.id)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back
@@ -160,10 +176,12 @@ function submit() {
                     :status-options="statusOptions"
                     :states="states"
                     :is-superadmin="isSuperadmin"
+                    :is-carrier-context="isCarrierContext"
+                    :route-names="routeNames"
                 />
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.vehicles.show', vehicle.id)">
+                    <Link :href="namedRoute('show', vehicle.id)">
                         <Button type="button" variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="X" class="w-4 h-4" />
                             Cancel

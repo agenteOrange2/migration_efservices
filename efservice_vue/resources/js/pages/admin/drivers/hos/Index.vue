@@ -21,6 +21,13 @@ const props = defineProps<{
     carriers: { id: number; name: string }[]
     cycleOptions: { value: string; label: string }[]
     canFilterCarriers: boolean
+    routeNames?: {
+        index?: string
+        update?: string
+        approve?: string
+        reject?: string
+        driverLog?: string
+    }
 }>()
 
 const filters = reactive({ ...props.filters })
@@ -29,7 +36,7 @@ const selectedDriver = ref<any | null>(null)
 const cycleForm = reactive({ hos_cycle_type: '70_8' })
 
 function applyFilters() {
-    router.get(route('admin.drivers.hos.index'), {
+    router.get(route(props.routeNames?.index ?? 'admin.drivers.hos.index'), {
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
         pending_only: filters.pending_only || undefined,
@@ -52,7 +59,7 @@ function openCycleModal(driver: any) {
 function updateCycle() {
     if (!selectedDriver.value) return
 
-    router.put(route('admin.drivers.hos.update', selectedDriver.value.id), cycleForm, {
+    router.put(route(props.routeNames?.update ?? 'admin.drivers.hos.update', selectedDriver.value.id), cycleForm, {
         preserveScroll: true,
         onSuccess: () => {
             cycleModalOpen.value = false
@@ -61,11 +68,11 @@ function updateCycle() {
 }
 
 function approve(driver: any) {
-    router.post(route('admin.drivers.hos.approve', driver.id), {}, { preserveScroll: true })
+    router.post(route(props.routeNames?.approve ?? 'admin.drivers.hos.approve', driver.id), {}, { preserveScroll: true })
 }
 
 function reject(driver: any) {
-    router.post(route('admin.drivers.hos.reject', driver.id), {}, { preserveScroll: true })
+    router.post(route(props.routeNames?.reject ?? 'admin.drivers.hos.reject', driver.id), {}, { preserveScroll: true })
 }
 </script>
 
@@ -158,7 +165,7 @@ function reject(driver: any) {
                                             <Lucide icon="Settings" class="h-4 w-4" />
                                             Change
                                         </Button>
-                                        <Link :href="route('admin.hos.driver.log', driver.id)" class="inline-flex items-center gap-2 text-primary hover:underline">
+                                        <Link :href="route(props.routeNames?.driverLog ?? 'admin.hos.driver.log', driver.id)" class="inline-flex items-center gap-2 text-primary hover:underline">
                                             <Lucide icon="Eye" class="h-4 w-4" />
                                             View Log
                                         </Link>

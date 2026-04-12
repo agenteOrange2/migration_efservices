@@ -23,14 +23,28 @@ const props = defineProps<{
     drivers: { id: number; name: string }[]
     filters: { driver_id: string; start_date: string; end_date: string; file_type: string }
     accident: { id: number; nature_of_accident: string; accident_date_display: string } | null
+    routeNames?: {
+        index: string
+        create: string
+        store: string
+        edit: string
+        update: string
+        destroy: string
+        driverHistory: string
+        documentsIndex: string
+        documentsShow: string
+        documentsDestroy: string
+        mediaDestroy: string
+        driverShow: string
+    }
 }>()
 
 const filters = reactive({ ...props.filters })
 
 function applyFilters() {
     const baseRoute = props.accident
-        ? route('admin.accidents.documents.show', props.accident.id)
-        : route('admin.accidents.documents.index')
+        ? route(props.routeNames?.documentsShow ?? 'admin.accidents.documents.show', props.accident.id)
+        : route(props.routeNames?.documentsIndex ?? 'admin.accidents.documents.index')
 
     router.get(baseRoute, {
         driver_id: filters.driver_id || undefined,
@@ -44,8 +58,8 @@ function deleteDocument(document: any) {
     if (!confirm(`Delete "${document.original_name}"?`)) return
 
     const target = document.source === 'document'
-        ? route('admin.accidents.documents.destroy', document.id)
-        : route('admin.accidents.media.destroy', document.id)
+        ? route(props.routeNames?.documentsDestroy ?? 'admin.accidents.documents.destroy', document.id)
+        : route(props.routeNames?.mediaDestroy ?? 'admin.accidents.media.destroy', document.id)
 
     router.delete(target, { preserveScroll: true })
 }
@@ -70,7 +84,7 @@ function deleteDocument(document: any) {
                         </div>
                     </div>
 
-                    <Link :href="route('admin.accidents.index')">
+                    <Link :href="route(props.routeNames?.index ?? 'admin.accidents.index')">
                         <Button variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back to Accidents
@@ -131,7 +145,7 @@ function deleteDocument(document: any) {
                                 <td class="px-5 py-4 text-sm text-slate-500">{{ document.created_at_display }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ document.carrier_name }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-700">
-                                    <Link v-if="document.driver_id" :href="route('admin.drivers.show', document.driver_id)" class="hover:text-primary">
+                                    <Link v-if="document.driver_id" :href="route(props.routeNames?.driverShow ?? 'admin.drivers.show', document.driver_id)" class="hover:text-primary">
                                         {{ document.driver_name }}
                                     </Link>
                                     <span v-else>{{ document.driver_name }}</span>
@@ -151,7 +165,7 @@ function deleteDocument(document: any) {
                                         <a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </a>
-                                        <Link v-if="document.accident_id" :href="route('admin.accidents.edit', document.accident_id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit accident">
+                                        <Link v-if="document.accident_id" :href="route(props.routeNames?.edit ?? 'admin.accidents.edit', document.accident_id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit accident">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
                                         <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">

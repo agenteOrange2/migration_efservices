@@ -25,7 +25,26 @@ const props = defineProps<{
     stats: { total: number; completed: number; pending: number; overdue: number; total_cost: number; avg_cost: number; vehicles_serviced: number }
     contextVehicle?: { id: number; label: string } | null
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        index: string
+        show: string
+        edit: string
+        calendar: string
+        reports: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.maintenance.index',
+    show: 'admin.maintenance.show',
+    edit: 'admin.maintenance.edit',
+    calendar: 'admin.maintenance.calendar',
+    reports: 'admin.maintenance.reports',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const filters = reactive({ ...props.filters })
 const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
@@ -33,7 +52,7 @@ const maxCost = computed(() => Math.max(...props.costByMonth.map(item => item.co
 const maxType = computed(() => Math.max(...props.serviceTypeDistribution.map(item => item.count), 1))
 
 function applyFilters() {
-    router.get(route('admin.maintenance.reports'), {
+    router.get(namedRoute('reports'), {
         carrier_id: filters.carrier_id || undefined,
         vehicle_id: filters.vehicle_id || undefined,
         period: filters.period || undefined,
@@ -58,10 +77,10 @@ function applyFilters() {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.maintenance.index', { vehicle_id: contextVehicle?.id || undefined })">
+                        <Link :href="namedRoute('index', { vehicle_id: contextVehicle?.id || undefined })">
                             <Button variant="outline-secondary" class="flex items-center gap-2"><Lucide icon="List" class="w-4 h-4" /> List</Button>
                         </Link>
-                        <Link :href="route('admin.maintenance.calendar', { vehicle_id: contextVehicle?.id || undefined })">
+                        <Link :href="namedRoute('calendar', { vehicle_id: contextVehicle?.id || undefined })">
                             <Button variant="outline-secondary" class="flex items-center gap-2"><Lucide icon="Calendar" class="w-4 h-4" /> Calendar</Button>
                         </Link>
                     </div>
@@ -188,8 +207,8 @@ function applyFilters() {
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ record.cost || 'N/A' }}</td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link :href="route('admin.maintenance.show', record.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Eye" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.maintenance.edit', record.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('show', record.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Eye" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('edit', record.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
                                     </div>
                                 </td>
                             </tr>

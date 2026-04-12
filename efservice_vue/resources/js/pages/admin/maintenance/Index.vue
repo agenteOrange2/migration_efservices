@@ -41,7 +41,31 @@ const props = defineProps<{
     upcomingItems: { id: number; title: string; vehicle_label: string; service_date: string | null; next_service_date: string | null; status_label: string; show_url: string }[]
     contextVehicle?: { id: number; label: string } | null
     isSuperadmin: boolean
+    isCarrierContext?: boolean
+    routeNames?: Partial<{
+        index: string
+        create: string
+        show: string
+        edit: string
+        destroy: string
+        calendar: string
+        reports: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.maintenance.index',
+    create: 'admin.maintenance.create',
+    show: 'admin.maintenance.show',
+    edit: 'admin.maintenance.edit',
+    destroy: 'admin.maintenance.destroy',
+    calendar: 'admin.maintenance.calendar',
+    reports: 'admin.maintenance.reports',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 const filters = reactive({ ...props.filters })
@@ -49,7 +73,7 @@ const deleteModalOpen = ref(false)
 const selectedRecord = ref<MaintenanceRow | null>(null)
 
 function applyFilters() {
-    router.get(route('admin.maintenance.index'), {
+    router.get(namedRoute('index'), {
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
         vehicle_id: filters.vehicle_id || undefined,
@@ -71,18 +95,18 @@ function resetFilters() {
 
 function createHref() {
     return props.contextVehicle
-        ? route('admin.maintenance.create', { vehicle_id: props.contextVehicle.id })
-        : route('admin.maintenance.create')
+        ? namedRoute('create', { vehicle_id: props.contextVehicle.id })
+        : namedRoute('create')
 }
 
 function calendarHref() {
-    return route('admin.maintenance.calendar', {
+    return namedRoute('calendar', {
         vehicle_id: props.contextVehicle?.id || undefined,
     })
 }
 
 function reportsHref() {
-    return route('admin.maintenance.reports', {
+    return namedRoute('reports', {
         vehicle_id: props.contextVehicle?.id || undefined,
     })
 }
@@ -95,7 +119,7 @@ function openDeleteModal(record: MaintenanceRow) {
 function confirmDelete() {
     if (!selectedRecord.value) return
 
-    router.delete(route('admin.maintenance.destroy', selectedRecord.value.id), {
+    router.delete(namedRoute('destroy', selectedRecord.value.id), {
         preserveScroll: true,
         onSuccess: () => {
             deleteModalOpen.value = false
@@ -250,8 +274,8 @@ function statusBadge(status: string) {
                                 <td class="px-5 py-4 text-center text-sm text-slate-600">{{ record.attachments_count }}</td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link :href="route('admin.maintenance.show', record.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Eye" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.maintenance.edit', record.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('show', record.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Eye" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('edit', record.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
                                         <button type="button" @click="openDeleteModal(record)" class="p-1.5 text-slate-400 hover:text-danger transition"><Lucide icon="Trash2" class="w-4 h-4" /></button>
                                     </div>
                                 </td>

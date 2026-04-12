@@ -14,7 +14,24 @@ const props = defineProps<{
     makes: { data: any[]; links: { url: string | null; label: string; active: boolean }[]; total: number; last_page: number }
     filters: { search: string }
     stats: { total: number; in_use: number; unused: number }
+    routeNames?: Partial<{
+        index: string
+        store: string
+        update: string
+        destroy: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.vehicle-makes.index',
+    store: 'admin.vehicle-makes.store',
+    update: 'admin.vehicle-makes.update',
+    destroy: 'admin.vehicle-makes.destroy',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const search = ref(props.filters.search ?? '')
 const showModal = ref(false)
@@ -24,7 +41,7 @@ const errors = ref<Record<string, string[]>>({})
 const form = reactive({ id: 0, name: '' })
 
 function applyFilters() {
-    router.get(route('admin.vehicle-makes.index'), {
+    router.get(namedRoute('index'), {
         search: search.value || undefined,
     }, { preserveState: true, replace: true })
 }
@@ -54,8 +71,8 @@ function saveForm() {
 
     const method = modalMode.value === 'create' ? 'post' : 'put'
     const url = modalMode.value === 'create'
-        ? route('admin.vehicle-makes.store')
-        : route('admin.vehicle-makes.update', form.id)
+        ? namedRoute('store')
+        : namedRoute('update', form.id)
 
     router[method](url, { name: form.name }, {
         preserveScroll: true,
@@ -72,7 +89,7 @@ function saveForm() {
 
 function deleteMake(make: any) {
     if (!confirm(`Delete "${make.name}"?`)) return
-    router.delete(route('admin.vehicle-makes.destroy', make.id), { preserveScroll: true })
+    router.delete(namedRoute('destroy', make.id), { preserveScroll: true })
 }
 </script>
 

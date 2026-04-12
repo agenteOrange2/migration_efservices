@@ -45,14 +45,44 @@ const props = defineProps<{
     statusOptions: Record<string, string>
     stats: { total: number; active: number; pending: number; out_of_service: number; suspended: number; unassigned: number }
     isSuperadmin: boolean
+    isCarrierContext?: boolean
+    routeNames?: Partial<{
+        index: string
+        create: string
+        show: string
+        edit: string
+        destroy: string
+        assignmentHistory: string
+        documentsOverview: string
+        documentsIndex: string
+        unassigned: string
+    }>
 }>()
 
 const filters = reactive({ ...props.filters })
 const deleteModalOpen = ref(false)
 const selectedVehicle = ref<VehicleRow | null>(null)
 
+const defaultRouteNames = {
+    index: 'admin.vehicles.index',
+    create: 'admin.vehicles.create',
+    show: 'admin.vehicles.show',
+    edit: 'admin.vehicles.edit',
+    destroy: 'admin.vehicles.destroy',
+    assignmentHistory: 'admin.vehicles.driver-assignment-history',
+    documentsOverview: 'admin.vehicles-documents.index',
+    documentsIndex: 'admin.vehicles.documents.index',
+    unassigned: 'admin.vehicles.unassigned',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
+
+const showUnassignedLink = !props.isCarrierContext || !!props.routeNames?.unassigned
+
 function applyFilters() {
-    router.get(route('admin.vehicles.index'), {
+    router.get(namedRoute('index'), {
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
         status: filters.status || undefined,
@@ -76,7 +106,7 @@ function resetFilters() {
 
 function sortUrl(field: string) {
     const direction = props.filters.sort_field === field && props.filters.sort_direction === 'asc' ? 'desc' : 'asc'
-    return route('admin.vehicles.index', {
+    return namedRoute('index', {
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
         status: filters.status || undefined,
@@ -96,7 +126,7 @@ function openDeleteModal(vehicle: VehicleRow) {
 function confirmDelete() {
     if (!selectedVehicle.value) return
 
-    router.delete(route('admin.vehicles.destroy', selectedVehicle.value.id), {
+    router.delete(namedRoute('destroy', selectedVehicle.value.id), {
         preserveScroll: true,
         onSuccess: () => {
             deleteModalOpen.value = false
@@ -124,19 +154,19 @@ function confirmDelete() {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.vehicles.unassigned')">
+                        <Link v-if="showUnassignedLink" :href="namedRoute('unassigned')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="Unlink" class="w-4 h-4" />
                                 Unassigned
                             </Button>
                         </Link>
-                        <Link :href="route('admin.vehicles-documents.index')">
+                        <Link :href="namedRoute('documentsOverview')">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="Files" class="w-4 h-4" />
                                 Documents Overview
                             </Button>
                         </Link>
-                        <Link :href="route('admin.vehicles.create')">
+                        <Link :href="namedRoute('create')">
                             <Button variant="primary" class="flex items-center gap-2">
                                 <Lucide icon="Plus" class="w-4 h-4" />
                                 Add Vehicle
@@ -279,17 +309,17 @@ function confirmDelete() {
                                     </div>
                                 </td>
                                 <td class="px-5 py-4 text-center">
-                                    <Link :href="route('admin.vehicles.documents.index', vehicle.id)" class="inline-flex flex-col items-center rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:border-primary/30 hover:text-primary transition">
+                                    <Link :href="namedRoute('documentsIndex', vehicle.id)" class="inline-flex flex-col items-center rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:border-primary/30 hover:text-primary transition">
                                         <span>{{ vehicle.document_count }}</span>
                                         <span v-if="vehicle.expiring_documents_count" class="text-[11px] text-danger">{{ vehicle.expiring_documents_count }} expiring</span>
                                     </Link>
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link :href="route('admin.vehicles.show', vehicle.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View"><Lucide icon="Eye" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.vehicles.driver-assignment-history', vehicle.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Assignment history"><Lucide icon="History" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.vehicles.documents.index', vehicle.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.vehicles.edit', vehicle.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('show', vehicle.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View"><Lucide icon="Eye" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('assignmentHistory', vehicle.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Assignment history"><Lucide icon="History" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('documentsIndex', vehicle.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('edit', vehicle.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
                                         <button type="button" @click="openDeleteModal(vehicle)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
                                     </div>
                                 </td>

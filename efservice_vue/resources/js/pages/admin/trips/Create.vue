@@ -13,6 +13,11 @@ const props = defineProps<{
     vehicles: { id: number; label: string }[]
     isSuperadmin: boolean
     selectedCarrierId: string
+    routeNames?: Partial<{
+        store: string
+        index: string
+        carrierData: string
+    }>
 }>()
 
 const form = useForm({
@@ -33,7 +38,7 @@ const form = useForm({
 })
 
 function submit() {
-    form.post(route('admin.trips.store'), {
+    form.post(route(props.routeNames?.store ?? 'admin.trips.store'), {
         preserveScroll: true,
     })
 }
@@ -51,7 +56,8 @@ function submit() {
         page-title="Create New Trip"
         page-description="Schedule a trip across carriers with the current admin workflow."
         submit-label="Create Trip"
-        :cancel-href="route('admin.trips.index')"
+        :cancel-href="route(props.routeNames?.index ?? 'admin.trips.index')"
+        :route-names="{ carrierData: props.routeNames?.carrierData ?? 'admin.trips.carrier.data' }"
         @submit="submit"
     />
 </template>

@@ -10,7 +10,14 @@ declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
 
-const props = defineProps<{ violation: Record<string, any> }>()
+const props = defineProps<{
+    violation: Record<string, any>
+    routeNames?: {
+        index?: string
+        acknowledge?: string
+        forgive?: string
+    }
+}>()
 
 const forgiveness = reactive({
     forgiveness_reason: '',
@@ -18,11 +25,11 @@ const forgiveness = reactive({
 })
 
 function acknowledge() {
-    router.post(route('admin.hos.violations.acknowledge', props.violation.id), {}, { preserveScroll: true })
+    router.post(route(props.routeNames?.acknowledge ?? 'admin.hos.violations.acknowledge', props.violation.id), {}, { preserveScroll: true })
 }
 
 function forgive() {
-    router.post(route('admin.hos.violations.forgive', props.violation.id), forgiveness, { preserveScroll: true })
+    router.post(route(props.routeNames?.forgive ?? 'admin.hos.violations.forgive', props.violation.id), forgiveness, { preserveScroll: true })
 }
 </script>
 
@@ -48,7 +55,7 @@ function forgive() {
                             <Lucide icon="BadgeCheck" class="h-4 w-4" />
                             Acknowledge
                         </Button>
-                        <Link :href="route('admin.hos.violations')" class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+                        <Link :href="route(props.routeNames?.index ?? 'admin.hos.violations')" class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
                             <Lucide icon="ArrowLeft" class="h-4 w-4" />
                             Back to violations
                         </Link>

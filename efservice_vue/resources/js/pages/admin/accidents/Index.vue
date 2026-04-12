@@ -32,6 +32,22 @@ const props = defineProps<{
         sort_field: string
         sort_direction: string
     }
+    carrier?: { id: number; name: string } | null
+    isCarrierContext?: boolean
+    routeNames?: {
+        index: string
+        create: string
+        store: string
+        edit: string
+        update: string
+        destroy: string
+        driverHistory: string
+        documentsIndex: string
+        documentsShow: string
+        documentsDestroy: string
+        mediaDestroy: string
+        driverShow: string
+    }
 }>()
 
 const filters = reactive({ ...props.filters })
@@ -39,10 +55,10 @@ const deleteModalOpen = ref(false)
 const selectedAccident = ref<any | null>(null)
 
 function applyFilters() {
-    router.get(route('admin.accidents.index'), {
+    router.get(route(props.routeNames?.index ?? 'admin.accidents.index'), {
         ...filters,
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: props.isCarrierContext ? undefined : (filters.carrier_filter || undefined),
         driver_filter: filters.driver_filter || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -53,7 +69,7 @@ function applyFilters() {
 
 function resetFilters() {
     filters.search_term = ''
-    filters.carrier_filter = ''
+    filters.carrier_filter = props.isCarrierContext && props.carrier?.id ? String(props.carrier.id) : ''
     filters.driver_filter = ''
     filters.date_from = ''
     filters.date_to = ''
@@ -63,10 +79,10 @@ function resetFilters() {
 function sortUrl(field: string) {
     const direction = props.filters.sort_field === field && props.filters.sort_direction === 'asc' ? 'desc' : 'asc'
 
-    return route('admin.accidents.index', {
+    return route(props.routeNames?.index ?? 'admin.accidents.index', {
         ...filters,
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: props.isCarrierContext ? undefined : (filters.carrier_filter || undefined),
         driver_filter: filters.driver_filter || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -83,7 +99,7 @@ function openDeleteModal(accident: any) {
 function confirmDelete() {
     if (!selectedAccident.value) return
 
-    router.delete(route('admin.accidents.destroy', selectedAccident.value.id), {
+    router.delete(route(props.routeNames?.destroy ?? 'admin.accidents.destroy', selectedAccident.value.id), {
         preserveScroll: true,
         onSuccess: () => {
             deleteModalOpen.value = false
@@ -111,11 +127,11 @@ function confirmDelete() {
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <Link :href="route('admin.accidents.documents.index')" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition">
+                        <Link :href="route(props.routeNames?.documentsIndex ?? 'admin.accidents.documents.index')" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition">
                             <Lucide icon="FileText" class="w-4 h-4" />
                             View All Documents
                         </Link>
-                        <Link :href="route('admin.accidents.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                        <Link :href="route(props.routeNames?.create ?? 'admin.accidents.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
                             <Lucide icon="Plus" class="w-4 h-4" />
                             Add Accident
                         </Link>
@@ -130,10 +146,15 @@ function confirmDelete() {
                         <FormInput v-model="filters.search_term" type="text" class="pl-10" placeholder="Search accidents..." />
                     </div>
 
-                    <TomSelect v-model="filters.carrier_filter">
+                    <TomSelect v-if="!props.isCarrierContext" v-model="filters.carrier_filter">
                         <option value="">All Carriers</option>
                         <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                     </TomSelect>
+
+                    <div v-else class="rounded-lg border border-primary/15 bg-primary/5 px-4 py-2.5 text-sm text-slate-700">
+                        <span class="font-medium text-primary">Carrier:</span>
+                        <span class="ml-2">{{ props.carrier?.name ?? 'Assigned carrier' }}</span>
+                    </div>
 
                     <TomSelect v-model="filters.driver_filter">
                         <option value="">All Drivers</option>
@@ -212,13 +233,13 @@ function confirmDelete() {
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link v-if="accident.driver" :href="route('admin.accidents.driver-history', accident.driver.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View history">
+                                        <Link v-if="accident.driver" :href="route(props.routeNames?.driverHistory ?? 'admin.accidents.driver-history', accident.driver.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View history">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="route('admin.accidents.documents.show', accident.id)" class="p-1.5 text-slate-400 hover:text-blue-500 transition" title="View documents">
+                                        <Link :href="route(props.routeNames?.documentsShow ?? 'admin.accidents.documents.show', accident.id)" class="p-1.5 text-slate-400 hover:text-blue-500 transition" title="View documents">
                                             <Lucide icon="FileText" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="route('admin.accidents.edit', accident.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit">
+                                        <Link :href="route(props.routeNames?.edit ?? 'admin.accidents.edit', accident.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
                                         <button type="button" @click="openDeleteModal(accident)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
@@ -232,7 +253,7 @@ function confirmDelete() {
                                 <td colspan="8" class="px-5 py-12 text-center text-slate-400">
                                     <Lucide icon="AlertTriangle" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
                                     <p>No accident records found</p>
-                                    <Link :href="route('admin.accidents.create')" class="inline-flex items-center gap-2 mt-4 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition">
+                                    <Link :href="route(props.routeNames?.create ?? 'admin.accidents.create')" class="inline-flex items-center gap-2 mt-4 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition">
                                         <Lucide icon="Plus" class="w-4 h-4" />
                                         Add First Accident
                                     </Link>

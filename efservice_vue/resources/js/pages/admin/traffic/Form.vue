@@ -27,14 +27,36 @@ interface ConvictionPayload {
     documents: DocumentPayload[]
 }
 
+interface TrafficRouteNames {
+    index: string
+    create: string
+    store: string
+    edit: string
+    update: string
+    destroy: string
+    driverHistory: string
+    documentsShow: string
+    mediaDestroy: string
+    driverShow: string
+}
+
 const props = defineProps<{
     mode: 'create' | 'edit'
     carriers: CarrierOption[]
     drivers: DriverOption[]
     conviction?: ConvictionPayload
+    carrier?: CarrierOption | null
+    isCarrierContext?: boolean
+    routeNames?: TrafficRouteNames
 }>()
 
-const selectedCarrierId = ref(props.conviction?.carrier_id ? String(props.conviction.carrier_id) : '')
+const selectedCarrierId = ref(
+    props.carrier?.id
+        ? String(props.carrier.id)
+        : props.conviction?.carrier_id
+            ? String(props.conviction.carrier_id)
+            : ''
+)
 const previewOpen = ref(false)
 const previewFile = ref<DocumentPayload | null>(null)
 
@@ -62,6 +84,13 @@ watch(selectedCarrierId, value => {
     form.user_driver_detail_id = ''
 })
 
+watch(() => props.carrier?.id, (value) => {
+    if (props.isCarrierContext && value) {
+        selectedCarrierId.value = String(value)
+        form.carrier_id = String(value)
+    }
+}, { immediate: true })
+
 function onFileChange(event: Event) {
     const input = event.target as HTMLInputElement
     form.attachments = Array.from(input.files ?? [])
@@ -79,10 +108,10 @@ function isPdf(file: DocumentPayload | null) {
 function submit() {
     if (props.mode === 'edit' && props.conviction) {
         form.transform(data => ({ ...data, _method: 'put' }))
-            .post(route('admin.traffic.update', props.conviction.id), { forceFormData: true })
+            .post(route(props.routeNames?.update ?? 'admin.traffic.update', props.conviction.id), { forceFormData: true })
         return
     }
-    form.post(route('admin.traffic.store'), { forceFormData: true })
+    form.post(route(props.routeNames?.store ?? 'admin.traffic.store'), { forceFormData: true })
 }
 </script>
 
@@ -101,7 +130,7 @@ function submit() {
                         </div>
                     </div>
 
-                    <Link :href="route('admin.traffic.index')">
+                    <Link :href="route(props.routeNames?.index ?? 'admin.traffic.index')">
                         <Button variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back to Traffic
@@ -120,13 +149,19 @@ function submit() {
                     </h2>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                        <div v-if="!props.isCarrierContext">
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
                             <TomSelect v-model="selectedCarrierId">
                                 <option value="">Select carrier</option>
                                 <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                             </TomSelect>
                             <p v-if="form.errors.carrier_id" class="text-red-500 text-xs mt-1">{{ form.errors.carrier_id }}</p>
+                        </div>
+
+                        <div v-else class="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+                            <div class="text-xs font-medium uppercase tracking-wide text-primary/80">Carrier</div>
+                            <div class="mt-1 text-sm font-semibold text-slate-800">{{ props.carrier?.name ?? 'Assigned carrier' }}</div>
+                            <div class="mt-1 text-xs text-slate-500">Only drivers from your carrier are available for this conviction record.</div>
                         </div>
 
                         <div>
@@ -189,7 +224,7 @@ function submit() {
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.traffic.index')"><Button variant="outline-secondary" type="button">Cancel</Button></Link>
+                    <Link :href="route(props.routeNames?.index ?? 'admin.traffic.index')"><Button variant="outline-secondary" type="button">Cancel</Button></Link>
                     <Button type="submit" variant="primary" :disabled="form.processing">{{ form.processing ? 'Saving...' : mode === 'edit' ? 'Update Conviction' : 'Create Conviction' }}</Button>
                 </div>
             </form>
@@ -203,7 +238,7 @@ function submit() {
                 </h2>
 
                 <div class="space-y-3">
-                    <Link v-if="conviction" :href="route('admin.traffic.documents.show', conviction.id)" class="w-full flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary hover:bg-primary/10">
+                    <Link v-if="conviction" :href="route(props.routeNames?.documentsShow ?? 'admin.traffic.documents.show', conviction.id)" class="w-full flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary hover:bg-primary/10">
                         <span>Manage all documents</span>
                         <Lucide icon="ArrowUpRight" class="w-4 h-4" />
                     </Link>

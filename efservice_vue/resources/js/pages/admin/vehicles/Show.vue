@@ -45,7 +45,42 @@ const props = defineProps<{
     }
     recentMaintenances: { id: number; service_date: string | null; next_service_date: string | null; service_tasks: string | null; vendor_mechanic: string | null; cost: string | null; odometer: string | null; status: string }[]
     recentRepairs: { id: number; repair_name: string; repair_date: string | null; cost: string | null; status: string; odometer: string | null }[]
+    isCarrierContext?: boolean
+    routeNames?: Partial<{
+        index: string
+        show: string
+        edit: string
+        assignmentHistory: string
+        documentsIndex: string
+        maintenanceIndexByVehicle: string
+        maintenanceCreateByVehicle: string
+        maintenanceShow: string
+        repairsIndexByVehicle: string
+        repairsCreateByVehicle: string
+        repairsShow: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.vehicles.index',
+    show: 'admin.vehicles.show',
+    edit: 'admin.vehicles.edit',
+    assignmentHistory: 'admin.vehicles.driver-assignment-history',
+    documentsIndex: 'admin.vehicles.documents.index',
+    maintenanceIndexByVehicle: 'admin.vehicles.maintenance.index',
+    maintenanceCreateByVehicle: 'admin.vehicles.maintenance.create',
+    maintenanceShow: 'admin.maintenance.show',
+    repairsIndexByVehicle: 'admin.vehicles.repairs.index',
+    repairsCreateByVehicle: 'admin.vehicles.repairs.create',
+    repairsShow: 'admin.vehicles.emergency-repairs.show',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
+
+const showMaintenanceLinks = !props.isCarrierContext || !!props.routeNames?.maintenanceIndexByVehicle
+const showRepairLinks = !props.isCarrierContext || !!props.routeNames?.repairsIndexByVehicle
 </script>
 
 <template>
@@ -62,25 +97,25 @@ const props = defineProps<{
                         </p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.vehicles.documents.index', vehicle.id)">
+                        <Link :href="namedRoute('documentsIndex', vehicle.id)">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="Files" class="w-4 h-4" />
                                 Documents
                             </Button>
                         </Link>
-                        <Link :href="route('admin.vehicles.driver-assignment-history', vehicle.id)">
+                        <Link :href="namedRoute('assignmentHistory', vehicle.id)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="History" class="w-4 h-4" />
                                 Assignment History
                             </Button>
                         </Link>
-                        <Link :href="route('admin.vehicles.edit', vehicle.id)">
+                        <Link :href="namedRoute('edit', vehicle.id)">
                             <Button variant="primary" class="flex items-center gap-2">
                                 <Lucide icon="PenLine" class="w-4 h-4" />
                                 Edit
                             </Button>
                         </Link>
-                        <Link :href="route('admin.vehicles.index')">
+                        <Link :href="namedRoute('index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back
@@ -152,7 +187,7 @@ const props = defineProps<{
                         <Lucide icon="Users" class="w-4 h-4 text-primary" />
                         Current Assignment
                     </h2>
-                    <Link :href="route('admin.vehicles.driver-assignment-history', vehicle.id)" class="text-sm text-primary hover:underline">Open full history</Link>
+                    <Link :href="namedRoute('assignmentHistory', vehicle.id)" class="text-sm text-primary hover:underline">Open full history</Link>
                 </div>
 
                 <div v-if="vehicle.current_assignment" class="space-y-4">
@@ -226,22 +261,27 @@ const props = defineProps<{
                         <Lucide icon="Wrench" class="w-4 h-4 text-primary" />
                         Maintenance Summary
                     </h2>
-                    <div class="flex items-center gap-3 text-xs">
-                        <Link :href="route('admin.vehicles.maintenance.index', vehicle.id)" class="text-primary hover:underline">View all</Link>
-                        <Link :href="route('admin.vehicles.maintenance.create', vehicle.id)" class="text-primary hover:underline">Add new</Link>
+                    <div v-if="showMaintenanceLinks" class="flex items-center gap-3 text-xs">
+                        <Link :href="namedRoute('maintenanceIndexByVehicle', vehicle.id)" class="text-primary hover:underline">View all</Link>
+                        <Link :href="namedRoute('maintenanceCreateByVehicle', vehicle.id)" class="text-primary hover:underline">Add new</Link>
                     </div>
                 </div>
                 <p class="text-sm text-slate-500 mb-3">{{ vehicle.maintenance_count }} maintenance record(s)</p>
                 <div v-if="recentMaintenances.length" class="space-y-3">
-                    <Link v-for="maintenance in recentMaintenances" :key="maintenance.id" :href="route('admin.maintenance.show', maintenance.id)" class="block rounded-lg border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100/70 transition">
+                    <Link v-if="showMaintenanceLinks" v-for="maintenance in recentMaintenances" :key="maintenance.id" :href="namedRoute('maintenanceShow', maintenance.id)" class="block rounded-lg border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100/70 transition">
                         <p class="text-sm font-medium text-slate-800">{{ maintenance.service_tasks || 'Maintenance item' }}</p>
                         <p class="text-xs text-slate-500">{{ maintenance.service_date ?? 'N/A' }} · {{ maintenance.status }}</p>
                         <p v-if="maintenance.cost" class="text-xs text-slate-400">{{ maintenance.cost }}</p>
                     </Link>
+                    <div v-else v-for="maintenance in recentMaintenances" :key="maintenance.id" class="block rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-sm font-medium text-slate-800">{{ maintenance.service_tasks || 'Maintenance item' }}</p>
+                        <p class="text-xs text-slate-500">{{ maintenance.service_date ?? 'N/A' }} · {{ maintenance.status }}</p>
+                        <p v-if="maintenance.cost" class="text-xs text-slate-400">{{ maintenance.cost }}</p>
+                    </div>
                 </div>
                 <div v-else class="space-y-3">
                     <p class="text-sm text-slate-400">No maintenance history available yet.</p>
-                    <Link :href="route('admin.vehicles.maintenance.create', vehicle.id)" class="inline-flex text-sm text-primary hover:underline">Create the first maintenance record</Link>
+                    <Link v-if="showMaintenanceLinks" :href="namedRoute('maintenanceCreateByVehicle', vehicle.id)" class="inline-flex text-sm text-primary hover:underline">Create the first maintenance record</Link>
                 </div>
             </div>
 
@@ -251,22 +291,27 @@ const props = defineProps<{
                         <Lucide icon="AlertTriangle" class="w-4 h-4 text-primary" />
                         Emergency Repairs
                     </h2>
-                    <div class="flex items-center gap-3 text-xs">
-                        <Link :href="route('admin.vehicles.repairs.index', vehicle.id)" class="text-primary hover:underline">View all</Link>
-                        <Link :href="route('admin.vehicles.repairs.create', vehicle.id)" class="text-primary hover:underline">Add new</Link>
+                    <div v-if="showRepairLinks" class="flex items-center gap-3 text-xs">
+                        <Link :href="namedRoute('repairsIndexByVehicle', vehicle.id)" class="text-primary hover:underline">View all</Link>
+                        <Link :href="namedRoute('repairsCreateByVehicle', vehicle.id)" class="text-primary hover:underline">Add new</Link>
                     </div>
                 </div>
                 <p class="text-sm text-slate-500 mb-3">{{ vehicle.repair_count }} repair record(s)</p>
                 <div v-if="recentRepairs.length" class="space-y-3">
-                    <Link v-for="repair in recentRepairs" :key="repair.id" :href="route('admin.vehicles.emergency-repairs.show', repair.id)" class="block rounded-lg border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100/70 transition">
+                    <Link v-if="showRepairLinks" v-for="repair in recentRepairs" :key="repair.id" :href="namedRoute('repairsShow', repair.id)" class="block rounded-lg border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100/70 transition">
                         <p class="text-sm font-medium text-slate-800">{{ repair.repair_name }}</p>
                         <p class="text-xs text-slate-500">{{ repair.repair_date ?? 'N/A' }} · {{ repair.status }}</p>
                         <p v-if="repair.cost" class="text-xs text-slate-400">{{ repair.cost }}</p>
                     </Link>
+                    <div v-else v-for="repair in recentRepairs" :key="repair.id" class="block rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-sm font-medium text-slate-800">{{ repair.repair_name }}</p>
+                        <p class="text-xs text-slate-500">{{ repair.repair_date ?? 'N/A' }} · {{ repair.status }}</p>
+                        <p v-if="repair.cost" class="text-xs text-slate-400">{{ repair.cost }}</p>
+                    </div>
                 </div>
                 <div v-else class="space-y-3">
                     <p class="text-sm text-slate-400">No emergency repairs logged for this vehicle.</p>
-                    <Link :href="route('admin.vehicles.repairs.create', vehicle.id)" class="inline-flex text-sm text-primary hover:underline">Create the first repair record</Link>
+                    <Link v-if="showRepairLinks" :href="namedRoute('repairsCreateByVehicle', vehicle.id)" class="inline-flex text-sm text-primary hover:underline">Create the first repair record</Link>
                 </div>
             </div>
         </div>

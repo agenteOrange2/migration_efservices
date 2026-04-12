@@ -20,6 +20,14 @@ const props = defineProps<{
     documentTypes: Record<string, string>
     documentStatuses: Record<string, string>
     stats: { total: number; active: number; expired: number; pending: number }
+    isCarrierContext?: boolean
+    routeNames?: Partial<{
+        show: string
+        documentsIndex: string
+        documentsStore: string
+        documentsUpdate: string
+        documentsDestroy: string
+    }>
 }>()
 
 const filters = reactive({ ...props.filters })
@@ -28,6 +36,18 @@ const modalMode = ref<'create' | 'edit'>('create')
 const saving = ref(false)
 const errors = ref<Record<string, string[]>>({})
 const lpOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
+
+const defaultRouteNames = {
+    show: 'admin.vehicles.show',
+    documentsIndex: 'admin.vehicles.documents.index',
+    documentsStore: 'admin.vehicles.documents.store',
+    documentsUpdate: 'admin.vehicles.documents.update',
+    documentsDestroy: 'admin.vehicles.documents.destroy',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 function blankForm() {
     return {
@@ -46,7 +66,7 @@ function blankForm() {
 const form = reactive(blankForm())
 
 function applyFilters() {
-    router.get(route('admin.vehicles.documents.index', props.vehicle.id), {
+    router.get(namedRoute('documentsIndex', props.vehicle.id), {
         search: filters.search || undefined,
         document_type: filters.document_type || undefined,
         status: filters.status || undefined,
@@ -109,7 +129,7 @@ function saveForm() {
     }
 
     if (modalMode.value === 'create') {
-        router.post(route('admin.vehicles.documents.store', props.vehicle.id), payload, {
+        router.post(namedRoute('documentsStore', props.vehicle.id), payload, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
@@ -124,7 +144,7 @@ function saveForm() {
         return
     }
 
-    router.post(route('admin.vehicles.documents.update', { vehicle: props.vehicle.id, document: form.id }), {
+    router.post(namedRoute('documentsUpdate', { vehicle: props.vehicle.id, document: form.id }), {
         ...payload,
         _method: 'put',
     }, {
@@ -144,7 +164,7 @@ function saveForm() {
 function deleteDocument(document: any) {
     if (!confirm(`Delete "${document.document_type_label}"?`)) return
 
-    router.delete(route('admin.vehicles.documents.destroy', { vehicle: props.vehicle.id, document: document.id }), {
+    router.delete(namedRoute('documentsDestroy', { vehicle: props.vehicle.id, document: document.id }), {
         preserveScroll: true,
     })
 }
@@ -166,7 +186,7 @@ function deleteDocument(document: any) {
                             <Lucide icon="Plus" class="w-4 h-4" />
                             Add Document
                         </Button>
-                        <Link :href="route('admin.vehicles.show', vehicle.id)">
+                        <Link :href="namedRoute('show', vehicle.id)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back

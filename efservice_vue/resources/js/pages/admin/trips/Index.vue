@@ -21,7 +21,37 @@ const props = defineProps<{
     carriers: { id: number; name: string }[]
     statusOptions: { value: string; label: string }[]
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        index: string
+        statistics: string
+        create: string
+        show: string
+        edit: string
+        destroy: string
+        forceStart: string
+        forcePause: string
+        forceResume: string
+        forceEnd: string
+    }>
+    overviewLabel?: string
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.trips.index',
+    statistics: 'admin.trips.statistics',
+    create: 'admin.trips.create',
+    show: 'admin.trips.show',
+    edit: 'admin.trips.edit',
+    destroy: 'admin.trips.destroy',
+    forceStart: 'admin.trips.force-start',
+    forcePause: 'admin.trips.force-pause',
+    forceResume: 'admin.trips.force-resume',
+    forceEnd: 'admin.trips.force-end',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const filters = reactive({ ...props.filters })
 
@@ -40,7 +70,7 @@ const pickerOptions = {
 }
 
 function applyFilters() {
-    router.get(route('admin.trips.index'), {
+    router.get(namedRoute('index'), {
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
         status: filters.status || undefined,
@@ -64,12 +94,12 @@ function resetFilters() {
 
 function destroyTrip(trip: any) {
     if (!confirm(`Delete trip ${trip.trip_number}?`)) return
-    router.delete(route('admin.trips.destroy', trip.id), { preserveScroll: true })
+    router.delete(namedRoute('destroy', trip.id), { preserveScroll: true })
 }
 
 function runAction(routeName: string, trip: any, label: string) {
     if (!confirm(`${label} ${trip.trip_number}?`)) return
-    router.post(route(routeName, trip.id), {}, { preserveScroll: true })
+    router.post(namedRoute(routeName as keyof typeof defaultRouteNames, trip.id), {}, { preserveScroll: true })
 }
 
 function badgeClass(status: string) {
@@ -98,13 +128,13 @@ function badgeClass(status: string) {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.trips.statistics')">
+                        <Link :href="namedRoute('statistics')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="BarChart3" class="h-4 w-4" />
-                                Statistics
+                                {{ overviewLabel || 'Statistics' }}
                             </Button>
                         </Link>
-                        <Link :href="route('admin.trips.create')">
+                        <Link :href="namedRoute('create')">
                             <Button variant="primary" class="flex items-center gap-2">
                                 <Lucide icon="Plus" class="h-4 w-4" />
                                 Add Trip
@@ -188,7 +218,7 @@ function badgeClass(status: string) {
                         <tbody class="divide-y divide-slate-100 bg-white">
                             <tr v-for="trip in trips.data" :key="trip.id">
                                 <td class="px-5 py-4">
-                                    <Link :href="route('admin.trips.show', trip.id)" class="font-medium text-primary hover:underline">
+                                    <Link :href="namedRoute('show', trip.id)" class="font-medium text-primary hover:underline">
                                         {{ trip.trip_number }}
                                     </Link>
                                     <div class="mt-1 text-xs text-slate-500">{{ trip.vehicle_label }}</div>
@@ -214,19 +244,19 @@ function badgeClass(status: string) {
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex flex-wrap gap-2">
-                                        <Button v-if="trip.quick_actions.can_force_start" variant="primary" class="px-3 py-1 text-xs" @click="runAction('admin.trips.force-start', trip, 'Start')">Start</Button>
-                                        <Button v-if="trip.quick_actions.can_force_pause" variant="outline-secondary" class="px-3 py-1 text-xs" @click="runAction('admin.trips.force-pause', trip, 'Pause')">Pause</Button>
-                                        <Button v-if="trip.quick_actions.can_force_resume" variant="primary" class="px-3 py-1 text-xs" @click="runAction('admin.trips.force-resume', trip, 'Resume')">Resume</Button>
-                                        <Button v-if="trip.quick_actions.can_force_end" variant="outline-secondary" class="px-3 py-1 text-xs" @click="runAction('admin.trips.force-end', trip, 'End')">End</Button>
+                                        <Button v-if="trip.quick_actions.can_force_start" variant="primary" class="px-3 py-1 text-xs" @click="runAction('forceStart', trip, 'Start')">Start</Button>
+                                        <Button v-if="trip.quick_actions.can_force_pause" variant="outline-secondary" class="px-3 py-1 text-xs" @click="runAction('forcePause', trip, 'Pause')">Pause</Button>
+                                        <Button v-if="trip.quick_actions.can_force_resume" variant="primary" class="px-3 py-1 text-xs" @click="runAction('forceResume', trip, 'Resume')">Resume</Button>
+                                        <Button v-if="trip.quick_actions.can_force_end" variant="outline-secondary" class="px-3 py-1 text-xs" @click="runAction('forceEnd', trip, 'End')">End</Button>
                                         <span v-if="!trip.quick_actions.can_force_start && !trip.quick_actions.can_force_pause && !trip.quick_actions.can_force_resume && !trip.quick_actions.can_force_end" class="text-xs text-slate-400">No quick action</span>
                                     </div>
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-end gap-2">
-                                        <Link :href="route('admin.trips.show', trip.id)" class="p-1.5 text-slate-400 transition hover:text-primary">
+                                        <Link :href="namedRoute('show', trip.id)" class="p-1.5 text-slate-400 transition hover:text-primary">
                                             <Lucide icon="Eye" class="h-4 w-4" />
                                         </Link>
-                                        <Link v-if="trip.can_edit" :href="route('admin.trips.edit', trip.id)" class="p-1.5 text-slate-400 transition hover:text-primary">
+                                        <Link v-if="trip.can_edit" :href="namedRoute('edit', trip.id)" class="p-1.5 text-slate-400 transition hover:text-primary">
                                             <Lucide icon="PenLine" class="h-4 w-4" />
                                         </Link>
                                         <button v-if="trip.can_delete" type="button" class="p-1.5 text-slate-400 transition hover:text-red-500" @click="destroyTrip(trip)">

@@ -22,6 +22,15 @@ const props = defineProps<{
     dailyLogs: any[]
     violations: any[]
     documents: any[]
+    routeNames?: {
+        driverLog?: string
+        documentsIndex?: string
+        violationsIndex?: string
+        violationsShow?: string
+        entryUpdate?: string
+        entryDestroy?: string
+        entryBulkDestroy?: string
+    }
 }>()
 
 const filters = reactive({ ...props.filters })
@@ -45,7 +54,7 @@ const pickerOptions = {
 }
 
 function applyFilters() {
-    router.get(route('admin.hos.driver.log', props.driver.id), {
+    router.get(route(props.routeNames?.driverLog ?? 'admin.hos.driver.log', props.driver.id), {
         start_date: filters.start_date || undefined,
         end_date: filters.end_date || undefined,
     }, { preserveState: true, preserveScroll: true, replace: true })
@@ -62,7 +71,7 @@ function openEdit(entry: any) {
 }
 
 function saveEntry() {
-    router.put(route('admin.hos.entries.update', editForm.id), {
+    router.put(route(props.routeNames?.entryUpdate ?? 'admin.hos.entries.update', editForm.id), {
         status: editForm.status,
         start_time: editForm.start_time,
         end_time: editForm.end_time || null,
@@ -78,13 +87,13 @@ function saveEntry() {
 
 function destroyEntry(id: number) {
     if (!confirm('Delete this HOS entry?')) return
-    router.delete(route('admin.hos.entries.destroy', id), { preserveScroll: true })
+    router.delete(route(props.routeNames?.entryDestroy ?? 'admin.hos.entries.destroy', id), { preserveScroll: true })
 }
 
 function bulkDelete() {
     if (!selectedEntryIds.value.length || !confirm(`Delete ${selectedEntryIds.value.length} selected entries?`)) return
 
-    router.post(route('admin.hos.entries.bulk-destroy'), {
+    router.post(route(props.routeNames?.entryBulkDestroy ?? 'admin.hos.entries.bulk-destroy'), {
         entry_ids: selectedEntryIds.value,
     }, {
         preserveScroll: true,
@@ -113,11 +122,11 @@ function bulkDelete() {
                     </div>
 
                     <div class="flex flex-wrap gap-3">
-                        <Link :href="route('admin.hos.documents.index', { driver_id: driver.id })" class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+                        <Link :href="route(props.routeNames?.documentsIndex ?? 'admin.hos.documents.index', { driver_id: driver.id })" class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
                             <Lucide icon="FileText" class="h-4 w-4" />
                             Open Documents
                         </Link>
-                        <Link :href="route('admin.hos.violations', { driver_id: driver.id })" class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+                        <Link :href="route(props.routeNames?.violationsIndex ?? 'admin.hos.violations', { driver_id: driver.id })" class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
                             <Lucide icon="AlertTriangle" class="h-4 w-4" />
                             Driver Violations
                         </Link>
@@ -236,7 +245,7 @@ function bulkDelete() {
                                 <div class="mt-1 text-slate-600">{{ violation.date }} · {{ violation.severity }}</div>
                                 <div class="text-xs text-slate-500">{{ violation.hours_exceeded }}h exceeded</div>
                             </div>
-                            <Link :href="route('admin.hos.violations.show', violation.id)" class="text-primary hover:underline">Open</Link>
+                            <Link :href="route(props.routeNames?.violationsShow ?? 'admin.hos.violations.show', violation.id)" class="text-primary hover:underline">Open</Link>
                         </div>
                     </div>
                     <div v-if="!violations.length" class="px-5 py-8 text-center text-sm text-slate-500">No violations in this range.</div>

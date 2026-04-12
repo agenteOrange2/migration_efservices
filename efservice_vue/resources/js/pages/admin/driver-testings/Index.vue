@@ -53,6 +53,7 @@ const props = defineProps<{
     carriers: { id: number; name: string }[]
     filters: {
         search: string
+        driver_filter?: string
         carrier_filter: string
         test_type: string
         status: string
@@ -64,11 +65,24 @@ const props = defineProps<{
     statuses: Record<string, string>
     testResults: Record<string, string>
     stats: { total: number; positive: number; negative: number; scheduled: number }
+    drivers?: { id: number; full_name?: string; name?: string }[]
+    carrier?: { id: number; name: string } | null
+    isCarrierContext?: boolean
+    routeNames?: {
+        index: string
+        show: string
+        create: string
+        edit: string
+        destroy: string
+        driverHistory?: string
+        driverShow: string
+    }
 }>()
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
 const filters = reactive({
     search:         props.filters.search ?? '',
+    driver_filter:  props.filters.driver_filter ?? '',
     carrier_filter: props.filters.carrier_filter ?? '',
     test_type:      props.filters.test_type ?? '',
     status:         props.filters.status ?? '',
@@ -78,8 +92,9 @@ const filters = reactive({
 })
 
 function applyFilters() {
-    router.get(route('admin.driver-testings.index'), {
+    router.get(route(props.routeNames?.index ?? 'admin.driver-testings.index'), {
         search:         filters.search         || undefined,
+        driver_filter:  filters.driver_filter  || undefined,
         carrier_filter: filters.carrier_filter || undefined,
         test_type:      filters.test_type      || undefined,
         status:         filters.status         || undefined,
@@ -91,6 +106,7 @@ function applyFilters() {
 
 function resetFilters() {
     filters.search         = ''
+    filters.driver_filter  = ''
     filters.carrier_filter = ''
     filters.test_type      = ''
     filters.status         = ''
@@ -111,7 +127,7 @@ function openDeleteModal(testing: TestingRow) {
 
 function confirmDelete() {
     if (!selectedTesting.value) return
-    router.delete(route('admin.driver-testings.destroy', selectedTesting.value.id), {
+    router.delete(route(props.routeNames?.destroy ?? 'admin.driver-testings.destroy', selectedTesting.value.id), {
         preserveScroll: true,
         onSuccess: () => {
             deleteModalOpen.value = false
@@ -226,8 +242,14 @@ const reasonLabels: { key: keyof TestingRow; label: string; color: string }[] = 
                         <FormInput v-model="filters.search" type="text" class="pl-10" placeholder="Driver, administrator..." @keyup.enter="applyFilters" />
                     </div>
 
+                    <!-- Driver -->
+                    <FormSelect v-if="props.drivers?.length" v-model="filters.driver_filter">
+                        <option value="">All Drivers</option>
+                        <option v-for="d in props.drivers" :key="d.id" :value="String(d.id)">{{ d.full_name ?? d.name ?? `Driver #${d.id}` }}</option>
+                    </FormSelect>
+
                     <!-- Carrier -->
-                    <FormSelect v-model="filters.carrier_filter">
+                    <FormSelect v-if="!props.isCarrierContext" v-model="filters.carrier_filter">
                         <option value="">All Carriers</option>
                         <option v-for="c in carriers" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
                     </FormSelect>
@@ -346,19 +368,24 @@ const reasonLabels: { key: keyof TestingRow; label: string; color: string }[] = 
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-center gap-1">
                                         <!-- View Test -->
-                                        <Link :href="route('admin.driver-testings.show', t.id)"
+                                        <Link :href="route(props.routeNames?.show ?? 'admin.driver-testings.show', t.id)"
                                             class="p-1.5 text-slate-400 hover:text-primary transition" title="View Test">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </Link>
                                         <!-- View Driver -->
                                         <Link v-if="t.driver_id"
-                                            :href="route('admin.drivers.show', t.driver_id)"
+                                            :href="route(props.routeNames?.driverShow ?? 'admin.drivers.show', t.driver_id)"
                                             class="p-1.5 text-slate-400 hover:text-primary transition" title="View Driver">
                                             <Lucide icon="User" class="w-4 h-4" />
                                         </Link>
+                                        <Link v-if="t.driver_id && props.routeNames?.driverHistory"
+                                            :href="route(props.routeNames.driverHistory, t.driver_id)"
+                                            class="p-1.5 text-slate-400 hover:text-primary transition" title="Driver history">
+                                            <Lucide icon="History" class="w-4 h-4" />
+                                        </Link>
                                         <!-- Edit -->
-                                        <Link v-if="t.driver_id"
-                                            :href="route('admin.drivers.testings.edit', { driver: t.driver_id, testing: t.id })"
+                                        <Link
+                                            :href="route(props.routeNames?.edit ?? 'admin.drivers.testings.edit', props.isCarrierContext ? t.id : { driver: t.driver_id, testing: t.id })"
                                             class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>

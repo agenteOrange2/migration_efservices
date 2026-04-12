@@ -50,14 +50,38 @@ interface AccidentPayload {
     media_files: ExistingFile[]
 }
 
+interface AccidentRouteNames {
+    index: string
+    create: string
+    store: string
+    edit: string
+    update: string
+    destroy: string
+    driverHistory: string
+    documentsIndex: string
+    documentsShow: string
+    documentsDestroy: string
+    mediaDestroy: string
+    driverShow: string
+}
+
 const props = defineProps<{
     mode: 'create' | 'edit'
     carriers: CarrierOption[]
     drivers: DriverOption[]
     accident?: AccidentPayload
+    carrier?: CarrierOption | null
+    isCarrierContext?: boolean
+    routeNames?: AccidentRouteNames
 }>()
 
-const selectedCarrierId = ref(props.accident?.carrier_id ? String(props.accident.carrier_id) : '')
+const selectedCarrierId = ref(
+    props.carrier?.id
+        ? String(props.carrier.id)
+        : props.accident?.carrier_id
+            ? String(props.accident.carrier_id)
+            : ''
+)
 const previewOpen = ref(false)
 const previewFile = ref<ExistingFile | null>(null)
 
@@ -94,6 +118,13 @@ watch(selectedCarrierId, (value, oldValue) => {
     }
 })
 
+watch(() => props.carrier?.id, (value) => {
+    if (props.isCarrierContext && value) {
+        selectedCarrierId.value = String(value)
+        form.carrier_id = String(value)
+    }
+}, { immediate: true })
+
 watch(() => form.had_injuries, (value) => {
     if (!value) {
         form.number_of_injuries = 0
@@ -129,8 +160,8 @@ function deleteFile(file: ExistingFile) {
     if (!confirmed || !props.accident) return
 
     const target = file.source === 'document'
-        ? route('admin.accidents.documents.destroy', file.id)
-        : route('admin.accidents.media.destroy', file.id)
+        ? route(props.routeNames?.documentsDestroy ?? 'admin.accidents.documents.destroy', file.id)
+        : route(props.routeNames?.mediaDestroy ?? 'admin.accidents.media.destroy', file.id)
 
     router.delete(target, {
         preserveScroll: true,
@@ -140,11 +171,11 @@ function deleteFile(file: ExistingFile) {
 function submit() {
     if (props.mode === 'edit' && props.accident) {
         form.transform(data => ({ ...data, _method: 'put' }))
-            .post(route('admin.accidents.update', props.accident.id), { forceFormData: true })
+            .post(route(props.routeNames?.update ?? 'admin.accidents.update', props.accident.id), { forceFormData: true })
         return
     }
 
-    form.post(route('admin.accidents.store'), { forceFormData: true })
+    form.post(route(props.routeNames?.store ?? 'admin.accidents.store'), { forceFormData: true })
 }
 </script>
 
@@ -168,13 +199,13 @@ function submit() {
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <Link v-if="mode === 'edit' && accident" :href="route('admin.accidents.documents.show', accident.id)">
+                        <Link v-if="mode === 'edit' && accident" :href="route(props.routeNames?.documentsShow ?? 'admin.accidents.documents.show', accident.id)">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="FileText" class="w-4 h-4" />
                                 View Documents
                             </Button>
                         </Link>
-                        <Link :href="route('admin.accidents.index')">
+                        <Link :href="route(props.routeNames?.index ?? 'admin.accidents.index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back to Accidents
@@ -194,7 +225,7 @@ function submit() {
                     </h2>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                        <div v-if="!props.isCarrierContext">
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
                             <TomSelect v-model="selectedCarrierId">
                                 <option value="">Select carrier</option>
@@ -203,6 +234,12 @@ function submit() {
                                 </option>
                             </TomSelect>
                             <p v-if="form.errors.carrier_id" class="text-red-500 text-xs mt-1">{{ form.errors.carrier_id }}</p>
+                        </div>
+
+                        <div v-else class="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+                            <div class="text-xs font-medium uppercase tracking-wide text-primary/80">Carrier</div>
+                            <div class="mt-1 text-sm font-semibold text-slate-800">{{ props.carrier?.name ?? 'Assigned carrier' }}</div>
+                            <div class="mt-1 text-xs text-slate-500">Only drivers from your carrier are available for this accident record.</div>
                         </div>
 
                         <div>
@@ -323,7 +360,7 @@ function submit() {
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.accidents.index')">
+                    <Link :href="route(props.routeNames?.index ?? 'admin.accidents.index')">
                         <Button variant="outline-secondary" type="button">Cancel</Button>
                     </Link>
                     <Button type="submit" variant="primary" :disabled="form.processing">

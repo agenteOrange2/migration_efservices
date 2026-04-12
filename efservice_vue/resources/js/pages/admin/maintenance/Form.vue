@@ -59,7 +59,26 @@ const props = defineProps<{
     selectedCarrierId?: number | null
     contextVehicle?: ContextVehicle | null
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        index: string
+        store: string
+        update: string
+        attachmentsDestroy: string
+        vehicleIndex: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.maintenance.index',
+    store: 'admin.maintenance.store',
+    update: 'admin.maintenance.update',
+    attachmentsDestroy: 'admin.maintenance.attachments.destroy',
+    vehicleIndex: 'admin.vehicles.maintenance.index',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const lockedVehicle = computed(() => props.contextVehicle ?? null)
 const selectedCarrierId = ref(
@@ -102,10 +121,10 @@ const filteredVehicles = computed(() => {
 
 const backHref = computed(() => {
     if (lockedVehicle.value) {
-        return route('admin.vehicles.maintenance.index', lockedVehicle.value.id)
+        return namedRoute('vehicleIndex', lockedVehicle.value.id)
     }
 
-    return route('admin.maintenance.index')
+    return namedRoute('index')
 })
 
 watch(selectedCarrierId, value => {
@@ -146,17 +165,17 @@ function onFileChange(event: Event) {
 function submit() {
     if (props.mode === 'edit' && props.maintenance) {
         form.transform(data => ({ ...data, _method: 'put' }))
-            .post(route('admin.maintenance.update', props.maintenance.id), { forceFormData: true })
+            .post(namedRoute('update', props.maintenance.id), { forceFormData: true })
         return
     }
 
-    form.post(route('admin.maintenance.store'), { forceFormData: true })
+    form.post(namedRoute('store'), { forceFormData: true })
 }
 
 function deleteAttachment(id: number) {
     if (!props.maintenance) return
 
-    router.delete(route('admin.maintenance.attachments.destroy', { maintenance: props.maintenance.id, media: id }), {
+    router.delete(namedRoute('attachmentsDestroy', { maintenance: props.maintenance.id, media: id }), {
         preserveScroll: true,
         onSuccess: () => {
             existingAttachments.value = existingAttachments.value.filter(file => file.id !== id)

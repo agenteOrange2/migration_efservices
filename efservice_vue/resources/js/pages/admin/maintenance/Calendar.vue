@@ -24,12 +24,29 @@ const props = defineProps<{
     upcomingItems: { id: number; title: string; vehicle_label: string; service_date: string | null; next_service_date: string | null; status_label: string; show_url: string }[]
     contextVehicle?: { id: number; label: string } | null
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        index: string
+        create: string
+        calendar: string
+        reports: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.maintenance.index',
+    create: 'admin.maintenance.create',
+    calendar: 'admin.maintenance.calendar',
+    reports: 'admin.maintenance.reports',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const filters = reactive({ ...props.filters })
 
 function goToMonth(month: string) {
-    router.get(route('admin.maintenance.calendar'), {
+    router.get(namedRoute('calendar'), {
         carrier_id: filters.carrier_id || undefined,
         vehicle_id: filters.vehicle_id || undefined,
         status: filters.status || undefined,
@@ -56,13 +73,13 @@ function applyFilters() {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.maintenance.index', { vehicle_id: contextVehicle?.id || undefined })">
+                        <Link :href="namedRoute('index', { vehicle_id: contextVehicle?.id || undefined })">
                             <Button variant="outline-secondary" class="flex items-center gap-2"><Lucide icon="List" class="w-4 h-4" /> List</Button>
                         </Link>
-                        <Link :href="route('admin.maintenance.reports', { vehicle_id: contextVehicle?.id || undefined })">
+                        <Link :href="namedRoute('reports', { vehicle_id: contextVehicle?.id || undefined })">
                             <Button variant="outline-secondary" class="flex items-center gap-2"><Lucide icon="BarChart3" class="w-4 h-4" /> Reports</Button>
                         </Link>
-                        <Link :href="route('admin.maintenance.create', { vehicle_id: contextVehicle?.id || undefined })">
+                        <Link :href="namedRoute('create', { vehicle_id: contextVehicle?.id || undefined })">
                             <Button variant="primary" class="flex items-center gap-2"><Lucide icon="Plus" class="w-4 h-4" /> New Maintenance</Button>
                         </Link>
                     </div>

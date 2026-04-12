@@ -30,11 +30,23 @@ const props = defineProps<{
         penalty: string | null
     }
     documents: DocumentRow[]
+    routeNames?: {
+        index: string
+        create: string
+        store: string
+        edit: string
+        update: string
+        destroy: string
+        driverHistory: string
+        documentsShow: string
+        mediaDestroy: string
+        driverShow: string
+    }
 }>()
 
 function deleteDocument(document: DocumentRow) {
     if (!confirm(`Delete "${document.file_name}"?`)) return
-    router.delete(route('admin.traffic.media.destroy', document.id), { preserveScroll: true })
+    router.delete(route(props.routeNames?.mediaDestroy ?? 'admin.traffic.media.destroy', document.id), { preserveScroll: true })
 }
 </script>
 
@@ -56,13 +68,13 @@ function deleteDocument(document: DocumentRow) {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.traffic.edit', conviction.id)">
+                        <Link :href="route(props.routeNames?.edit ?? 'admin.traffic.edit', conviction.id)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="PenLine" class="w-4 h-4" />
                                 Edit Conviction
                             </Button>
                         </Link>
-                        <Link :href="route('admin.traffic.index')">
+                        <Link :href="route(props.routeNames?.index ?? 'admin.traffic.index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back to Traffic

@@ -23,12 +23,28 @@ const props = defineProps<{
     }
     filters: { search: string; status: string }
     statusOptions: Record<string, string>
+    isCarrierContext?: boolean
+    routeNames?: Partial<{
+        index: string
+        show: string
+        assignmentHistory: string
+    }>
 }>()
 
 const filters = reactive({ ...props.filters })
 
+const defaultRouteNames = {
+    index: 'admin.vehicles.index',
+    show: 'admin.vehicles.show',
+    assignmentHistory: 'admin.vehicles.driver-assignment-history',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
+
 function applyFilters() {
-    router.get(route('admin.vehicles.driver-assignment-history', props.vehicle.id), {
+    router.get(namedRoute('assignmentHistory', props.vehicle.id), {
         search: filters.search || undefined,
         status: filters.status || undefined,
     }, { preserveState: true, replace: true })
@@ -53,13 +69,13 @@ function resetFilters() {
                         <p class="text-slate-500">{{ vehicle.title }}{{ vehicle.company_unit_number ? ` · Unit ${vehicle.company_unit_number}` : '' }} · {{ vehicle.vin }}</p>
                     </div>
                     <div class="flex items-center gap-3">
-                        <Link :href="route('admin.vehicles.show', vehicle.id)">
+                        <Link :href="namedRoute('show', vehicle.id)">
                             <Button variant="outline-primary" class="flex items-center gap-2">
                                 <Lucide icon="Eye" class="w-4 h-4" />
                                 Vehicle Detail
                             </Button>
                         </Link>
-                        <Link :href="route('admin.vehicles.index')">
+                        <Link :href="namedRoute('index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                                 Back

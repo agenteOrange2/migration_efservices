@@ -24,27 +24,50 @@ const props = defineProps<{
         attachments: { id: number; name: string; url: string; size: string; mime_type: string | null }[]
         generated_reports: { id: number; document_number: string | null; issued_date: string | null; status_label: string; url: string | null; file_name: string | null }[]
     }
+    routeNames?: Partial<{
+        edit: string
+        generateReport: string
+        deleteReport: string
+        attachmentsStore: string
+        attachmentsDestroy: string
+        vehicleShow: string
+        vehicleIndex: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    edit: 'admin.vehicles.emergency-repairs.edit',
+    generateReport: 'admin.vehicles.emergency-repairs.generate-report',
+    deleteReport: 'admin.vehicles.emergency-repairs.delete-report',
+    attachmentsStore: 'admin.vehicles.emergency-repairs.attachments.store',
+    attachmentsDestroy: 'admin.vehicles.emergency-repairs.attachments.destroy',
+    vehicleShow: 'admin.vehicles.show',
+    vehicleIndex: 'admin.vehicles.repairs.index',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const uploadForm = useForm({ attachments: [] as File[] })
 
 function backHref() {
-    return route('admin.vehicles.repairs.index', props.repair.vehicle.id)
+    return namedRoute('vehicleIndex', props.repair.vehicle.id)
 }
 
 function generateReport() {
-    router.post(route('admin.vehicles.emergency-repairs.generate-report', props.repair.id), {}, { preserveScroll: true })
+    router.post(namedRoute('generateReport', props.repair.id), {}, { preserveScroll: true })
 }
 
 function deleteAttachment(id: number) {
-    router.delete(route('admin.vehicles.emergency-repairs.attachments.destroy', {
+    router.delete(namedRoute('attachmentsDestroy', {
         emergencyRepair: props.repair.id,
         media: id,
     }), { preserveScroll: true })
 }
 
 function deleteReport(id: number) {
-    router.delete(route('admin.vehicles.emergency-repairs.delete-report', {
+    router.delete(namedRoute('deleteReport', {
         emergencyRepair: props.repair.id,
         document: id,
     }), { preserveScroll: true })
@@ -56,7 +79,7 @@ function onFileChange(event: Event) {
 }
 
 function uploadAttachments() {
-    uploadForm.post(route('admin.vehicles.emergency-repairs.attachments.store', props.repair.id), {
+    uploadForm.post(namedRoute('attachmentsStore', props.repair.id), {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
@@ -89,7 +112,7 @@ function statusBadge(status: string) {
                             <Lucide icon="FileText" class="w-4 h-4" />
                             Generate Report
                         </button>
-                        <Link :href="route('admin.vehicles.emergency-repairs.edit', repair.id)">
+                        <Link :href="namedRoute('edit', repair.id)">
                             <Button variant="primary" class="flex items-center gap-2"><Lucide icon="PenLine" class="w-4 h-4" /> Edit</Button>
                         </Link>
                         <Link :href="backHref()">
@@ -176,7 +199,7 @@ function statusBadge(status: string) {
                 <p class="text-sm font-medium text-slate-800">{{ repair.vehicle.label }}</p>
                 <p class="text-xs text-slate-500 mt-2">{{ repair.vehicle.carrier_name || 'No carrier' }}</p>
                 <div class="mt-4">
-                    <Link :href="route('admin.vehicles.show', repair.vehicle.id)" class="text-sm text-primary hover:underline">Open vehicle profile</Link>
+                    <Link :href="namedRoute('vehicleShow', repair.vehicle.id)" class="text-sm text-primary hover:underline">Open vehicle profile</Link>
                 </div>
             </div>
 

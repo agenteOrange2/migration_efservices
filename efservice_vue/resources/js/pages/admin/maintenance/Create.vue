@@ -19,6 +19,13 @@ defineProps<{
         company_unit_number: string | null
     } | null
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        index: string
+        store: string
+        update: string
+        attachmentsDestroy: string
+        vehicleIndex: string
+    }>
 }>()
 </script>
 

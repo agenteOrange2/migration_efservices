@@ -18,7 +18,23 @@ const props = defineProps<{
     statusOptions: Record<string, string>
     states: Record<string, string>
     isSuperadmin?: boolean
+    isCarrierContext?: boolean
+    routeNames?: Partial<{
+        vehicleMakesIndex: string
+        vehicleTypesIndex: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    vehicleMakesIndex: 'admin.vehicle-makes.index',
+    vehicleTypesIndex: 'admin.vehicle-types.index',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
+
+const showCatalogLinks = !props.isCarrierContext || !!props.routeNames?.vehicleMakesIndex || !!props.routeNames?.vehicleTypesIndex
 
 const lpOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 
@@ -105,13 +121,19 @@ watch(() => props.form.driver_type, (driverType) => {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div>
+                <div v-if="!props.isCarrierContext">
                     <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
                     <TomSelect v-model="form.carrier_id">
                         <option value="">Select carrier</option>
                         <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                     </TomSelect>
                     <p v-if="form.errors.carrier_id" class="text-red-500 text-xs mt-1">{{ form.errors.carrier_id }}</p>
+                </div>
+                <div v-else>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier</label>
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                        {{ carriers[0]?.name ?? 'Carrier scope locked to your account' }}
+                    </div>
                 </div>
 
                 <div>
@@ -154,10 +176,10 @@ watch(() => props.form.driver_type, (driverType) => {
                     <Lucide icon="BadgeInfo" class="w-4 h-4 text-primary" />
                     Vehicle Specifications
                 </h2>
-                <div class="flex gap-2 text-xs">
-                    <a :href="route('admin.vehicle-makes.index')" class="text-primary hover:underline">Manage makes</a>
+                <div v-if="showCatalogLinks" class="flex gap-2 text-xs">
+                    <a :href="namedRoute('vehicleMakesIndex')" class="text-primary hover:underline">Manage makes</a>
                     <span class="text-slate-300">|</span>
-                    <a :href="route('admin.vehicle-types.index')" class="text-primary hover:underline">Manage types</a>
+                    <a :href="namedRoute('vehicleTypesIndex')" class="text-primary hover:underline">Manage types</a>
                 </div>
             </div>
 

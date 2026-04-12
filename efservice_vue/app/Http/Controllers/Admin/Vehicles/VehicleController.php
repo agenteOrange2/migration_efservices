@@ -184,6 +184,7 @@ class VehicleController extends Controller
             'carrier:id,name',
             'documents.media',
             'currentDriverAssignment.driver.user:id,name,email',
+            'currentDriverAssignment.driver.carrier:id,name',
             'currentDriverAssignment.ownerOperatorDetail',
             'currentDriverAssignment.thirdPartyDetail',
             'currentDriverAssignment.companyDriverDetail.carrier:id,name',
@@ -192,6 +193,7 @@ class VehicleController extends Controller
         $assignmentPreview = $vehicle->driverAssignments()
             ->with([
                 'driver.user:id,name,email',
+                'driver.carrier:id,name',
                 'ownerOperatorDetail',
                 'thirdPartyDetail',
                 'companyDriverDetail.carrier:id,name',
@@ -373,6 +375,7 @@ class VehicleController extends Controller
         $query = $vehicle->driverAssignments()
             ->with([
                 'driver.user:id,name,email',
+                'driver.carrier:id,name',
                 'ownerOperatorDetail',
                 'thirdPartyDetail',
                 'companyDriverDetail.carrier:id,name',

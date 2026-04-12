@@ -557,7 +557,7 @@ class ReportsController extends Controller
 
         $response = $this->accidents($request);
         if ($response instanceof InertiaResponse) {
-            return Inertia::render('admin/reports/AccidentsList', $response->getProps());
+            return Inertia::render('admin/reports/AccidentsList', (fn() => $this->props)->call($response));
         }
 
         abort(500);

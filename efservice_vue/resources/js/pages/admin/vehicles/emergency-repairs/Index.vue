@@ -42,7 +42,28 @@ const props = defineProps<{
     stats: { total: number; pending: number; in_progress: number; completed: number; total_cost: number }
     contextVehicle?: { id: number; label: string } | null
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        index: string
+        create: string
+        show: string
+        edit: string
+        destroy: string
+        vehicleShow: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.vehicles.emergency-repairs.index',
+    create: 'admin.vehicles.emergency-repairs.create',
+    show: 'admin.vehicles.emergency-repairs.show',
+    edit: 'admin.vehicles.emergency-repairs.edit',
+    destroy: 'admin.vehicles.emergency-repairs.destroy',
+    vehicleShow: 'admin.vehicles.show',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 const filters = reactive({ ...props.filters })
@@ -64,7 +85,7 @@ function money(value: number) {
 }
 
 function applyFilters() {
-    router.get(route('admin.vehicles.emergency-repairs.index'), {
+    router.get(namedRoute('index'), {
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
         vehicle_id: filters.vehicle_id || undefined,
@@ -90,8 +111,8 @@ function resetFilters() {
 
 function createHref() {
     return props.contextVehicle
-        ? route('admin.vehicles.emergency-repairs.create', { vehicle_id: props.contextVehicle.id })
-        : route('admin.vehicles.emergency-repairs.create')
+        ? namedRoute('create', { vehicle_id: props.contextVehicle.id })
+        : namedRoute('create')
 }
 
 function statusBadge(status: string) {
@@ -108,7 +129,7 @@ function openDeleteModal(record: RepairRow) {
 function confirmDelete() {
     if (!selectedRecord.value) return
 
-    router.delete(route('admin.vehicles.emergency-repairs.destroy', selectedRecord.value.id), {
+    router.delete(namedRoute('destroy', selectedRecord.value.id), {
         preserveScroll: true,
         onSuccess: () => {
             deleteModalOpen.value = false
@@ -137,7 +158,7 @@ function confirmDelete() {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link v-if="contextVehicle" :href="route('admin.vehicles.show', contextVehicle.id)">
+                        <Link v-if="contextVehicle" :href="namedRoute('vehicleShow', contextVehicle.id)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="Truck" class="w-4 h-4" />
                                 Vehicle
@@ -253,8 +274,8 @@ function confirmDelete() {
                                 <td class="px-5 py-4 text-center text-sm text-slate-600">{{ repair.attachments_count }}</td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link :href="route('admin.vehicles.emergency-repairs.show', repair.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Eye" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.vehicles.emergency-repairs.edit', repair.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('show', repair.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Eye" class="w-4 h-4" /></Link>
+                                        <Link :href="namedRoute('edit', repair.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
                                         <button type="button" @click="openDeleteModal(repair)" class="p-1.5 text-slate-400 hover:text-danger transition"><Lucide icon="Trash2" class="w-4 h-4" /></button>
                                     </div>
                                 </td>

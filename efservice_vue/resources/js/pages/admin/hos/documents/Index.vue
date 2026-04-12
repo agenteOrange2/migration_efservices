@@ -19,6 +19,15 @@ const props = defineProps<{
     carriers: { id: number; name: string }[]
     drivers: { id: number; name: string }[]
     canFilterCarriers: boolean
+    routeNames?: {
+        index?: string
+        generateDailyLog?: string
+        generateMonthlySummary?: string
+        generateFmcsaMonthly?: string
+        destroy?: string
+        bulkDestroy?: string
+        bulkDownload?: string
+    }
 }>()
 
 const filters = reactive({ ...props.filters })
@@ -36,7 +45,7 @@ const pickerOptions = {
 }
 
 function applyFilters() {
-    router.get(route('admin.hos.documents.index'), {
+    router.get(route(props.routeNames?.index ?? 'admin.hos.documents.index'), {
         type: filters.type || undefined,
         carrier_id: filters.carrier_id || undefined,
         driver_id: filters.driver_id || undefined,
@@ -55,25 +64,25 @@ function resetFilters() {
 }
 
 function generateDailyLog() {
-    router.post(route('admin.hos.documents.generate-daily-log'), dailyForm, { preserveScroll: true })
+    router.post(route(props.routeNames?.generateDailyLog ?? 'admin.hos.documents.generate-daily-log'), dailyForm, { preserveScroll: true })
 }
 
 function generateMonthlySummary() {
-    router.post(route('admin.hos.documents.generate-monthly-summary'), monthlyForm, { preserveScroll: true })
+    router.post(route(props.routeNames?.generateMonthlySummary ?? 'admin.hos.documents.generate-monthly-summary'), monthlyForm, { preserveScroll: true })
 }
 
 function generateFmcsaMonthly() {
-    router.post(route('admin.hos.documents.generate-fmcsa-monthly'), fmcsaForm, { preserveScroll: true })
+    router.post(route(props.routeNames?.generateFmcsaMonthly ?? 'admin.hos.documents.generate-fmcsa-monthly'), fmcsaForm, { preserveScroll: true })
 }
 
 function destroyDocument(id: number) {
     if (!confirm('Delete this HOS document?')) return
-    router.delete(route('admin.hos.documents.destroy', id), { preserveScroll: true })
+    router.delete(route(props.routeNames?.destroy ?? 'admin.hos.documents.destroy', id), { preserveScroll: true })
 }
 
 function bulkDelete() {
     if (!selectedDocuments.value.length || !confirm(`Delete ${selectedDocuments.value.length} selected documents?`)) return
-    router.post(route('admin.hos.documents.bulk-destroy'), { document_ids: selectedDocuments.value }, {
+    router.post(route(props.routeNames?.bulkDestroy ?? 'admin.hos.documents.bulk-destroy'), { document_ids: selectedDocuments.value }, {
         preserveScroll: true,
         onSuccess: () => {
             selectedDocuments.value = []
@@ -83,7 +92,7 @@ function bulkDelete() {
 
 function bulkDownload() {
     if (!selectedDocuments.value.length) return
-    window.location.href = route('admin.hos.documents.bulk-download', { ids: selectedDocuments.value.join(',') })
+    window.location.href = route(props.routeNames?.bulkDownload ?? 'admin.hos.documents.bulk-download', { ids: selectedDocuments.value.join(',') })
 }
 </script>
 

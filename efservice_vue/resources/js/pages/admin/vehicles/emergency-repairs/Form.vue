@@ -62,7 +62,26 @@ const props = defineProps<{
     selectedCarrierId?: number | null
     contextVehicle?: ContextVehicle | null
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        index: string
+        store: string
+        update: string
+        attachmentsDestroy: string
+        vehicleIndex: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.vehicles.emergency-repairs.index',
+    store: 'admin.vehicles.emergency-repairs.store',
+    update: 'admin.vehicles.emergency-repairs.update',
+    attachmentsDestroy: 'admin.vehicles.emergency-repairs.attachments.destroy',
+    vehicleIndex: 'admin.vehicles.repairs.index',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const lockedVehicle = computed(() => props.contextVehicle ?? null)
 const selectedCarrierId = ref(
@@ -99,10 +118,10 @@ const filteredVehicles = computed(() => {
 
 const backHref = computed(() => {
     if (lockedVehicle.value) {
-        return route('admin.vehicles.repairs.index', lockedVehicle.value.id)
+        return namedRoute('vehicleIndex', lockedVehicle.value.id)
     }
 
-    return route('admin.vehicles.emergency-repairs.index')
+    return namedRoute('index')
 })
 
 watch(selectedCarrierId, value => {
@@ -131,17 +150,17 @@ function onFileChange(event: Event) {
 function submit() {
     if (props.mode === 'edit' && props.repair) {
         form.transform(data => ({ ...data, _method: 'put' }))
-            .post(route('admin.vehicles.emergency-repairs.update', props.repair.id), { forceFormData: true })
+            .post(namedRoute('update', props.repair.id), { forceFormData: true })
         return
     }
 
-    form.post(route('admin.vehicles.emergency-repairs.store'), { forceFormData: true })
+    form.post(namedRoute('store'), { forceFormData: true })
 }
 
 function deleteAttachment(id: number) {
     if (!props.repair) return
 
-    router.delete(route('admin.vehicles.emergency-repairs.attachments.destroy', {
+    router.delete(namedRoute('attachmentsDestroy', {
         emergencyRepair: props.repair.id,
         media: id,
     }), {

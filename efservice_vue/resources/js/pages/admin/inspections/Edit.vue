@@ -13,10 +13,25 @@ defineProps<{
     inspectionTypes: string[]
     inspectionLevels: string[]
     statuses: string[]
+    carrier?: any | null
+    isCarrierContext?: boolean
+    routeNames?: Record<string, string>
 }>()
 </script>
 
 <template>
     <Head title="Edit Inspection" />
-    <Form mode="edit" :inspection="inspection" :carriers="carriers" :drivers="drivers" :vehicles="vehicles" :inspection-types="inspectionTypes" :inspection-levels="inspectionLevels" :statuses="statuses" />
+    <Form
+        mode="edit"
+        :inspection="inspection"
+        :carriers="carriers"
+        :drivers="drivers"
+        :vehicles="vehicles"
+        :inspection-types="inspectionTypes"
+        :inspection-levels="inspectionLevels"
+        :statuses="statuses"
+        :carrier="carrier"
+        :is-carrier-context="isCarrierContext"
+        :route-names="routeNames"
+    />
 </template>

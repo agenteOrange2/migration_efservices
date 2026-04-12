@@ -40,6 +40,20 @@ const props = defineProps<{
         sort_field: string
         sort_direction: string
     }
+    carrier?: { id: number; name: string } | null
+    isCarrierContext?: boolean
+    routeNames?: {
+        index: string
+        create: string
+        store: string
+        edit: string
+        update: string
+        destroy: string
+        driverHistory: string
+        documentsShow: string
+        mediaDestroy: string
+        driverShow: string
+    }
 }>()
 
 const filters = reactive({
@@ -53,9 +67,9 @@ const deleteModalOpen = ref(false)
 const selectedConviction = ref<ConvictionRow | null>(null)
 
 function applyFilters() {
-    router.get(route('admin.traffic.index'), {
+    router.get(route(props.routeNames?.index ?? 'admin.traffic.index'), {
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: props.isCarrierContext ? undefined : (filters.carrier_filter || undefined),
         driver_filter: filters.driver_filter || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -66,7 +80,7 @@ function applyFilters() {
 
 function resetFilters() {
     filters.search_term = ''
-    filters.carrier_filter = ''
+    filters.carrier_filter = props.isCarrierContext && props.carrier?.id ? String(props.carrier.id) : ''
     filters.driver_filter = ''
     filters.date_from = ''
     filters.date_to = ''
@@ -75,9 +89,9 @@ function resetFilters() {
 
 function sortUrl(field: string) {
     const direction = props.filters.sort_field === field && props.filters.sort_direction === 'asc' ? 'desc' : 'asc'
-    return route('admin.traffic.index', {
+    return route(props.routeNames?.index ?? 'admin.traffic.index', {
         search_term: filters.search_term || undefined,
-        carrier_filter: filters.carrier_filter || undefined,
+        carrier_filter: props.isCarrierContext ? undefined : (filters.carrier_filter || undefined),
         driver_filter: filters.driver_filter || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -93,7 +107,7 @@ function openDeleteModal(conviction: ConvictionRow) {
 
 function confirmDelete() {
     if (!selectedConviction.value) return
-    router.delete(route('admin.traffic.destroy', selectedConviction.value.id), {
+    router.delete(route(props.routeNames?.destroy ?? 'admin.traffic.destroy', selectedConviction.value.id), {
         preserveScroll: true,
         onSuccess: () => {
             deleteModalOpen.value = false
@@ -120,7 +134,7 @@ function confirmDelete() {
                         </div>
                     </div>
 
-                    <Link :href="route('admin.traffic.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                    <Link :href="route(props.routeNames?.create ?? 'admin.traffic.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
                         <Lucide icon="Plus" class="w-4 h-4" />
                         Add Conviction
                     </Link>
@@ -134,10 +148,15 @@ function confirmDelete() {
                         <FormInput v-model="filters.search_term" type="text" class="pl-10" placeholder="Search charge, location, penalty..." />
                     </div>
 
-                    <TomSelect v-model="filters.carrier_filter">
+                    <TomSelect v-if="!props.isCarrierContext" v-model="filters.carrier_filter">
                         <option value="">All Carriers</option>
                         <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                     </TomSelect>
+
+                    <div v-else class="rounded-lg border border-primary/15 bg-primary/5 px-4 py-2.5 text-sm text-slate-700">
+                        <span class="font-medium text-primary">Carrier:</span>
+                        <span class="ml-2">{{ props.carrier?.name ?? 'Assigned carrier' }}</span>
+                    </div>
 
                     <TomSelect v-model="filters.driver_filter">
                         <option value="">All Drivers</option>
@@ -218,9 +237,9 @@ function confirmDelete() {
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link v-if="conviction.driver" :href="route('admin.traffic.driver-history', conviction.driver.id)" class="p-1.5 text-slate-400 hover:text-sky-500 transition" title="Driver history"><Lucide icon="History" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.traffic.documents.show', conviction.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.traffic.edit', conviction.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                        <Link v-if="conviction.driver" :href="route(props.routeNames?.driverHistory ?? 'admin.traffic.driver-history', conviction.driver.id)" class="p-1.5 text-slate-400 hover:text-sky-500 transition" title="Driver history"><Lucide icon="History" class="w-4 h-4" /></Link>
+                                        <Link :href="route(props.routeNames?.documentsShow ?? 'admin.traffic.documents.show', conviction.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
+                                        <Link :href="route(props.routeNames?.edit ?? 'admin.traffic.edit', conviction.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
                                         <button type="button" @click="openDeleteModal(conviction)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
                                     </div>
                                 </td>

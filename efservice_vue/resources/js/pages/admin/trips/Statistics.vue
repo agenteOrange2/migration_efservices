@@ -34,12 +34,30 @@ const props = defineProps<{
     }[]
     carriers: { id: number; name: string }[]
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        statistics: string
+        index: string
+        show: string
+    }>
+    pageTitle?: string
+    pageDescription?: string
+    backLabel?: string
 }>()
+
+const defaultRouteNames = {
+    statistics: 'admin.trips.statistics',
+    index: 'admin.trips.index',
+    show: 'admin.trips.show',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const filters = reactive({ ...props.filters })
 
 function applyFilters() {
-    router.get(route('admin.trips.statistics'), {
+    router.get(namedRoute('statistics'), {
         carrier_id: filters.carrier_id || undefined,
     }, {
         preserveState: true,
@@ -61,8 +79,8 @@ function applyFilters() {
                             <Lucide icon="BarChart3" class="h-8 w-8 text-primary" />
                         </div>
                         <div>
-                            <h1 class="text-2xl font-bold text-slate-800">Trips Statistics</h1>
-                            <p class="mt-1 text-sm text-slate-500">Operational overview of trip statuses, violations, and ghost logs.</p>
+                            <h1 class="text-2xl font-bold text-slate-800">{{ pageTitle || 'Trips Statistics' }}</h1>
+                            <p class="mt-1 text-sm text-slate-500">{{ pageDescription || 'Operational overview of trip statuses, violations, and ghost logs.' }}</p>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
@@ -72,10 +90,10 @@ function applyFilters() {
                                 <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                             </TomSelect>
                         </div>
-                        <Link :href="route('admin.trips.index')">
+                        <Link :href="namedRoute('index')">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="h-4 w-4" />
-                                Back to Trips
+                                {{ backLabel || 'Back to Trips' }}
                             </Button>
                         </Link>
                     </div>
@@ -116,7 +134,7 @@ function applyFilters() {
                         <tbody class="divide-y divide-slate-100 bg-white">
                             <tr v-for="trip in recentTrips" :key="trip.id">
                                 <td class="px-5 py-4">
-                                    <Link :href="route('admin.trips.show', trip.id)" class="font-medium text-primary hover:underline">{{ trip.trip_number }}</Link>
+                                    <Link :href="namedRoute('show', trip.id)" class="font-medium text-primary hover:underline">{{ trip.trip_number }}</Link>
                                 </td>
                                 <td class="px-5 py-4 text-slate-600">
                                     <div>{{ trip.carrier_name || 'N/A' }}</div>

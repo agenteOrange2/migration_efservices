@@ -386,6 +386,11 @@ class TripService
             'pre_trip_remarks' => $preInspection['remarks'] ?? null,
             'pre_trip_defects_found' => $hasDefects,
             'vehicle_condition_satisfactory' => !empty($preInspection['condition_satisfactory']),
+            'pre_trip_defects_corrected' => (bool) ($preInspection['defects_corrected'] ?? false),
+            'pre_trip_defects_corrected_notes' => $preInspection['defects_corrected_notes'] ?? null,
+            'pre_trip_defects_not_need_correction' => (bool) ($preInspection['defects_not_need_correction'] ?? false),
+            'pre_trip_defects_not_need_correction_notes' => $preInspection['defects_not_need_correction_notes'] ?? null,
+            'pre_trip_driver_signature' => $preInspection['driver_signature'] ?? null,
         ]);
 
         // Create HOS entry for driving
@@ -438,6 +443,11 @@ class TripService
             'post_trip_remarks' => $postInspection['remarks'] ?? null,
             'post_trip_defects_found' => $hasDefects,
             'driver_notes' => $notes,
+            'post_trip_defects_corrected' => (bool) ($postInspection['defects_corrected'] ?? false),
+            'post_trip_defects_corrected_notes' => $postInspection['defects_corrected_notes'] ?? null,
+            'post_trip_defects_not_need_correction' => (bool) ($postInspection['defects_not_need_correction'] ?? false),
+            'post_trip_defects_not_need_correction_notes' => $postInspection['defects_not_need_correction_notes'] ?? null,
+            'post_trip_driver_signature' => $postInspection['driver_signature'] ?? null,
         ]);
 
         // Create off-duty HOS entry

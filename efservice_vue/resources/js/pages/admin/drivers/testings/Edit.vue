@@ -3,6 +3,8 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import Button from '@/components/Base/Button'
+import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
+import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 declare function route(name: string, params?: any): string
@@ -54,6 +56,7 @@ interface TestingData {
 // ─── Props ────────────────────────────────────────────────────────────────────
 const props = defineProps<{
     driver: DriverInfo
+    drivers?: DriverInfo[]
     testing: TestingData
     testTypes: Record<string, string>
     locations: Record<string, string>
@@ -61,10 +64,25 @@ const props = defineProps<{
     testResults: Record<string, string>
     billOptions: Record<string, string>
     administrators: Record<string, string>
+    isCarrierContext?: boolean
+    routeNames?: {
+        index: string
+        show: string
+        edit: string
+        update: string
+        driverShow: string
+    }
 }>()
+
+const lpOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
+const availableDrivers = computed(() => props.drivers ?? [props.driver])
+const selectedDriverId = ref<string>(String(props.driver.id))
+const activeDriver = computed(() => availableDrivers.value.find((driver) => String(driver.id) === selectedDriverId.value) ?? props.driver)
+const driver = computed<DriverInfo>(() => activeDriver.value)
 
 // ─── Form state ───────────────────────────────────────────────────────────────
 const form = ref({
+    user_driver_detail_id: selectedDriverId.value,
     test_type:                    props.testing.test_type,
     administered_by:              props.testing.administered_by,
     administered_by_other:        '',
@@ -134,6 +152,7 @@ function formatBytes(bytes: number) {
 function submit() {
     processing.value = true
     errors.value = {}
+    form.value.user_driver_detail_id = selectedDriverId.value
 
     const effectiveAdmin = form.value.administered_by === 'other'
         ? form.value.administered_by_other
@@ -165,7 +184,9 @@ function submit() {
     })
 
     router.post(
-        route('admin.drivers.testings.update', { driver: props.driver.id, testing: props.testing.id }),
+        props.isCarrierContext
+            ? route(props.routeNames?.update ?? 'carrier.drivers.testings.update', { testing: props.testing.id })
+            : route(props.routeNames?.update ?? 'admin.drivers.testings.update', { driver: activeDriver.value.id, testing: props.testing.id }),
         data,
         {
             forceFormData: true,
@@ -204,17 +225,17 @@ const testReasonCheckboxes = [
                         </p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <Link :href="route('admin.driver-testings.show', testing.id)">
+                        <Link :href="route(props.routeNames?.show ?? 'admin.driver-testings.show', testing.id)">
                             <Button variant="outline-primary" size="sm" class="flex items-center gap-1.5">
                                 <Lucide icon="Eye" class="w-4 h-4" /> View Test
                             </Button>
                         </Link>
-                        <Link :href="route('admin.driver-testings.index')">
+                        <Link :href="route(props.routeNames?.index ?? 'admin.driver-testings.index')">
                             <Button variant="outline-secondary" size="sm" class="flex items-center gap-1.5">
                                 <Lucide icon="List" class="w-4 h-4" /> All Testings
                             </Button>
                         </Link>
-                        <Link :href="route('admin.drivers.show', driver.id)">
+                        <Link v-if="driver.id" :href="route(props.routeNames?.driverShow ?? 'admin.drivers.show', driver.id)">
                             <Button variant="outline-secondary" size="sm" class="flex items-center gap-1.5">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" /> Back to Driver
                             </Button>
@@ -274,27 +295,34 @@ const testReasonCheckboxes = [
                     </h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
+                        <div v-if="props.isCarrierContext" class="md:col-span-2">
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
+                            <TomSelect v-model="selectedDriverId">
+                                <option value="">-- Select driver --</option>
+                                <option v-for="option in availableDrivers" :key="option.id" :value="String(option.id)">
+                                    {{ option.full_name }}
+                                </option>
+                            </TomSelect>
+                            <p v-if="errors.user_driver_detail_id" class="text-red-500 text-xs mt-1">{{ errors.user_driver_detail_id }}</p>
+                        </div>
+
                         <!-- Test Type -->
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Test Type <span class="text-red-500">*</span></label>
-                            <select v-model="form.test_type" required
-                                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                :class="errors.test_type ? 'border-red-400' : ''">
+                            <TomSelect v-model="form.test_type">
                                 <option value="">-- Select test type --</option>
                                 <option v-for="(label, key) in testTypes" :key="key" :value="key">{{ label }}</option>
-                            </select>
+                            </TomSelect>
                             <p v-if="errors.test_type" class="text-red-500 text-xs mt-1">{{ errors.test_type }}</p>
                         </div>
 
                         <!-- Administered By -->
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Administered By <span class="text-red-500">*</span></label>
-                            <select v-model="form.administered_by" required
-                                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                :class="errors.administered_by ? 'border-red-400' : ''">
+                            <TomSelect v-model="form.administered_by">
                                 <option value="">-- Select administrator --</option>
                                 <option v-for="(label, key) in administrators" :key="key" :value="key">{{ label }}</option>
-                            </select>
+                            </TomSelect>
                             <input v-if="adminIsOther" v-model="form.administered_by_other" type="text"
                                 placeholder="Please specify"
                                 class="mt-2 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -305,9 +333,7 @@ const testReasonCheckboxes = [
                         <!-- Test Date -->
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Test Date <span class="text-red-500">*</span></label>
-                            <input v-model="form.test_date" type="date" required
-                                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                :class="errors.test_date ? 'border-red-400' : ''" />
+                            <Litepicker v-model="form.test_date" :options="lpOptions" />
                             <p v-if="errors.test_date" class="text-red-500 text-xs mt-1">{{ errors.test_date }}</p>
                         </div>
 
@@ -321,12 +347,10 @@ const testReasonCheckboxes = [
                         <!-- Location -->
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Location <span class="text-red-500">*</span></label>
-                            <select v-model="form.location" required
-                                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                :class="errors.location ? 'border-red-400' : ''">
+                            <TomSelect v-model="form.location">
                                 <option value="">-- Select location --</option>
                                 <option v-for="(label, key) in locations" :key="key" :value="label">{{ label }}</option>
-                            </select>
+                            </TomSelect>
                             <p v-if="errors.location" class="text-red-500 text-xs mt-1">{{ errors.location }}</p>
                         </div>
 
@@ -349,37 +373,33 @@ const testReasonCheckboxes = [
                         <!-- Status -->
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Status</label>
-                            <select v-model="form.status"
-                                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                            <TomSelect v-model="form.status">
                                 <option v-for="(label, key) in statuses" :key="key" :value="key">{{ label }}</option>
-                            </select>
+                            </TomSelect>
                         </div>
 
                         <!-- Test Result -->
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Test Result</label>
-                            <select v-model="form.test_result"
-                                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                            <TomSelect v-model="form.test_result">
                                 <option value="">-- Pending / Not yet --</option>
                                 <option v-for="(label, key) in testResults" :key="key" :value="key">{{ label }}</option>
-                            </select>
+                            </TomSelect>
                         </div>
 
                         <!-- Next Test Due -->
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Next Test Due Date</label>
-                            <input v-model="form.next_test_due" type="date"
-                                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                            <Litepicker v-model="form.next_test_due" :options="lpOptions" />
                         </div>
 
                         <!-- Bill To -->
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Bill To</label>
-                            <select v-model="form.bill_to"
-                                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                            <TomSelect v-model="form.bill_to">
                                 <option value="">-- Select billing --</option>
                                 <option v-for="(label, key) in billOptions" :key="key" :value="key">{{ label }}</option>
-                            </select>
+                            </TomSelect>
                         </div>
 
                     </div>
@@ -473,7 +493,7 @@ const testReasonCheckboxes = [
 
                 <!-- ── Actions ── -->
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.drivers.show', driver.id)">
+                    <Link v-if="driver.id" :href="route(props.routeNames?.driverShow ?? 'admin.drivers.show', driver.id)">
                         <Button variant="outline-secondary" type="button" class="flex items-center gap-1.5">
                             <Lucide icon="X" class="w-4 h-4" /> Cancel
                         </Button>

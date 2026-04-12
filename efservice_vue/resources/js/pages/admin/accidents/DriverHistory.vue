@@ -18,12 +18,26 @@ const props = defineProps<{
         last_page: number
     }
     filters: { search_term: string; sort_field: string; sort_direction: string }
+    routeNames?: {
+        index: string
+        create: string
+        store: string
+        edit: string
+        update: string
+        destroy: string
+        driverHistory: string
+        documentsIndex: string
+        documentsShow: string
+        documentsDestroy: string
+        mediaDestroy: string
+        driverShow: string
+    }
 }>()
 
 const filters = reactive({ ...props.filters })
 
 function applyFilters() {
-    router.get(route('admin.accidents.driver-history', props.driver.id), {
+    router.get(route(props.routeNames?.driverHistory ?? 'admin.accidents.driver-history', props.driver.id), {
         search_term: filters.search_term || undefined,
         sort_field: props.filters.sort_field || undefined,
         sort_direction: props.filters.sort_direction || undefined,
@@ -33,7 +47,7 @@ function applyFilters() {
 function sortUrl(field: string) {
     const direction = props.filters.sort_field === field && props.filters.sort_direction === 'asc' ? 'desc' : 'asc'
 
-    return route('admin.accidents.driver-history', {
+    return route(props.routeNames?.driverHistory ?? 'admin.accidents.driver-history', {
         driver: props.driver.id,
         search_term: filters.search_term || undefined,
         sort_field: field,
@@ -60,11 +74,11 @@ function sortUrl(field: string) {
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <Link :href="route('admin.accidents.documents.index', { driver_id: driver.id })" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition">
+                        <Link :href="route(props.routeNames?.documentsIndex ?? 'admin.accidents.documents.index', { driver_id: driver.id })" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition">
                             <Lucide icon="FileText" class="w-4 h-4" />
                             View Documents
                         </Link>
-                        <Link :href="route('admin.accidents.index')" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition">
+                        <Link :href="route(props.routeNames?.index ?? 'admin.accidents.index')" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back
                         </Link>
@@ -116,10 +130,10 @@ function sortUrl(field: string) {
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ accident.document_count }}</td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link :href="route('admin.accidents.edit', accident.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition">
+                                        <Link :href="route(props.routeNames?.edit ?? 'admin.accidents.edit', accident.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="route('admin.accidents.documents.show', accident.id)" class="p-1.5 text-slate-400 hover:text-primary transition">
+                                        <Link :href="route(props.routeNames?.documentsShow ?? 'admin.accidents.documents.show', accident.id)" class="p-1.5 text-slate-400 hover:text-primary transition">
                                             <Lucide icon="FileText" class="w-4 h-4" />
                                         </Link>
                                     </div>

@@ -20,12 +20,28 @@ const props = defineProps<{
     vehicleStatusOptions: Record<string, string>
     stats: { vehicles: number; documents: number; active: number; expired: number; expiring_soon: number }
     isSuperadmin: boolean
+    isCarrierContext?: boolean
+    routeNames?: Partial<{
+        index: string
+        documentsOverview: string
+        documentsIndex: string
+    }>
 }>()
 
 const filters = reactive({ ...props.filters })
 
+const defaultRouteNames = {
+    index: 'admin.vehicles.index',
+    documentsOverview: 'admin.vehicles-documents.index',
+    documentsIndex: 'admin.vehicles.documents.index',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
+
 function applyFilters() {
-    router.get(route('admin.vehicles-documents.index'), {
+    router.get(namedRoute('documentsOverview'), {
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
         vehicle_status: filters.vehicle_status || undefined,
@@ -62,7 +78,7 @@ function resetFilters() {
                             <p class="text-slate-500">Review document health across the fleet.</p>
                         </div>
                     </div>
-                    <Link :href="route('admin.vehicles.index')">
+                    <Link :href="namedRoute('index')">
                         <Button variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back to Vehicles
@@ -161,7 +177,7 @@ function resetFilters() {
                                     <div class="text-xs text-slate-400">{{ vehicle.next_expiring_document?.expiration_date ?? 'N/A' }}</div>
                                 </td>
                                 <td class="px-5 py-4 text-center">
-                                    <Link :href="route('admin.vehicles.documents.index', vehicle.id)" class="inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10">
+                                    <Link :href="namedRoute('documentsIndex', vehicle.id)" class="inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10">
                                         <Lucide icon="Files" class="w-4 h-4" />
                                         Open
                                     </Link>

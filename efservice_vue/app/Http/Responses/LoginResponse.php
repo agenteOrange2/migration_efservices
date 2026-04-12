@@ -18,6 +18,6 @@ class LoginResponse implements LoginResponseContract
         $authService = app(AuthenticationService::class);
         $redirectUrl = $authService->determineRedirect($user);
 
-        return redirect()->intended($redirectUrl);
+        return redirect($redirectUrl);
     }
 }

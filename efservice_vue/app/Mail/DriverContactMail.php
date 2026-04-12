@@ -31,7 +31,7 @@ class DriverContactMail extends Mailable
      */
     public function build()
     {
-        return $this->subject('Contact from EF Services Admin')
+        return $this->subject($this->contactData['subject'] ?? 'Message from Your Carrier')
                     ->view('emails.driver-contact');
     }
 }

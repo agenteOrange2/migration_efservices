@@ -63,13 +63,25 @@ const props = defineProps<{
     testing: TestingDetail
     driver: DriverInfo
     carrier: CarrierInfo | null
+    routeNames?: {
+        index: string
+        show: string
+        edit: string
+        destroy: string
+        downloadPdf: string
+        regeneratePdf: string
+        uploadAttachment: string
+        deleteAttachment: string
+        driverShow: string
+    }
+    isCarrierContext?: boolean
 }>()
 
 // ─── Delete modal ─────────────────────────────────────────────────────────────
 const deleteModalOpen = ref(false)
 
 function confirmDelete() {
-    router.delete(route('admin.driver-testings.destroy', props.testing.id), {
+    router.delete(route(props.routeNames?.destroy ?? 'admin.driver-testings.destroy', props.testing.id), {
         onSuccess: () => { deleteModalOpen.value = false },
     })
 }
@@ -79,7 +91,7 @@ const regenerating = ref(false)
 
 function regeneratePdf() {
     regenerating.value = true
-    router.post(route('admin.driver-testings.regenerate-pdf', props.testing.id), {}, {
+    router.post(route(props.routeNames?.regeneratePdf ?? 'admin.driver-testings.regenerate-pdf', props.testing.id), {}, {
         onFinish: () => { regenerating.value = false },
     })
 }
@@ -109,7 +121,7 @@ function submitUpload() {
     uploading.value = true
     const data = new FormData()
     uploadFiles.value.forEach(f => data.append('attachments[]', f))
-    router.post(route('admin.driver-testings.upload-attachment', props.testing.id), data, {
+    router.post(route(props.routeNames?.uploadAttachment ?? 'admin.driver-testings.upload-attachment', props.testing.id), data, {
         forceFormData: true,
         onFinish: () => {
             uploading.value = false
@@ -120,7 +132,7 @@ function submitUpload() {
 }
 
 function deleteAttachment(mediaId: number) {
-    router.delete(route('admin.driver-testings.delete-attachment', { testing: props.testing.id, media: mediaId }), {
+    router.delete(route(props.routeNames?.deleteAttachment ?? 'admin.driver-testings.delete-attachment', { testing: props.testing.id, media: mediaId }), {
         preserveScroll: true,
     })
 }
@@ -181,7 +193,7 @@ function isPdf(ext: string) {
                     <div class="flex flex-wrap items-center gap-2">
                         <!-- Download PDF -->
                         <a v-if="testing.has_pdf"
-                            :href="route('admin.driver-testings.download-pdf', testing.id)"
+                            :href="route(props.routeNames?.downloadPdf ?? 'admin.driver-testings.download-pdf', testing.id)"
                             target="_blank"
                             class="inline-flex items-center gap-1.5 px-3 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition text-sm">
                             <Lucide icon="FileDown" class="w-4 h-4" /> Download PDF
@@ -194,7 +206,7 @@ function isPdf(ext: string) {
                         </button>
                         <!-- Edit -->
                         <Link v-if="driver.id"
-                            :href="route('admin.drivers.testings.edit', { driver: driver.id, testing: testing.id })">
+                            :href="route(props.routeNames?.edit ?? 'admin.drivers.testings.edit', props.isCarrierContext ? testing.id : { driver: driver.id, testing: testing.id })">
                             <Button variant="outline-primary" class="flex items-center gap-1.5 text-sm">
                                 <Lucide icon="PenLine" class="w-4 h-4" /> Edit
                             </Button>
@@ -205,7 +217,7 @@ function isPdf(ext: string) {
                             <Lucide icon="Trash2" class="w-4 h-4" /> Delete
                         </button>
                         <!-- Back -->
-                        <Link :href="route('admin.driver-testings.index')">
+                        <Link :href="route(props.routeNames?.index ?? 'admin.driver-testings.index')">
                             <Button variant="outline-secondary" class="flex items-center gap-1.5 text-sm">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" /> Back to List
                             </Button>
@@ -372,7 +384,7 @@ function isPdf(ext: string) {
                             class="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-primary/10 text-primary rounded hover:bg-primary/15 transition">
                             <Lucide icon="ExternalLink" class="w-3 h-3" /> Open
                         </a>
-                        <a :href="route('admin.driver-testings.download-pdf', testing.id)"
+                        <a :href="route(props.routeNames?.downloadPdf ?? 'admin.driver-testings.download-pdf', testing.id)"
                             class="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-primary/15 text-primary rounded hover:bg-primary/20 transition">
                             <Lucide icon="Download" class="w-3 h-3" /> Download
                         </a>
@@ -469,7 +481,7 @@ function isPdf(ext: string) {
                             <p v-if="driver.license.expires" class="text-xs text-slate-500">Exp: {{ driver.license.expires }}</p>
                         </div>
                         <div v-if="driver.id" class="mt-3">
-                            <Link :href="route('admin.drivers.show', driver.id)"
+                            <Link :href="route(props.routeNames?.driverShow ?? 'admin.drivers.show', driver.id)"
                                 class="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
                                 <Lucide icon="User" class="w-3.5 h-3.5" /> View Driver Profile
                             </Link>

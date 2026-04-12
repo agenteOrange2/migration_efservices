@@ -20,7 +20,21 @@ const props = defineProps<{
     states: Record<string, string>
     isSuperadmin?: boolean
     selectedCarrierId?: number | null
+    isCarrierContext?: boolean
+    routeNames?: Partial<{
+        index: string
+        store: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    index: 'admin.vehicles.index',
+    store: 'admin.vehicles.store',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const form = useForm({
     carrier_id: props.selectedCarrierId ? String(props.selectedCarrierId) : '',
@@ -72,7 +86,7 @@ function submit() {
         irp_apportioned_plate: data.irp_apportioned_plate ? 1 : 0,
         contract_agreed: data.contract_agreed ? 1 : 0,
         third_party_email_sent: data.third_party_email_sent ? 1 : 0,
-    })).post(route('admin.vehicles.store'))
+    })).post(namedRoute('store'))
 }
 </script>
 
@@ -87,7 +101,7 @@ function submit() {
                         <h1 class="text-xl font-bold text-slate-800">Add Vehicle</h1>
                         <p class="text-sm text-slate-500 mt-0.5">Create a vehicle record with assignment details and document-ready metadata.</p>
                     </div>
-                    <Link :href="route('admin.vehicles.index')">
+                    <Link :href="namedRoute('index')">
                         <Button variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back to Vehicles
@@ -110,10 +124,12 @@ function submit() {
                     :status-options="statusOptions"
                     :states="states"
                     :is-superadmin="isSuperadmin"
+                    :is-carrier-context="isCarrierContext"
+                    :route-names="routeNames"
                 />
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.vehicles.index')">
+                    <Link :href="namedRoute('index')">
                         <Button type="button" variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="X" class="w-4 h-4" />
                             Cancel

@@ -48,16 +48,34 @@ const props = defineProps<{
     inspectionTypes: string[]
     inspectionLevels: string[]
     statuses: string[]
+    carrier?: CarrierOption | null
+    isCarrierContext?: boolean
+    routeNames?: Record<string, string>
+    selectedDriverId?: string
     inspection?: InspectionPayload
 }>()
 
-const selectedCarrierId = ref(props.inspection?.carrier_id ? String(props.inspection.carrier_id) : '')
+const defaultRouteNames = {
+    index: 'admin.inspections.index',
+    store: 'admin.inspections.store',
+    update: 'admin.inspections.update',
+}
+
+function routeName(key: keyof typeof defaultRouteNames) {
+    return props.routeNames?.[key] ?? defaultRouteNames[key]
+}
+
+const selectedCarrierId = ref(
+    props.isCarrierContext
+        ? String(props.carrier?.id ?? props.inspection?.carrier_id ?? '')
+        : (props.inspection?.carrier_id ? String(props.inspection.carrier_id) : '')
+)
 const previewOpen = ref(false)
 const previewFile = ref<DocumentPayload | null>(null)
 
 const form = useForm({
     carrier_id: selectedCarrierId.value,
-    user_driver_detail_id: props.inspection ? String(props.inspection.user_driver_detail_id) : '',
+    user_driver_detail_id: props.inspection ? String(props.inspection.user_driver_detail_id) : (props.selectedDriverId ?? ''),
     vehicle_id: props.inspection?.vehicle_id ? String(props.inspection.vehicle_id) : '',
     inspection_date: props.inspection?.inspection_date ?? '',
     inspection_type: props.inspection?.inspection_type ?? '',
@@ -88,6 +106,9 @@ const filteredVehicles = computed(() => {
 
 watch(selectedCarrierId, value => {
     form.carrier_id = value
+    if (props.isCarrierContext) {
+        return
+    }
     if (props.inspection && String(props.inspection.carrier_id ?? '') === value) {
         form.user_driver_detail_id = String(props.inspection.user_driver_detail_id)
         form.vehicle_id = props.inspection.vehicle_id ? String(props.inspection.vehicle_id) : ''
@@ -121,10 +142,10 @@ function isPdf(file: DocumentPayload | null) {
 function submit() {
     if (props.mode === 'edit' && props.inspection) {
         form.transform(data => ({ ...data, _method: 'put' }))
-            .post(route('admin.inspections.update', props.inspection.id), { forceFormData: true })
+            .post(route(routeName('update'), props.inspection.id), { forceFormData: true })
         return
     }
-    form.post(route('admin.inspections.store'), { forceFormData: true })
+    form.post(route(routeName('store')), { forceFormData: true })
 }
 </script>
 
@@ -143,7 +164,7 @@ function submit() {
                         </div>
                     </div>
 
-                    <Link :href="route('admin.inspections.index')">
+                    <Link :href="route(routeName('index'))">
                         <Button variant="outline-secondary" class="flex items-center gap-2">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back to Inspections
@@ -158,13 +179,17 @@ function submit() {
                 <div class="box box--stacked p-6">
                     <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2"><Lucide icon="Users" class="w-4 h-4 text-primary" /> Assignment</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
+                        <div v-if="!props.isCarrierContext">
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
                             <TomSelect v-model="selectedCarrierId">
                                 <option value="">Select carrier</option>
                                 <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                             </TomSelect>
                             <p v-if="form.errors.carrier_id" class="text-red-500 text-xs mt-1">{{ form.errors.carrier_id }}</p>
+                        </div>
+                        <div v-else class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <label class="block text-xs font-medium text-slate-500 mb-1.5">Carrier</label>
+                            <div class="text-sm font-medium text-slate-700">{{ props.carrier?.name ?? 'Current Carrier' }}</div>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
@@ -281,7 +306,7 @@ function submit() {
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <Link :href="route('admin.inspections.index')"><Button variant="outline-secondary" type="button">Cancel</Button></Link>
+                    <Link :href="route(routeName('index'))"><Button variant="outline-secondary" type="button">Cancel</Button></Link>
                     <Button type="submit" variant="primary" :disabled="form.processing">{{ form.processing ? 'Saving...' : mode === 'edit' ? 'Update Inspection' : 'Create Inspection' }}</Button>
                 </div>
             </form>

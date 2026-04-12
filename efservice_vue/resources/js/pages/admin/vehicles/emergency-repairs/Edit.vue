@@ -31,6 +31,13 @@ defineProps<{
         label: string
     } | null
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        index: string
+        store: string
+        update: string
+        attachmentsDestroy: string
+        vehicleIndex: string
+    }>
 }>()
 </script>
 

@@ -35,6 +35,9 @@ const props = defineProps<{
     submitLabel: string
     cancelHref: string
     statusLabel?: string | null
+    routeNames?: Partial<{
+        carrierData: string
+    }>
 }>()
 
 const emit = defineEmits<{
@@ -84,7 +87,7 @@ watch(() => props.form.carrier_id, async (carrierId, previousValue) => {
 
     try {
         const response = await fetch(
-            route('admin.trips.carrier.data') +
+            route(props.routeNames?.carrierData ?? 'admin.trips.carrier.data') +
             `?carrier_id=${encodeURIComponent(carrierId)}&selected_driver_id=${encodeURIComponent(props.form.driver_id || '')}&selected_vehicle_id=${encodeURIComponent(props.form.vehicle_id || '')}`
         )
 

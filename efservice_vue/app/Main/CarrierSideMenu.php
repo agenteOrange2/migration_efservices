@@ -94,7 +94,7 @@ class CarrierSideMenu
                     ],
                     [
                         'icon' => "alertTriangle",
-                        'route_name' => "carrier.traffic.index",
+                        'route_name' => "carrier.drivers.traffic.index",
                         'params' => [],
                         'title' => "Traffic Convictions",
                     ],
@@ -302,6 +302,12 @@ class CarrierSideMenu
                 'route_name' => "carrier.reports.repairs",
                 'params' => [],
                 'title' => "Repairs Reports",
+            ],
+            [
+                'icon' => "CalendarDays",
+                'route_name' => "carrier.reports.monthly",
+                'params' => [],
+                'title' => "Monthly Summary",
             ],
             [
                 'icon' => "MapPin",

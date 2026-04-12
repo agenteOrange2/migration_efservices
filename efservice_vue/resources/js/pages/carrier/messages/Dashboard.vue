@@ -1,0 +1,325 @@
+<script setup lang="ts">
+import { Head, Link } from '@inertiajs/vue3'
+import Button from '@/components/Base/Button'
+import Lucide from '@/components/Base/Lucide'
+import CarrierLayout from '@/layouts/CarrierLayout.vue'
+
+declare function route(name: string, params?: any): string
+
+defineOptions({ layout: CarrierLayout })
+
+interface StatsPayload {
+    total: number
+    sent: number
+    draft: number
+    failed: number
+    received: number
+    sent_today: number
+    sent_this_week: number
+    sent_this_month: number
+}
+
+interface RecentMessageRow {
+    id: number
+    subject: string
+    sender_name: string
+    sender_type: string
+    direction: string
+    recipients_count: number
+    delivered_count: number
+    read_count: number
+    priority: string
+    status: string
+    sent_at: string | null
+    can_edit: boolean
+}
+
+const props = defineProps<{
+    stats: StatsPayload
+    statusDistribution: Record<string, number>
+    priorityDistribution: Record<string, number>
+    directionDistribution: Record<string, number>
+    deliveryStats: {
+        total: number
+        delivered: number
+        pending: number
+        failed: number
+        read: number
+    }
+    recentMessages: RecentMessageRow[]
+}>()
+
+function asEntries(record: Record<string, number>) {
+    return Object.entries(record).map(([label, value]) => ({ label, value }))
+}
+
+function percentage(value: number, total: number) {
+    if (!total) return 0
+    return Math.round((value / total) * 100)
+}
+
+function titleCase(value: string) {
+    return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function statusBadgeClass(status: string) {
+    if (status === 'sent') return 'bg-primary/10 text-primary'
+    if (status === 'draft') return 'bg-slate-100 text-slate-600'
+    return 'bg-slate-200 text-slate-700'
+}
+
+function priorityBadgeClass(priority: string) {
+    if (priority === 'high') return 'bg-slate-200 text-slate-700'
+    if (priority === 'normal') return 'bg-primary/10 text-primary'
+    return 'bg-slate-100 text-slate-600'
+}
+
+function directionBadgeClass(direction: string) {
+    return direction === 'sent'
+        ? 'bg-primary/10 text-primary'
+        : 'bg-slate-100 text-slate-600'
+}
+
+const deliveryRate = percentage(props.deliveryStats.delivered, props.deliveryStats.total)
+const readRate = percentage(props.deliveryStats.read, props.deliveryStats.total)
+</script>
+
+<template>
+    <Head title="Carrier Messages Dashboard" />
+
+    <div class="grid grid-cols-12 gap-6">
+        <div class="col-span-12">
+            <div class="box box--stacked p-6">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="rounded-2xl border border-primary/20 bg-primary/10 p-3">
+                            <Lucide icon="MessagesSquare" class="h-8 w-8 text-primary" />
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-slate-800">Messages Dashboard</h1>
+                            <p class="text-sm text-slate-500">Track outbound delivery, incoming activity, and message health across your carrier account.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <Link :href="route('carrier.messages.index')">
+                            <Button variant="outline-secondary" class="flex items-center gap-2">
+                                <Lucide icon="List" class="h-4 w-4" />
+                                All Messages
+                            </Button>
+                        </Link>
+                        <Link :href="route('carrier.messages.create')">
+                            <Button variant="primary" class="flex items-center gap-2">
+                                <Lucide icon="Plus" class="h-4 w-4" />
+                                New Message
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <div class="box box--stacked rounded-2xl p-5">
+                <p class="text-sm text-slate-500">Accessible Messages</p>
+                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.total }}</p>
+                <p class="mt-2 text-xs text-slate-500">{{ stats.sent_this_month }} sent this month</p>
+            </div>
+            <div class="box box--stacked rounded-2xl p-5">
+                <p class="text-sm text-slate-500">Sent</p>
+                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.sent }}</p>
+                <p class="mt-2 text-xs text-slate-500">{{ stats.sent_today }} today, {{ stats.sent_this_week }} this week</p>
+            </div>
+            <div class="box box--stacked rounded-2xl p-5">
+                <p class="text-sm text-slate-500">Received</p>
+                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.received }}</p>
+                <p class="mt-2 text-xs text-slate-500">Messages delivered into your carrier inbox.</p>
+            </div>
+            <div class="box box--stacked rounded-2xl p-5">
+                <p class="text-sm text-slate-500">Drafts</p>
+                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.draft }}</p>
+                <p class="mt-2 text-xs text-slate-500">Messages still editable before delivery.</p>
+            </div>
+            <div class="box box--stacked rounded-2xl p-5">
+                <p class="text-sm text-slate-500">Delivery Rate</p>
+                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ deliveryRate }}%</p>
+                <p class="mt-2 text-xs text-slate-500">{{ deliveryStats.delivered }} of {{ deliveryStats.total }} recipient rows delivered</p>
+            </div>
+        </div>
+
+        <div class="col-span-12 xl:col-span-8 space-y-6">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div class="box box--stacked p-6">
+                    <div class="flex items-center gap-3">
+                        <Lucide icon="PieChart" class="h-5 w-5 text-primary" />
+                        <h2 class="text-base font-semibold text-slate-800">Status Distribution</h2>
+                    </div>
+                    <div class="mt-5 space-y-4">
+                        <div v-for="item in asEntries(statusDistribution)" :key="item.label">
+                            <div class="mb-2 flex items-center justify-between gap-3">
+                                <p class="text-sm font-medium text-slate-700">{{ titleCase(item.label) }}</p>
+                                <p class="text-sm text-slate-500">{{ item.value }} / {{ percentage(item.value, stats.total) }}%</p>
+                            </div>
+                            <div class="h-2 rounded-full bg-slate-100">
+                                <div class="h-2 rounded-full bg-primary" :style="{ width: `${percentage(item.value, stats.total)}%` }" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="box box--stacked p-6">
+                    <div class="flex items-center gap-3">
+                        <Lucide icon="ShieldCheck" class="h-5 w-5 text-primary" />
+                        <h2 class="text-base font-semibold text-slate-800">Delivery Overview</h2>
+                    </div>
+                    <div class="mt-5 grid grid-cols-2 gap-4">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Delivered</p>
+                            <p class="mt-2 text-2xl font-semibold text-slate-800">{{ deliveryStats.delivered }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Pending</p>
+                            <p class="mt-2 text-2xl font-semibold text-slate-800">{{ deliveryStats.pending }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Failed</p>
+                            <p class="mt-2 text-2xl font-semibold text-slate-800">{{ deliveryStats.failed }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Read</p>
+                            <p class="mt-2 text-2xl font-semibold text-slate-800">{{ deliveryStats.read }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 space-y-4 rounded-2xl border border-dashed border-slate-300 p-4">
+                        <div>
+                            <div class="mb-2 flex items-center justify-between">
+                                <span class="text-sm font-medium text-slate-700">Delivered Rate</span>
+                                <span class="text-sm text-slate-500">{{ deliveryRate }}%</span>
+                            </div>
+                            <div class="h-2 rounded-full bg-slate-100">
+                                <div class="h-2 rounded-full bg-primary" :style="{ width: `${deliveryRate}%` }" />
+                            </div>
+                        </div>
+                        <div>
+                            <div class="mb-2 flex items-center justify-between">
+                                <span class="text-sm font-medium text-slate-700">Read Rate</span>
+                                <span class="text-sm text-slate-500">{{ readRate }}%</span>
+                            </div>
+                            <div class="h-2 rounded-full bg-slate-100">
+                                <div class="h-2 rounded-full bg-slate-500" :style="{ width: `${readRate}%` }" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="box box--stacked p-0 overflow-hidden">
+                <div class="flex items-center justify-between border-b border-slate-200/60 px-6 py-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-slate-800">Recent Messages</h2>
+                        <p class="text-sm text-slate-500">Latest sent and received activity for your carrier.</p>
+                    </div>
+                    <Link :href="route('carrier.messages.index')">
+                        <Button variant="outline-secondary" class="flex items-center gap-2">
+                            <Lucide icon="ArrowRight" class="h-4 w-4" />
+                            View All
+                        </Button>
+                    </Link>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50/80">
+                                <th class="px-6 py-3 text-xs font-medium uppercase text-slate-500">Subject</th>
+                                <th class="px-6 py-3 text-xs font-medium uppercase text-slate-500">Direction</th>
+                                <th class="px-6 py-3 text-xs font-medium uppercase text-slate-500">Sender</th>
+                                <th class="px-6 py-3 text-xs font-medium uppercase text-slate-500">Recipients</th>
+                                <th class="px-6 py-3 text-xs font-medium uppercase text-slate-500">Status</th>
+                                <th class="px-6 py-3 text-xs font-medium uppercase text-slate-500">Priority</th>
+                                <th class="px-6 py-3 text-xs font-medium uppercase text-slate-500 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="message in recentMessages" :key="message.id" class="border-t border-slate-100">
+                                <td class="px-6 py-4">
+                                    <p class="font-medium text-slate-800">{{ message.subject }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ message.sent_at || 'Created recently' }}</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="directionBadgeClass(message.direction)">
+                                        {{ titleCase(message.direction) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <p class="text-sm font-medium text-slate-800">{{ message.sender_name }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ message.sender_type }}</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <p class="text-sm text-slate-700">{{ message.recipients_count }} recipients</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ message.delivered_count }} delivered, {{ message.read_count }} read</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="statusBadgeClass(message.status)">
+                                        {{ titleCase(message.status) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="priorityBadgeClass(message.priority)">
+                                        {{ titleCase(message.priority) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <Link :href="route('carrier.messages.show', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-primary">
+                                            <Lucide icon="Eye" class="h-4 w-4" />
+                                        </Link>
+                                        <Link v-if="message.can_edit" :href="route('carrier.messages.edit', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-primary">
+                                            <Lucide icon="PenLine" class="h-4 w-4" />
+                                        </Link>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="!recentMessages.length">
+                                <td colspan="7" class="px-6 py-12 text-center text-sm text-slate-500">
+                                    No message activity yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-span-12 xl:col-span-4 space-y-6">
+            <div class="box box--stacked p-6">
+                <h2 class="text-base font-semibold text-slate-800">Priority Mix</h2>
+                <div class="mt-4 space-y-4">
+                    <div v-for="item in asEntries(priorityDistribution)" :key="item.label" class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-slate-700">{{ titleCase(item.label) }}</p>
+                            <p class="text-sm text-slate-500">{{ item.value }}</p>
+                        </div>
+                        <p class="mt-2 text-xs text-slate-500">{{ percentage(item.value, stats.total) }}% of accessible messages</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="box box--stacked p-6">
+                <h2 class="text-base font-semibold text-slate-800">Direction Mix</h2>
+                <div class="mt-4 space-y-4">
+                    <div v-for="item in asEntries(directionDistribution)" :key="item.label">
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <p class="text-sm font-medium text-slate-700">{{ titleCase(item.label) }}</p>
+                            <p class="text-sm text-slate-500">{{ item.value }}</p>
+                        </div>
+                        <div class="h-2 rounded-full bg-slate-100">
+                            <div class="h-2 rounded-full bg-primary" :style="{ width: `${percentage(item.value, stats.total)}%` }" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

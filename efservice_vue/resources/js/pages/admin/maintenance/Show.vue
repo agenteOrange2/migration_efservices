@@ -31,7 +31,34 @@ const props = defineProps<{
         attachments: { id: number; name: string; url: string; size: string; mime_type: string | null }[]
         generated_reports: { id: number; document_number: string | null; issued_date: string | null; status_label: string; url: string | null; file_name: string | null }[]
     }
+    routeNames?: Partial<{
+        edit: string
+        toggleStatus: string
+        generateReport: string
+        deleteReport: string
+        attachmentsStore: string
+        attachmentsDestroy: string
+        reschedule: string
+        vehicleShow: string
+        vehicleIndex: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    edit: 'admin.maintenance.edit',
+    toggleStatus: 'admin.maintenance.toggle-status',
+    generateReport: 'admin.maintenance.generate-report',
+    deleteReport: 'admin.maintenance.delete-report',
+    attachmentsStore: 'admin.maintenance.attachments.store',
+    attachmentsDestroy: 'admin.maintenance.attachments.destroy',
+    reschedule: 'admin.maintenance.reschedule',
+    vehicleShow: 'admin.vehicles.show',
+    vehicleIndex: 'admin.vehicles.maintenance.index',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 const rescheduleOpen = ref(false)
@@ -39,23 +66,23 @@ const uploadForm = useForm({ attachments: [] as File[] })
 const rescheduleForm = useForm({ next_service_date: props.maintenance.next_service_date ?? '', reason: '' })
 
 function backHref() {
-    return route('admin.vehicles.maintenance.index', props.maintenance.vehicle.id)
+    return namedRoute('vehicleIndex', props.maintenance.vehicle.id)
 }
 
 function toggleStatus() {
-    router.put(route('admin.maintenance.toggle-status', props.maintenance.id), {}, { preserveScroll: true })
+    router.put(namedRoute('toggleStatus', props.maintenance.id), {}, { preserveScroll: true })
 }
 
 function generateReport() {
-    router.post(route('admin.maintenance.generate-report', props.maintenance.id), {}, { preserveScroll: true })
+    router.post(namedRoute('generateReport', props.maintenance.id), {}, { preserveScroll: true })
 }
 
 function deleteAttachment(id: number) {
-    router.delete(route('admin.maintenance.attachments.destroy', { maintenance: props.maintenance.id, media: id }), { preserveScroll: true })
+    router.delete(namedRoute('attachmentsDestroy', { maintenance: props.maintenance.id, media: id }), { preserveScroll: true })
 }
 
 function deleteReport(id: number) {
-    router.delete(route('admin.maintenance.delete-report', { maintenance: props.maintenance.id, document: id }), { preserveScroll: true })
+    router.delete(namedRoute('deleteReport', { maintenance: props.maintenance.id, document: id }), { preserveScroll: true })
 }
 
 function onFileChange(event: Event) {
@@ -64,7 +91,7 @@ function onFileChange(event: Event) {
 }
 
 function uploadAttachments() {
-    uploadForm.post(route('admin.maintenance.attachments.store', props.maintenance.id), {
+    uploadForm.post(namedRoute('attachmentsStore', props.maintenance.id), {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
@@ -74,7 +101,7 @@ function uploadAttachments() {
 }
 
 function submitReschedule() {
-    rescheduleForm.post(route('admin.maintenance.reschedule', props.maintenance.id), {
+    rescheduleForm.post(namedRoute('reschedule', props.maintenance.id), {
         preserveScroll: true,
         onSuccess: () => {
             rescheduleOpen.value = false
@@ -116,7 +143,7 @@ function statusBadge(statusLabel: string) {
                             <Lucide icon="FileText" class="w-4 h-4" />
                             Generate Report
                         </button>
-                        <Link :href="route('admin.maintenance.edit', maintenance.id)">
+                        <Link :href="namedRoute('edit', maintenance.id)">
                             <Button variant="primary" class="flex items-center gap-2"><Lucide icon="PenLine" class="w-4 h-4" /> Edit</Button>
                         </Link>
                         <Link :href="backHref()">
@@ -206,7 +233,7 @@ function statusBadge(statusLabel: string) {
                 <p class="text-sm font-medium text-slate-800">{{ maintenance.vehicle.label }}</p>
                 <p class="text-xs text-slate-500 mt-2">{{ maintenance.vehicle.carrier_name || 'No carrier' }}</p>
                 <div class="mt-4">
-                    <Link :href="route('admin.vehicles.show', maintenance.vehicle.id)" class="text-sm text-primary hover:underline">Open vehicle profile</Link>
+                    <Link :href="namedRoute('vehicleShow', maintenance.vehicle.id)" class="text-sm text-primary hover:underline">Open vehicle profile</Link>
                 </div>
             </div>
 

@@ -167,10 +167,20 @@ class HosReportService
             $trips = $query->orderBy('scheduled_start_date', 'desc')->get();
             $stats = $this->calculateTripStatistics($query->clone());
 
-            $pdf = PDF::loadView('admin.reports.pdf.trips-pdf', [
+            $carrier = null;
+            if ($carrierId !== null) {
+                $carrier = Carrier::find($carrierId);
+            } elseif (!empty($filters['carrier_id'])) {
+                $carrier = Carrier::find($filters['carrier_id']);
+            }
+
+            $viewName = $carrierId !== null ? 'carrier.reports.pdf.trips-pdf' : 'admin.reports.pdf.trips-pdf';
+
+            $pdf = PDF::loadView($viewName, [
                 'trips' => $trips,
                 'stats' => $stats,
-                'filters' => $this->formatFiltersForPdf($filters),
+                'carrier' => $carrier,
+                'appliedFilters' => implode(', ', $this->formatFiltersForPdf($filters)),
                 'date' => now()->format('m/d/Y H:i'),
                 'generatedAt' => now()->format('m/d/Y H:i:s'),
             ]);
@@ -570,13 +580,21 @@ class HosReportService
             $violations = $query->orderBy('violation_date', 'desc')->get();
             $stats = $this->calculateViolationsStatistics($query->clone());
 
-            $pdf = PDF::loadView('admin.reports.pdf.violations-pdf', [
+            $viewName = $carrierId !== null ? 'carrier.reports.pdf.violations-pdf' : 'admin.reports.pdf.violations-pdf';
+
+            $viewData = [
                 'violations' => $violations,
                 'stats' => $stats,
                 'filters' => $this->formatFiltersForPdf($filters),
                 'date' => now()->format('m/d/Y H:i'),
                 'generatedAt' => now()->format('m/d/Y H:i:s'),
-            ]);
+            ];
+
+            if ($carrierId !== null) {
+                $viewData['carrier'] = Carrier::find($carrierId);
+            }
+
+            $pdf = PDF::loadView($viewName, $viewData);
 
             $pdf->setPaper('a4', 'landscape');
             $pdf->setOptions([

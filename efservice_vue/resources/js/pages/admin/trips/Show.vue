@@ -21,8 +21,31 @@ const props = defineProps<{
     tripReportPdfs: any[]
     inspectionDocuments: any[]
     tripDocuments: any[]
-    hosLogRoute: string
+    hosLogRoute?: string | null
+    routeNames?: Partial<{
+        destroy: string
+        edit: string
+        index: string
+        forceStart: string
+        forcePause: string
+        forceResume: string
+        forceEnd: string
+    }>
 }>()
+
+const defaultRouteNames = {
+    destroy: 'admin.trips.destroy',
+    edit: 'admin.trips.edit',
+    index: 'admin.trips.index',
+    forceStart: 'admin.trips.force-start',
+    forcePause: 'admin.trips.force-pause',
+    forceResume: 'admin.trips.force-resume',
+    forceEnd: 'admin.trips.force-end',
+} as const
+
+function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
+    return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
+}
 
 function badgeClass(status: string) {
     if (status === 'completed') return 'bg-primary/10 text-primary'
@@ -33,12 +56,12 @@ function badgeClass(status: string) {
 
 function destroyTrip() {
     if (!confirm(`Delete trip ${props.trip.trip_number}?`)) return
-    router.delete(route('admin.trips.destroy', props.trip.id))
+    router.delete(namedRoute('destroy', props.trip.id))
 }
 
 function emergencyAction(routeName: string, label: string) {
     if (!confirm(`${label} ${props.trip.trip_number}?`)) return
-    router.post(route(routeName, props.trip.id), {}, { preserveScroll: true })
+    router.post(namedRoute(routeName as keyof typeof defaultRouteNames, props.trip.id), {}, { preserveScroll: true })
 }
 </script>
 
@@ -67,13 +90,13 @@ function emergencyAction(routeName: string, label: string) {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Button v-if="trip.can_force_start" variant="primary" class="flex items-center gap-2" @click="emergencyAction('admin.trips.force-start', 'Start')"><Lucide icon="Play" class="h-4 w-4" />Force Start</Button>
-                        <Button v-if="trip.can_force_pause" variant="outline-secondary" class="flex items-center gap-2" @click="emergencyAction('admin.trips.force-pause', 'Pause')"><Lucide icon="Pause" class="h-4 w-4" />Force Pause</Button>
-                        <Button v-if="trip.can_force_resume" variant="primary" class="flex items-center gap-2" @click="emergencyAction('admin.trips.force-resume', 'Resume')"><Lucide icon="Play" class="h-4 w-4" />Force Resume</Button>
-                        <Button v-if="trip.can_force_end" variant="outline-secondary" class="flex items-center gap-2" @click="emergencyAction('admin.trips.force-end', 'End')"><Lucide icon="Square" class="h-4 w-4" />Force End</Button>
-                        <Link v-if="trip.can_edit" :href="route('admin.trips.edit', trip.id)"><Button variant="primary" class="flex items-center gap-2"><Lucide icon="PenLine" class="h-4 w-4" />Edit</Button></Link>
+                        <Button v-if="trip.can_force_start" variant="primary" class="flex items-center gap-2" @click="emergencyAction('forceStart', 'Start')"><Lucide icon="Play" class="h-4 w-4" />Force Start</Button>
+                        <Button v-if="trip.can_force_pause" variant="outline-secondary" class="flex items-center gap-2" @click="emergencyAction('forcePause', 'Pause')"><Lucide icon="Pause" class="h-4 w-4" />Force Pause</Button>
+                        <Button v-if="trip.can_force_resume" variant="primary" class="flex items-center gap-2" @click="emergencyAction('forceResume', 'Resume')"><Lucide icon="Play" class="h-4 w-4" />Force Resume</Button>
+                        <Button v-if="trip.can_force_end" variant="outline-secondary" class="flex items-center gap-2" @click="emergencyAction('forceEnd', 'End')"><Lucide icon="Square" class="h-4 w-4" />Force End</Button>
+                        <Link v-if="trip.can_edit" :href="namedRoute('edit', trip.id)"><Button variant="primary" class="flex items-center gap-2"><Lucide icon="PenLine" class="h-4 w-4" />Edit</Button></Link>
                         <Button v-if="trip.can_delete" variant="outline-secondary" class="flex items-center gap-2" @click="destroyTrip"><Lucide icon="Trash2" class="h-4 w-4" />Delete</Button>
-                        <Link :href="route('admin.trips.index')"><Button variant="outline-secondary" class="flex items-center gap-2"><Lucide icon="ArrowLeft" class="h-4 w-4" />Back</Button></Link>
+                        <Link :href="namedRoute('index')"><Button variant="outline-secondary" class="flex items-center gap-2"><Lucide icon="ArrowLeft" class="h-4 w-4" />Back</Button></Link>
                     </div>
                 </div>
             </div>
@@ -158,7 +181,7 @@ function emergencyAction(routeName: string, label: string) {
                 <div class="box box--stacked p-6">
                     <div class="mb-4 flex items-center justify-between gap-3">
                         <h2 class="text-base font-semibold text-slate-800">HOS Entries</h2>
-                        <a :href="hosLogRoute" class="text-sm text-primary hover:underline">Open HOS Log</a>
+                        <a v-if="hosLogRoute" :href="hosLogRoute" class="text-sm text-primary hover:underline">Open HOS Log</a>
                     </div>
                     <div v-if="hosEntries.length" class="space-y-3">
                         <div v-for="entry in hosEntries" :key="entry.id" class="rounded-xl border border-slate-200 bg-slate-50 p-4">

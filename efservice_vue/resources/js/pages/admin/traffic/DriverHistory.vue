@@ -23,6 +23,18 @@ const props = defineProps<{
         last_page: number
     }
     filters: { search_term: string; date_from: string; date_to: string; sort_field: string; sort_direction: string }
+    routeNames?: {
+        index: string
+        create: string
+        store: string
+        edit: string
+        update: string
+        destroy: string
+        driverHistory: string
+        documentsShow: string
+        mediaDestroy: string
+        driverShow: string
+    }
 }>()
 
 const filters = reactive({
@@ -32,7 +44,7 @@ const filters = reactive({
 })
 
 function applyFilters() {
-    router.get(route('admin.traffic.driver-history', props.driver.id), {
+    router.get(route(props.routeNames?.driverHistory ?? 'admin.traffic.driver-history', props.driver.id), {
         search_term: filters.search_term || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
@@ -50,7 +62,7 @@ function resetFilters() {
 
 function sortUrl(field: string) {
     const direction = props.filters.sort_field === field && props.filters.sort_direction === 'asc' ? 'desc' : 'asc'
-    return route('admin.traffic.driver-history', {
+    return route(props.routeNames?.driverHistory ?? 'admin.traffic.driver-history', {
         driver: props.driver.id,
         search_term: filters.search_term || undefined,
         date_from: filters.date_from || undefined,
@@ -79,11 +91,11 @@ function sortUrl(field: string) {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('admin.drivers.show', driver.id)" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">
+                        <Link :href="route(props.routeNames?.driverShow ?? 'admin.drivers.show', driver.id)" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">
                             <Lucide icon="ArrowLeft" class="w-4 h-4" />
                             Back to Driver
                         </Link>
-                        <Link :href="route('admin.traffic.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                        <Link :href="route(props.routeNames?.create ?? 'admin.traffic.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
                             <Lucide icon="Plus" class="w-4 h-4" />
                             Add Conviction
                         </Link>
@@ -152,8 +164,8 @@ function sortUrl(field: string) {
                                 <td class="px-5 py-4 text-center text-sm font-medium text-slate-700">{{ conviction.document_count }}</td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link :href="route('admin.traffic.documents.show', conviction.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
-                                        <Link :href="route('admin.traffic.edit', conviction.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                        <Link :href="route(props.routeNames?.documentsShow ?? 'admin.traffic.documents.show', conviction.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
+                                        <Link :href="route(props.routeNames?.edit ?? 'admin.traffic.edit', conviction.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
                                     </div>
                                 </td>
                             </tr>

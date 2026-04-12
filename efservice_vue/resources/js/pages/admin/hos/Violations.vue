@@ -22,6 +22,10 @@ const props = defineProps<{
     severities: { value: string; label: string }[]
     canFilterCarriers: boolean
     violations: { data: any[]; links: PaginationLink[] }
+    routeNames?: {
+        index?: string
+        show?: string
+    }
 }>()
 
 const filters = reactive({ ...props.filters })
@@ -35,7 +39,7 @@ const pickerOptions = {
 }
 
 function applyFilters() {
-    router.get(route('admin.hos.violations'), {
+    router.get(route(props.routeNames?.index ?? 'admin.hos.violations'), {
         carrier_id: filters.carrier_id || undefined,
         driver_id: filters.driver_id || undefined,
         violation_type: filters.violation_type || undefined,
@@ -149,7 +153,7 @@ function resetFilters() {
                                 </td>
                                 <td class="px-5 py-4 text-slate-600">{{ violation.date || 'N/A' }}</td>
                                 <td class="px-5 py-4 text-right">
-                                    <Link :href="route('admin.hos.violations.show', violation.id)" class="inline-flex items-center gap-2 text-primary hover:underline">
+                                    <Link :href="route(props.routeNames?.show ?? 'admin.hos.violations.show', violation.id)" class="inline-flex items-center gap-2 text-primary hover:underline">
                                         <Lucide icon="Eye" class="h-4 w-4" />
                                         Open
                                     </Link>

@@ -30,6 +30,11 @@ const props = defineProps<{
     drivers: { id: number; name: string; email?: string | null; hours_remaining: number; status_color?: string; can_drive: boolean }[]
     vehicles: { id: number; label: string }[]
     isSuperadmin: boolean
+    routeNames?: Partial<{
+        update: string
+        show: string
+        carrierData: string
+    }>
 }>()
 
 const form = useForm({
@@ -50,7 +55,7 @@ const form = useForm({
 })
 
 function submit() {
-    form.put(route('admin.trips.update', props.trip.id), {
+    form.put(route(props.routeNames?.update ?? 'admin.trips.update', props.trip.id), {
         preserveScroll: true,
     })
 }
@@ -68,8 +73,9 @@ function submit() {
         page-title="Edit Trip"
         page-description="Update the trip assignment, route, and schedule before it starts."
         submit-label="Update Trip"
-        :cancel-href="route('admin.trips.show', trip.id)"
+        :cancel-href="route(props.routeNames?.show ?? 'admin.trips.show', trip.id)"
         :status-label="trip.status_label"
+        :route-names="{ carrierData: props.routeNames?.carrierData ?? 'admin.trips.carrier.data' }"
         @submit="submit"
     />
 </template>
