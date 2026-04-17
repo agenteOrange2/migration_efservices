@@ -7,6 +7,7 @@ use App\Models\Carrier;
 use App\Models\UserDriverDetail;
 use App\Models\Admin\Vehicle\Vehicle;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 
 /**
  * Search Service
@@ -31,6 +32,23 @@ class SearchService
     public function __construct(NavigationProvider $navigationProvider)
     {
         $this->navigationProvider = $navigationProvider;
+    }
+
+    protected function resolveRouteUrl(array $candidates, mixed ...$parameters): ?string
+    {
+        foreach ($candidates as $candidate) {
+            if (! Route::has($candidate)) {
+                continue;
+            }
+
+            try {
+                return route($candidate, ...$parameters);
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -215,8 +233,14 @@ class SearchService
         
         
         return $carriers->map(function ($carrier) {
-            // Generate URL directly: /admin/carrier/{slug}/details
-            $url = url('/admin/carrier/' . $carrier->slug . '/details');
+            $url = $this->resolveRouteUrl([
+                'admin.carriers.show',
+                'admin.carrier.details',
+            ], $carrier);
+
+            if (! $url) {
+                return null;
+            }
             
             return [
                 'id' => 'carrier_' . $carrier->id,
@@ -227,7 +251,7 @@ class SearchService
                 'url' => $url,
                 'category' => 'Carriers',
             ];
-        })->toArray();
+        })->filter()->values()->toArray();
     }
 
     /**
@@ -286,11 +310,12 @@ class SearchService
         $drivers = $driversQuery->limit(self::MAX_RESULTS_PER_CATEGORY)->get();
         
         return $drivers->map(function ($driver) use ($carrierId) {
-            // Generate URL directly
-            if ($carrierId) {
-                $url = url('/carrier/drivers/' . $driver->id);
-            } else {
-                $url = url('/admin/drivers/' . $driver->id);
+            $url = $carrierId
+                ? $this->resolveRouteUrl(['carrier.drivers.show'], $driver->id)
+                : $this->resolveRouteUrl(['admin.drivers.show'], $driver->id);
+
+            if (! $url) {
+                return null;
             }
             
             return [
@@ -302,7 +327,7 @@ class SearchService
                 'url' => $url,
                 'category' => 'Drivers',
             ];
-        })->toArray();
+        })->filter()->values()->toArray();
     }
 
     /**
@@ -338,11 +363,12 @@ class SearchService
         $vehicles = $vehiclesQuery->limit(self::MAX_RESULTS_PER_CATEGORY)->get();
         
         return $vehicles->map(function ($vehicle) use ($carrierId) {
-            // Generate URL directly
-            if ($carrierId) {
-                $url = url('/carrier/vehicles/' . $vehicle->id);
-            } else {
-                $url = url('/admin/vehicles/' . $vehicle->id);
+            $url = $carrierId
+                ? $this->resolveRouteUrl(['carrier.vehicles.show'], $vehicle->id)
+                : $this->resolveRouteUrl(['admin.vehicles.show'], $vehicle->id);
+
+            if (! $url) {
+                return null;
             }
             
             $subtitle = $vehicle->company_unit_number 
@@ -358,7 +384,7 @@ class SearchService
                 'url' => $url,
                 'category' => 'Vehicles',
             ];
-        })->toArray();
+        })->filter()->values()->toArray();
     }
 
     /**
@@ -379,7 +405,11 @@ class SearchService
         ->get();
         
         return $users->map(function ($user) {
-            $url = url('/admin/users/' . $user->id);
+            $url = $this->resolveRouteUrl(['admin.users.show'], $user->id);
+
+            if (! $url) {
+                return null;
+            }
             
             return [
                 'id' => 'user_' . $user->id,
@@ -390,7 +420,7 @@ class SearchService
                 'url' => $url,
                 'category' => 'Users',
             ];
-        })->toArray();
+        })->filter()->values()->toArray();
     }
 
     /**
@@ -409,8 +439,8 @@ class SearchService
                 if (\Route::has('admin.carriers.create')) {
                     $actions[] = ['title' => 'Add Carrier', 'icon' => 'Plus', 'url' => route('admin.carriers.create')];
                 }
-                if (\Route::has('admin.drivers.create')) {
-                    $actions[] = ['title' => 'Add Driver', 'icon' => 'UserPlus', 'url' => route('admin.drivers.create')];
+                if (\Route::has('admin.drivers.wizard.create')) {
+                    $actions[] = ['title' => 'Add Driver', 'icon' => 'UserPlus', 'url' => route('admin.drivers.wizard.create')];
                 }
                 if (\Route::has('admin.reports.index')) {
                     $actions[] = ['title' => 'View Reports', 'icon' => 'BarChart3', 'url' => route('admin.reports.index')];
@@ -427,9 +457,15 @@ class SearchService
                 if (\Route::has('carrier.hos.dashboard')) {
                     $actions[] = ['title' => 'View HOS', 'icon' => 'Clock', 'url' => route('carrier.hos.dashboard')];
                 }
+                if (\Route::has('carrier.reports.index')) {
+                    $actions[] = ['title' => 'View Reports', 'icon' => 'BarChart3', 'url' => route('carrier.reports.index')];
+                }
                 break;
                 
             case 'user_driver':
+                if (\Route::has('driver.profile')) {
+                    $actions[] = ['title' => 'My Profile', 'icon' => 'User', 'url' => route('driver.profile')];
+                }
                 if (\Route::has('driver.hos.dashboard')) {
                     $actions[] = ['title' => 'View HOS', 'icon' => 'Clock', 'url' => route('driver.hos.dashboard')];
                 }

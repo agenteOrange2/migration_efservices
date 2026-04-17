@@ -35,6 +35,10 @@ function safeRoute(routeName?: string | null): string | null {
 }
 
 const profileHref = computed(() => {
+    if (hasAnyRole('superadmin')) {
+        return safeRoute('admin.settings');
+    }
+
     if (hasAnyRole('user_driver')) {
         return safeRoute('driver.profile');
     }
@@ -47,6 +51,10 @@ const profileHref = computed(() => {
 });
 
 const profileEditHref = computed(() => {
+    if (hasAnyRole('superadmin')) {
+        return safeRoute('admin.settings-email-settings');
+    }
+
     if (hasAnyRole('user_driver')) {
         return safeRoute('driver.profile.edit');
     }
@@ -59,6 +67,10 @@ const profileEditHref = computed(() => {
 });
 
 const securityHref = computed(() => {
+    if (hasAnyRole('superadmin')) {
+        return safeRoute('admin.settings-security');
+    }
+
     if (hasAnyRole('user_driver')) {
         return safeRoute('driver.profile.edit');
     }

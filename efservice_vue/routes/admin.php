@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\MessagesController;
 use App\Http\Controllers\Admin\MembershipController;
 use App\Http\Controllers\Admin\PlanRequestController;
 use App\Http\Controllers\Admin\SafetyDataSystemController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TrainingDashboardController;
 use App\Http\Controllers\Admin\TrainingAssignmentsController;
 use App\Http\Controllers\Admin\TrainingsController;
@@ -115,6 +116,26 @@ Route::resource('document-types', DocumentTypeController::class)->except(['show'
 |--------------------------------------------------------------------------
 */
 Route::resource('memberships', MembershipController::class);
+Route::prefix('settings')->group(function () {
+    Route::get('/', [SettingsController::class, 'index'])->name('settings');
+    Route::get('email-settings', [SettingsController::class, 'index'])->defaults('page', 'email-settings')->name('settings-email-settings');
+    Route::get('security', [SettingsController::class, 'index'])->defaults('page', 'security')->name('settings-security');
+    Route::get('preferences', [SettingsController::class, 'index'])->defaults('page', 'preferences')->name('settings-preferences');
+    Route::get('two-factor-authentication', [SettingsController::class, 'index'])->defaults('page', 'two-factor-authentication')->name('settings-two-factor-authentication');
+    Route::get('device-history', [SettingsController::class, 'index'])->defaults('page', 'device-history')->name('settings-device-history');
+    Route::get('notification-settings', [SettingsController::class, 'index'])->defaults('page', 'notification-settings')->name('settings-notification-settings');
+    Route::get('connected-services', [SettingsController::class, 'index'])->defaults('page', 'connected-services')->name('settings-connected-services');
+    Route::get('account-deactivation', [SettingsController::class, 'index'])->defaults('page', 'account-deactivation')->name('settings-account-deactivation');
+
+    Route::patch('profile', [SettingsController::class, 'updateProfile'])->name('settings.update-profile');
+    Route::put('email-settings', [SettingsController::class, 'updateEmail'])->name('settings.update-email');
+    Route::put('security/password', [SettingsController::class, 'updatePassword'])->name('settings.update-password');
+    Route::post('profile-photo', [SettingsController::class, 'updatePhoto'])->name('settings.update-photo');
+    Route::delete('profile-photo', [SettingsController::class, 'deletePhoto'])->name('settings.delete-photo');
+    Route::put('notification-settings', [SettingsController::class, 'updateNotificationSettings'])->name('settings.update-notification-settings');
+    Route::post('device-history/logout-other-devices', [SettingsController::class, 'logoutOtherDevices'])->name('settings.logout-other-devices');
+    Route::delete('account', [SettingsController::class, 'destroy'])->name('settings.destroy-account');
+});
 Route::get('vehicles/dashboard', [VehicleDashboardController::class, 'index'])->name('vehicles.dashboard');
 Route::prefix('maintenance')->name('maintenance.')->group(function () {
     Route::get('/', [MaintenanceController::class, 'index'])->name('index');
