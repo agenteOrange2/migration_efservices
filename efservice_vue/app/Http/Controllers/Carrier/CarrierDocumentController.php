@@ -21,21 +21,23 @@ class CarrierDocumentController extends Controller
 
         $documentTypes   = DocumentType::orderBy('requirement', 'desc')->orderBy('name')->get();
         $uploadedDocs    = CarrierDocument::where('carrier_id', $carrier->id)
-            ->with('documentType')
+            ->with(['documentType', 'media'])
             ->get();
 
         $mappedDocuments = $documentTypes->map(function ($type) use ($uploadedDocs) {
             $doc = $uploadedDocs->firstWhere('document_type_id', $type->id);
+            $hasFile = $doc && $doc->media->where('collection_name', 'carrier_documents')->isNotEmpty();
+
             return [
                 'type_id'      => $type->id,
                 'type_name'    => $type->name,
                 'requirement'  => $type->requirement ?? 'optional',
                 'document_id'  => $doc?->id,
-                'status'       => $doc ? (int) $doc->status : null,
-                'status_name'  => $doc ? $doc->status_name : 'Not Uploaded',
-                'file_url'     => $doc ? $doc->getFirstMediaUrl('carrier_documents') : null,
-                'notes'        => $doc?->notes,
-                'date'         => $doc?->date?->format('M d, Y'),
+                'status'       => $hasFile ? (int) $doc->status : null,
+                'status_name'  => $hasFile ? $doc->status_name : 'Not Uploaded',
+                'file_url'     => $hasFile ? $doc->getFirstMediaUrl('carrier_documents') : null,
+                'notes'        => $hasFile ? $doc->notes : null,
+                'date'         => $hasFile ? $doc->date?->format('M d, Y') : null,
             ];
         });
 

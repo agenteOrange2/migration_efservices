@@ -797,15 +797,12 @@ onBeforeUnmount(() => {
               </a>
             </div>
 
-            <Breadcrumb class="hidden flex-1 xl:block">
-              <Breadcrumb.Link
-                v-for="(crumb, crumbIndex) in breadcrumbLinks"
-                :key="`${crumb.title}-${crumbIndex}`"
-                :index="crumbIndex"
-                :to="crumb.href"
-                :active="crumb.active"
-              >
-                {{ crumb.title }}
+            <!-- BEGIN: Breadcrumb -->
+            <Breadcrumb class="flex-1 hidden xl:block">
+              <Breadcrumb.Link to="/">App</Breadcrumb.Link>
+              <Breadcrumb.Link to="/dashboard">Dashboards</Breadcrumb.Link>
+              <Breadcrumb.Link :to="page.url" :active="true">
+                {{ page.props.title || 'Dashboard' }}
               </Breadcrumb.Link>
             </Breadcrumb>
 
@@ -1073,110 +1070,26 @@ onBeforeUnmount(() => {
           <div v-else class="rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-400 dark:border-darkmode-400">
             ESC
           </div>
-        </div>
-
-        <div class="max-h-[60vh] overflow-y-auto bg-white dark:bg-darkmode-600">
-          <div v-if="!searchQuery && quickActions.length" class="px-5 py-4">
-            <div class="text-xs uppercase text-slate-500">Quick Actions</div>
-            <div class="mt-3.5 flex flex-wrap gap-2">
-              <Link
-                v-for="action in quickActions"
-                :key="action.url"
-                :href="action.url"
-                class="inline-flex items-center gap-1.5 rounded-full border border-slate-300/70 px-3 py-1 text-sm transition hover:bg-slate-50 dark:border-darkmode-400 dark:hover:bg-darkmode-400"
-                @click="closeSearch"
-              >
-                <Lucide :icon="action.icon || 'Circle'" class="h-4 w-4" />
-                {{ action.title }}
-              </Link>
-            </div>
-          </div>
-
-          <template v-if="groupedSearchNavigation.length">
-            <div
-              v-for="[section, items] in groupedSearchNavigation"
-              :key="section"
-              class="border-t border-dashed px-5 py-4 first:border-t-0 dark:border-darkmode-400"
-            >
-              <div class="text-xs uppercase text-slate-500">{{ section }}</div>
-              <div class="mt-3.5 flex flex-col gap-1">
-                <Link
-                  v-for="item in items"
-                  :key="item.id"
-                  :href="item.url"
-                  class="flex items-center gap-2.5 rounded-md border border-transparent p-2 transition hover:border-slate-100 hover:bg-slate-50/80 dark:hover:bg-darkmode-400"
-                  :class="{
-                    'border-theme-1/20 bg-theme-1/5': flattenedSearchResults[selectedSearchIndex]?.id === item.id,
-                  }"
-                  @mouseenter="selectedSearchIndex = flattenedSearchResults.findIndex((result) => result.id === item.id)"
-                  @click="closeSearch"
-                >
-                  <div class="flex h-8 w-8 items-center justify-center rounded-md border border-theme-1/10 bg-theme-1/10">
-                    <Lucide :icon="item.icon || 'Search'" class="h-4 w-4 text-theme-1" />
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <div class="truncate font-medium text-slate-700 dark:text-slate-200">{{ item.title }}</div>
-                    <div v-if="item.fullPath && item.fullPath !== item.title" class="truncate text-xs text-slate-400">
-                      {{ item.fullPath }}
-                    </div>
-                  </div>
-                  <Lucide icon="ChevronRight" class="h-4 w-4 text-slate-300" />
-                </Link>
-              </div>
-            </div>
-          </template>
-
-          <template v-if="groupedSearchEntities.length">
-            <div
-              v-for="[category, items] in groupedSearchEntities"
-              :key="category"
-              class="border-t border-dashed px-5 py-4 dark:border-darkmode-400"
-            >
-              <div class="flex items-center gap-2">
-                <div class="text-xs uppercase text-slate-500">{{ category }}</div>
-                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-darkmode-400">
-                  {{ items.length }}
-                </span>
-              </div>
-              <div class="mt-3.5 flex flex-col gap-1">
-                <Link
-                  v-for="item in items"
-                  :key="item.id"
-                  :href="item.url"
-                  class="flex items-center gap-2.5 rounded-md border border-transparent p-2 transition hover:border-slate-100 hover:bg-slate-50/80 dark:hover:bg-darkmode-400"
-                  :class="{
-                    'border-theme-1/20 bg-theme-1/5': flattenedSearchResults[selectedSearchIndex]?.id === item.id,
-                  }"
-                  @mouseenter="selectedSearchIndex = flattenedSearchResults.findIndex((result) => result.id === item.id)"
-                  @click="closeSearch"
-                >
-                  <div class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100 dark:border-darkmode-400 dark:bg-darkmode-400">
-                    <Lucide :icon="item.icon || 'Circle'" class="h-4 w-4 text-slate-600 dark:text-slate-200" />
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <div class="truncate font-medium text-slate-700 dark:text-slate-200">{{ item.title }}</div>
-                    <div v-if="item.subtitle" class="truncate text-xs text-slate-400">
-                      {{ item.subtitle }}
-                    </div>
-                  </div>
-                  <span v-if="item.category" class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-darkmode-400 dark:text-slate-200">
-                    {{ item.category }}
-                  </span>
-                </Link>
-              </div>
-            </div>
-          </template>
-
-          <div v-if="searchQuery && !hasSearchResults && !searchLoading" class="flex flex-col items-center justify-center px-6 py-16">
-            <Lucide icon="SearchX" class="h-14 w-14 text-theme-1/20" />
-            <div class="mt-4 text-lg font-medium text-slate-700 dark:text-slate-100">No results found</div>
-            <div class="mt-2 text-center text-sm text-slate-500">
-              No results found for "{{ searchQuery }}". Please try a different term.
-            </div>
-          </div>
-
-          <div v-if="!searchQuery && !quickActions.length && !hasSearchResults" class="px-5 py-10 text-center text-slate-500">
-            Start typing to search...
+          <div class="p-3 max-h-[50vh] overflow-y-auto">
+            <div class="px-2 py-1.5 text-xs font-medium text-slate-400 uppercase">Páginas</div>
+            <Link :href="route('dashboard')"
+              class="flex items-center px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-darkmode-400 cursor-pointer"
+              @click="showSearch = false">
+              <Lucide icon="LayoutDashboard" class="w-4 h-4 text-slate-500 mr-3" />
+              <span class="dark:text-slate-300">Dashboard</span>
+            </Link>
+            <Link :href="route('profile.edit')"
+              class="flex items-center px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-darkmode-400 cursor-pointer"
+              @click="showSearch = false">
+              <Lucide icon="User" class="w-4 h-4 text-slate-500 mr-3" />
+              <span class="dark:text-slate-300">Perfil</span>
+            </Link>
+            <Link :href="route('profile.edit')"
+              class="flex items-center px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-darkmode-400 cursor-pointer"
+              @click="showSearch = false">
+              <Lucide icon="Settings" class="w-4 h-4 text-slate-500 mr-3" />
+              <span class="dark:text-slate-300">Configuración</span>
+            </Link>
           </div>
         </div>
       </Dialog.Panel>

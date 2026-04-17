@@ -142,14 +142,15 @@ class AuthenticationService
         // Redirect based on carrier status
         switch ($carrier->status) {
             case Carrier::STATUS_PENDING:
+            case Carrier::STATUS_PENDING_VALIDATION:
                 Log::info('AUTH_REDIRECT', [
                     'user_id' => $user->id,
                     'carrier_id' => $carrier->id,
                     'destination' => 'carrier_pending_validation',
-                    'carrier_status' => 'pending'
+                    'carrier_status' => $carrier->status,
                 ]);
                 return route('carrier.pending.validation');
-                
+
             case Carrier::STATUS_INACTIVE:
                 Log::info('AUTH_REDIRECT', [
                     'user_id' => $user->id,
@@ -158,7 +159,16 @@ class AuthenticationService
                     'carrier_status' => 'inactive'
                 ]);
                 return route('login');
-                
+
+            case Carrier::STATUS_REJECTED:
+                Log::info('AUTH_REDIRECT', [
+                    'user_id' => $user->id,
+                    'carrier_id' => $carrier->id,
+                    'destination' => 'carrier_pending_validation',
+                    'carrier_status' => 'rejected',
+                ]);
+                return route('carrier.pending.validation');
+
             case Carrier::STATUS_ACTIVE:
                 // Check if documents are in progress
                 if ($carrier->document_status === Carrier::DOCUMENT_STATUS_IN_PROGRESS) {
@@ -171,7 +181,7 @@ class AuthenticationService
                     ]);
                     return route('carrier.documents.index', $carrier->slug);
                 }
-                
+
                 Log::info('AUTH_REDIRECT', [
                     'user_id' => $user->id,
                     'carrier_id' => $carrier->id,
@@ -179,16 +189,16 @@ class AuthenticationService
                     'carrier_status' => 'active'
                 ]);
                 return route('carrier.dashboard');
-                
+
             default:
                 Log::info('AUTH_REDIRECT', [
                     'user_id' => $user->id,
                     'carrier_id' => $carrier->id,
-                    'destination' => 'carrier_wizard_step2',
+                    'destination' => 'carrier_pending_validation',
                     'carrier_status' => $carrier->status,
                     'reason' => 'unknown_status'
                 ]);
-                return route('carrier.wizard.step2');
+                return route('carrier.pending.validation');
         }
     }
 

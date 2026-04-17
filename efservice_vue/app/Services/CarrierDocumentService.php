@@ -23,7 +23,6 @@ class CarrierDocumentService
                 ],
                 [
                     'status' => CarrierDocument::STATUS_PENDING,
-                    'date' => now(),
                 ]
             );
 

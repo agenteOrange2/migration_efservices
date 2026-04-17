@@ -314,7 +314,7 @@ const progressWidth = computed(() => `${props.stats.percentage}%`)
 
                             <!-- Delete -->
                             <button
-                                v-if="doc.document_id"
+                                v-if="doc.file_url"
                                 @click="deleteDocument(doc)"
                                 class="flex items-center gap-1.5 text-xs font-medium text-danger/60 hover:text-danger transition-colors ml-auto">
                                 <Lucide icon="Trash2" class="w-3.5 h-3.5" />
