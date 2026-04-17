@@ -404,6 +404,12 @@ class SideMenu
                         'params' => [],
                         'title' => "New Message",
                     ],
+                    [
+                        'icon' => "Bell",
+                        'route_name' => "admin.notifications.index",
+                        'params' => [],
+                        'title' => "Notifications",
+                    ],
                 ],
             ],
             "CONTACT MANAGEMENT",

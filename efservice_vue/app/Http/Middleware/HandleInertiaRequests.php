@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Main\SideMenu;
 use App\Main\CarrierSideMenu;
 use App\Main\DriverSideMenu;
+use App\Services\NotificationCenterService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -20,6 +21,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $notificationCenter = app(NotificationCenterService::class);
 
         return [
             ...parent::share($request),
@@ -41,10 +43,10 @@ class HandleInertiaRequests extends Middleware
                 'info'    => fn () => $request->session()->get('info'),
             ],
             'notifications' => fn () => $user
-                ? $user->unreadNotifications()->latest()->take(10)->get()
+                ? $notificationCenter->getDropdownNotificationsForUser($user, 10)
                 : [],
             'unreadNotificationsCount' => fn () => $user
-                ? $user->unreadNotifications()->count()
+                ? $notificationCenter->getUnreadCount($user)
                 : 0,
         ];
     }

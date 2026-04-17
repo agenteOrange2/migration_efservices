@@ -202,6 +202,12 @@ const carrierDocumentsHref = computed(() => safeRoute('carrier.documents.index')
 const carrierReportsHref = computed(() => safeRoute('carrier.reports.index'));
 const driverDocumentsHref = computed(() => safeRoute('driver.documents.index'));
 const driverVehiclesHref = computed(() => safeRoute('driver.vehicles.index'));
+const notificationsIndexHref = computed(() => {
+  if (isAdmin.value) return safeRoute('admin.notifications.index');
+  if (isCarrier.value) return safeRoute('carrier.notifications.index');
+  if (isDriver.value) return safeRoute('driver.notifications.index');
+  return null;
+});
 const searchShortcutLabel = computed(() => {
   if (typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.platform)) {
     return '⌘K';
@@ -561,7 +567,7 @@ function selectSearchResult() {
 }
 
 function openNotification(notification: any) {
-  const href = notification?.data?.url || notification?.data?.link || null;
+  const href = notification?.url || notification?.data?.url || notification?.data?.link || notification?.data?.action_url || null;
 
   if (!notification?.read_at) {
     markAsRead(notification.id);
@@ -573,15 +579,15 @@ function openNotification(notification: any) {
 }
 
 function notificationTitle(notification: any): string {
-  return notification?.data?.title || notification?.type?.split('\\').pop() || 'Notification';
+  return notification?.title || notification?.data?.title || notification?.type_label || notification?.type?.split('\\').pop() || 'Notification';
 }
 
 function notificationDescription(notification: any): string {
-  return notification?.data?.message || notification?.data?.description || 'You have a new update.';
+  return notification?.message || notification?.data?.message || notification?.data?.description || 'You have a new update.';
 }
 
 function notificationIcon(notification: any): string {
-  return notification?.data?.icon || 'Bell';
+  return notification?.icon || notification?.data?.icon || 'Bell';
 }
 
 function toggleSubMenu(index: number) {
@@ -868,14 +874,23 @@ onBeforeUnmount(() => {
                         <div class="text-sm font-medium text-slate-800 dark:text-slate-100">Notifications</div>
                         <div class="text-xs text-slate-500">{{ unreadCount }} unread</div>
                       </div>
-                      <button
-                        v-if="unreadCount > 0"
-                        type="button"
-                        class="text-xs font-medium text-primary hover:text-primary/80"
-                        @click="markAllAsRead"
-                      >
-                        Mark all as read
-                      </button>
+                      <div class="flex items-center gap-3">
+                        <button
+                          v-if="unreadCount > 0"
+                          type="button"
+                          class="text-xs font-medium text-primary hover:text-primary/80"
+                          @click="markAllAsRead"
+                        >
+                          Mark all as read
+                        </button>
+                        <Link
+                          v-if="notificationsIndexHref"
+                          :href="notificationsIndexHref"
+                          class="text-xs font-medium text-slate-500 hover:text-primary"
+                        >
+                          View all
+                        </Link>
+                      </div>
                     </div>
                     <div v-if="notifications.length" class="max-h-[360px] overflow-y-auto p-2">
                       <button
@@ -896,7 +911,7 @@ onBeforeUnmount(() => {
                             {{ notificationDescription(notification) }}
                           </div>
                           <div class="mt-2 text-[11px] text-slate-400">
-                            {{ formatNotificationTime(notification.created_at) }}
+                            {{ notification.created_at_human || formatNotificationTime(notification.created_at) }}
                           </div>
                         </div>
                       </button>
@@ -904,6 +919,13 @@ onBeforeUnmount(() => {
                     <div v-else class="px-6 py-10 text-center">
                       <Lucide icon="BellOff" class="mx-auto h-10 w-10 text-slate-300" />
                       <div class="mt-3 text-sm font-medium text-slate-600">You have no notifications</div>
+                      <Link
+                        v-if="notificationsIndexHref"
+                        :href="notificationsIndexHref"
+                        class="mt-4 inline-flex text-sm font-medium text-primary hover:text-primary/80"
+                      >
+                        Open notification center
+                      </Link>
                     </div>
                   </Menu.Items>
                 </Menu>

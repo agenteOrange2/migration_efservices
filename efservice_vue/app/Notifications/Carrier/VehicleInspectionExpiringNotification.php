@@ -40,7 +40,7 @@ class VehicleInspectionExpiringNotification extends Notification implements Shou
             ->line('**Make/Model:** ' . ($this->vehicle->make ?? '') . ' ' . ($this->vehicle->model ?? ''))
             ->line('**Expiration Date:** ' . ($this->expirationDate ?? 'N/A'))
             ->line('**Days Remaining:** ' . $this->daysRemaining)
-            ->action('View Vehicle', url('/admin/vehicles/' . $this->vehicle->id))
+            ->action('View Vehicle', route('carrier.vehicles.show', $this->vehicle))
             ->line('Please schedule a new inspection before expiration.');
     }
 
@@ -57,7 +57,7 @@ class VehicleInspectionExpiringNotification extends Notification implements Shou
             'vehicle_unit' => $this->vehicle->company_unit_number ?? $this->vehicle->id,
             'days_remaining' => $this->daysRemaining,
             'expiration_date' => $this->expirationDate,
-            'url' => '/admin/vehicles/' . $this->vehicle->id,
+            'url' => route('carrier.vehicles.show', $this->vehicle),
         ];
     }
 }

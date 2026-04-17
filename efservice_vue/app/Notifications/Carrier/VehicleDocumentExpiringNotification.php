@@ -46,7 +46,7 @@ class VehicleDocumentExpiringNotification extends Notification implements Should
             ->when($this->documentNumber, fn($mail) => $mail->line('**Document Number:** ' . $this->documentNumber))
             ->line('**Expiration Date:** ' . ($this->expirationDate ?? 'N/A'))
             ->line('**Days Remaining:** ' . $this->daysRemaining)
-            ->action('View Vehicle', url('/admin/vehicles/' . $this->vehicle->id))
+            ->action('View Vehicle', route('carrier.vehicles.show', $this->vehicle))
             ->line('Please renew the document before expiration.');
     }
 
@@ -67,7 +67,7 @@ class VehicleDocumentExpiringNotification extends Notification implements Should
             'document_number' => $this->documentNumber,
             'days_remaining' => $this->daysRemaining,
             'expiration_date' => $this->expirationDate,
-            'url' => '/admin/vehicles/' . $this->vehicle->id,
+            'url' => route('carrier.vehicles.show', $this->vehicle),
         ];
     }
 }

@@ -21,8 +21,18 @@ export function useNotifications() {
         router.reload({ only: ['notifications', 'unreadNotificationsCount'] })
     }
 
+    async function markAsUnread(notificationId: string) {
+        await axios.post(`/api/notifications/${notificationId}/unread`)
+        router.reload({ only: ['notifications', 'unreadNotificationsCount'] })
+    }
+
     async function markAllAsRead() {
         await axios.post('/api/notifications/read-all')
+        router.reload({ only: ['notifications', 'unreadNotificationsCount'] })
+    }
+
+    async function deleteNotification(notificationId: string) {
+        await axios.delete(`/api/notifications/${notificationId}`)
         router.reload({ only: ['notifications', 'unreadNotificationsCount'] })
     }
 
@@ -35,7 +45,9 @@ export function useNotifications() {
         unreadCount,
         hasUnread,
         markAsRead,
+        markAsUnread,
         markAllAsRead,
+        deleteNotification,
         refreshNotifications,
     }
 }

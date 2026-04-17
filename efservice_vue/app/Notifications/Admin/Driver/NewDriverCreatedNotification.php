@@ -49,7 +49,7 @@ class NewDriverCreatedNotification extends Notification
             ->line('Email: ' . $this->user->email)
             ->line('Password: ' . $this->password)
             ->line('Please complete your application process by clicking the button below:')
-            ->action('Complete Application', route('admin.carrier.user_drivers.application.step1', $this->carrier))
+            ->action('Complete Application', route('login'))
             ->line('Thank you for using our application!');
     }
 

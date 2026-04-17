@@ -687,6 +687,17 @@ export interface NotificationSetting {
 export interface AppNotification {
     id: string
     type: string
+    type_label?: string
+    title?: string
+    message?: string
+    icon?: string
+    url?: string | null
+    category?: string | null
+    category_label?: string | null
+    level?: string | null
+    created_at_formatted?: string
+    created_at_human?: string
+    is_unread?: boolean
     data: Record<string, unknown>
     read_at: string | null
     created_at: string

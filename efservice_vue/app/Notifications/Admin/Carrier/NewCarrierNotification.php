@@ -4,45 +4,45 @@ namespace App\Notifications\Admin\Carrier;
 
 use App\Models\Carrier;
 use Illuminate\Bus\Queueable;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 
 class NewCarrierNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    protected $carrier;
-    
+    protected Carrier $carrier;
+
     public function __construct(Carrier $carrier)
     {
         $this->carrier = $carrier;
+
         Log::info('NewCarrierNotification constructor called', [
             'carrier_id' => $carrier->id,
-            'carrier_name' => $carrier->name
+            'carrier_name' => $carrier->name,
         ]);
     }
 
     public function via(object $notifiable): array
     {
-        // Añadimos 'database' además de 'mail'
         return ['mail', 'database'];
     }
 
     public function toMail($notifiable): MailMessage
     {
+        $url = route('admin.carriers.show', $this->carrier);
+
         try {
-            $url = route('admin.carrier.user_carriers.index', $this->carrier);
-            
             Log::info('NewCarrierNotification toMail method called', [
                 'admin_email' => config('app.admin_email'),
                 'carrier_details' => [
                     'name' => $this->carrier->name,
                     'address' => $this->carrier->address,
-                    'state' => $this->carrier->state
+                    'state' => $this->carrier->state,
                 ],
-                'url' => $url
+                'url' => $url,
             ]);
 
             return (new MailMessage)
@@ -56,13 +56,12 @@ class NewCarrierNotification extends Notification implements ShouldQueue
                 ->line('DOT Number: ' . $this->carrier->dot_number)
                 ->line('Creation date: ' . $this->carrier->created_at->format('m/d/Y H:i'))
                 ->action('View Carrier', $url);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error generating notification email', [
                 'error' => $e->getMessage(),
-                'carrier_id' => $this->carrier->id
+                'carrier_id' => $this->carrier->id,
             ]);
-            
-            // Return email without action button if there's an error with the URL
+
             return (new MailMessage)
                 ->subject('New Carrier Registered in the System')
                 ->greeting('Hello Administrator!')
@@ -76,15 +75,15 @@ class NewCarrierNotification extends Notification implements ShouldQueue
         }
     }
 
-    // Añadimos el método toDatabase para las notificaciones en la campana
-    public function toDatabase($notifiable)
+    public function toDatabase($notifiable): array
     {
         return [
             'carrier_id' => $this->carrier->id,
             'title' => 'New carrier created',
-            'message' => "New carrier registered: {$this->carrier->name}",            
-            'icon' => 'Building2', // Icono para usar en la UI (asegúrate de que exista en tu librería de iconos)
-            'action_url' => '/admin/carriers/' . $this->carrier->id
+            'message' => "New carrier registered: {$this->carrier->name}",
+            'icon' => 'Building2',
+            'category' => 'carriers',
+            'url' => route('admin.carriers.show', $this->carrier),
         ];
     }
 
@@ -93,6 +92,8 @@ class NewCarrierNotification extends Notification implements ShouldQueue
         return [
             'carrier_id' => $this->carrier->id,
             'carrier_name' => $this->carrier->name,
+            'category' => 'carriers',
+            'url' => route('admin.carriers.show', $this->carrier),
         ];
     }
 }

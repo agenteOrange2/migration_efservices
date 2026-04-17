@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\MembershipController;
 use App\Http\Controllers\Admin\PlanRequestController;
 use App\Http\Controllers\Admin\SafetyDataSystemController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\TrainingDashboardController;
 use App\Http\Controllers\Admin\TrainingAssignmentsController;
 use App\Http\Controllers\Admin\TrainingsController;
@@ -522,6 +523,20 @@ Route::prefix('messages')->name('messages.')->group(function () {
     Route::post('{message}/duplicate', [MessagesController::class, 'duplicate'])->name('duplicate');
     Route::post('{message}/resend', [MessagesController::class, 'resend'])->name('resend');
     Route::delete('{message}/recipients/{recipient}', [MessagesController::class, 'removeRecipient'])->name('remove-recipient');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Notifications
+|--------------------------------------------------------------------------
+*/
+Route::prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [NotificationsController::class, 'index'])->name('index');
+    Route::post('mark-all-read', [NotificationsController::class, 'markAllAsRead'])->name('mark-all-read');
+    Route::post('{notification}/mark-as-read', [NotificationsController::class, 'markAsRead'])->name('mark-as-read');
+    Route::post('{notification}/mark-as-unread', [NotificationsController::class, 'markAsUnread'])->name('mark-as-unread');
+    Route::delete('{notification}', [NotificationsController::class, 'destroy'])->name('destroy');
+    Route::delete('/', [NotificationsController::class, 'deleteAll'])->name('delete-all');
 });
 
 /*
