@@ -17,12 +17,20 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->text('two_factor_secret')->nullable();
+            $table->text('two_factor_recovery_codes')->nullable();
+            $table->timestamp('two_factor_confirmed_at')->nullable();
             $table->rememberToken();
             $table->foreignId('current_team_id')->nullable();
             $table->string('profile_photo_path', 2048)->nullable();
             $table->boolean('status')->default(true);
             $table->enum('access_type', ['full', 'restricted'])->default('full');
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('access_type', 'idx_users_access_type');
+            $table->index('status', 'idx_users_status');
+            $table->index(['access_type', 'status'], 'idx_users_access_type_status');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

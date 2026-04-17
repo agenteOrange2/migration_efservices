@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('slug')->nullable();
             $table->string('referrer_token')->nullable();
             $table->string('address');
+            $table->string('headquarters')->nullable();
             $table->string('state');
             $table->string('zipcode');
             $table->string('country', 2)->default('US');
@@ -43,6 +44,10 @@ return new class extends Migration
             $table->timestamp('documents_completed_at')->nullable();
             $table->timestamp('referrer_token_expires_at')->nullable();
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('created_at', 'idx_carriers_created_at');
+            $table->index(['status', 'created_at'], 'idx_carriers_status_created_at');
         });
     }
 

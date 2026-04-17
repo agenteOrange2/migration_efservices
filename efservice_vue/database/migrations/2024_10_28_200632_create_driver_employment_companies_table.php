@@ -29,6 +29,14 @@ return new class extends Migration
             $table->timestamp('verification_date')->nullable();
             $table->text('verification_notes')->nullable();
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('user_driver_detail_id', 'idx_employment_driver_id');
+            $table->index('master_company_id', 'idx_employment_company_id');
+            $table->index('email_sent', 'idx_employment_email_sent');
+            $table->index('employed_to', 'idx_employment_employed_to');
+            $table->index(['user_driver_detail_id', 'employed_to'], 'idx_employment_driver_date');
+            $table->index(['user_driver_detail_id', 'email_sent'], 'idx_employment_driver_email');
         });
     }
 

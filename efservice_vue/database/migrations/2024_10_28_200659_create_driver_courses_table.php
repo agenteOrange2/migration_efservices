@@ -23,6 +23,12 @@ return new class extends Migration
             $table->date('expiration_date')->nullable();
             $table->string('status')->default('Active')->nullable();
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('certification_date', 'idx_driver_courses_certification_date');
+            $table->index('status', 'idx_driver_courses_status');
+            $table->index(['user_driver_detail_id', 'certification_date'], 'idx_driver_courses_driver_cert_date');
+            $table->index('organization_name', 'idx_driver_courses_organization');
         });
     }
 

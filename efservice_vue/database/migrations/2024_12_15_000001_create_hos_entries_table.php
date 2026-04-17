@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('user_driver_detail_id')->constrained('user_driver_details')->onDelete('cascade');
             $table->foreignId('vehicle_id')->constrained('vehicles')->onDelete('cascade');
             $table->foreignId('carrier_id')->constrained('carriers')->onDelete('cascade');
+            $table->foreignId('trip_id')->nullable()->constrained('trips')->onDelete('set null');
             $table->enum('status', ['on_duty_not_driving', 'on_duty_driving', 'off_duty']);
             $table->datetime('start_time');
             $table->datetime('end_time')->nullable();
@@ -24,6 +25,8 @@ return new class extends Migration
             $table->string('formatted_address')->nullable();
             $table->boolean('location_available')->default(true);
             $table->boolean('is_manual_entry')->default(false);
+            $table->boolean('is_ghost_log')->default(false);
+            $table->text('ghost_log_reason')->nullable();
             $table->text('manual_entry_reason')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->date('date');

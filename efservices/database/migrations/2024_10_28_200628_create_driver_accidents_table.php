@@ -22,6 +22,14 @@ return new class extends Migration
             $table->integer('number_of_fatalities')->nullable();
             $table->text('comments')->nullable();
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('user_driver_detail_id', 'idx_driver_accidents_driver_id');
+            $table->index('accident_date', 'idx_driver_accidents_accident_date');
+            $table->index(['user_driver_detail_id', 'accident_date'], 'idx_driver_accidents_driver_date');
+            $table->index('had_injuries', 'idx_driver_accidents_had_injuries');
+            $table->index('had_fatalities', 'idx_driver_accidents_had_fatalities');
+            $table->index('created_at', 'idx_driver_accidents_created_at');
         });
     }
 

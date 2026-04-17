@@ -24,8 +24,13 @@ return new class extends Migration
             $table->string('third_party_contact')->nullable();
             $table->string('third_party_fein')->nullable();
             $table->boolean('email_sent')->default(false);
+            $table->timestamp('email_sent_at')->nullable();
+            $table->string('email_token', 64)->nullable();
+            $table->timestamp('email_verified_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
+
+            $table->index('email_token');
         });
     }
 

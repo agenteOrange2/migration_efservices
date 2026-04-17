@@ -16,6 +16,7 @@ return new class extends Migration
             $table->enum('driver_type', ['owner_operator', 'third_party', 'company_driver'])->nullable();
             $table->unsignedBigInteger('vehicle_id')->nullable();
             $table->unsignedBigInteger('user_driver_detail_id')->nullable();
+            $table->unsignedBigInteger('previous_assignment_id')->nullable();
             $table->date('start_date');
             $table->date('end_date')->nullable();
             $table->enum('status', ['active', 'inactive', 'pending'])->default('active');
@@ -24,13 +25,15 @@ return new class extends Migration
             // Foreign key constraints
             $table->foreign('vehicle_id')->references('id')->on('vehicles')->onDelete('cascade');
             $table->foreign('user_driver_detail_id')->references('id')->on('user_driver_details')->onDelete('set null');
-            
+            $table->foreign('previous_assignment_id')->references('id')->on('vehicle_driver_assignments')->onDelete('set null');
+
             // Indexes for performance
             $table->index(['vehicle_id', 'status']);
-            $table->index(['user_driver_detail_id', 'status']);
+            $table->index(['user_driver_detail_id', 'status'], 'idx_driver_status');
             $table->index(['start_date', 'end_date']);
-            
-            // Unique constraint to prevent overlapping active assignments (only when vehicle_id is not null)
+            $table->index('previous_assignment_id');
+
+            // Index to prevent overlapping active assignments (only when vehicle_id is not null)
             // For company drivers with null vehicle_id, we allow multiple assignments
             $table->index(['vehicle_id', 'user_driver_detail_id', 'start_date'], 'idx_vehicle_driver_assignment');
         });

@@ -25,6 +25,10 @@ return new class extends Migration
             $table->string('medical_examiner_registry_number');
             $table->date('medical_card_expiration_date');
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('user_driver_detail_id', 'idx_medical_driver_id');
+            $table->index('medical_card_expiration_date', 'idx_medical_expiration');
         });
     }
 

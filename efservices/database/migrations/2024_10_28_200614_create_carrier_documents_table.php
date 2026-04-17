@@ -20,6 +20,11 @@ return new class extends Migration
             $table->text('notes')->nullable(); // Notas adicionales
             $table->unsignedTinyInteger('status')->default(0); // 0: pending, 1: approved, 2: rejected
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('carrier_id', 'idx_carrier_docs_carrier_id');
+            $table->index('status', 'idx_carrier_docs_status');
+            $table->index(['carrier_id', 'status'], 'idx_carrier_docs_carrier_status');
         });
     }
 

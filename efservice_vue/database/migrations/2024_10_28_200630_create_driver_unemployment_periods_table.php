@@ -18,6 +18,11 @@ return new class extends Migration
             $table->date('end_date');
             $table->text('comments')->nullable();
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('user_driver_detail_id', 'idx_unemployment_driver_id');
+            $table->index('end_date', 'idx_unemployment_end_date');
+            $table->index(['user_driver_detail_id', 'end_date'], 'idx_unemployment_driver_date');
         });
     }
 

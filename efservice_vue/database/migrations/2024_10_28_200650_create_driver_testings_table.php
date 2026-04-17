@@ -36,10 +36,16 @@ return new class extends Migration
             $table->string('other_reason_description')->nullable();
             $table->string('bill_to')->nullable(); // Bill Company o Employee pay
             $table->foreignId('created_by')->nullable()->constrained('users');
-            $table->foreignId('updated_by')->nullable()->constrained('users');            
+            $table->foreignId('updated_by')->nullable()->constrained('users');
             // Campos adicionales para generar el PDF y gestionar resultados
 
-            $table->timestamps();    
+            $table->timestamps();
+
+            // Performance indexes
+            $table->index('carrier_id', 'idx_driver_testings_carrier_id');
+            $table->index('user_driver_detail_id', 'idx_driver_testings_user_driver_detail_id');
+            $table->index('test_date', 'idx_driver_testings_test_date');
+            $table->index(['status', 'test_date'], 'idx_driver_testings_status_test_date');
         });
     }
 

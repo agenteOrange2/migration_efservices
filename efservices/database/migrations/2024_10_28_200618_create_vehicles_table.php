@@ -51,8 +51,13 @@ return new class extends Migration
             $table->date('suspended_date')->nullable();
             $table->text('notes')->nullable();
 
-            
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('carrier_id', 'idx_vehicles_carrier_id');
+            $table->index('status', 'idx_vehicles_status');
+            $table->index(['carrier_id', 'status'], 'idx_vehicles_carrier_status');
+            $table->index(['carrier_id', 'vin'], 'idx_carrier_vin');
         });
     }
 

@@ -23,6 +23,13 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('fax')->nullable();
             $table->timestamps();
+
+            // Performance indexes for search optimization
+            $table->index('company_name', 'idx_master_companies_name');
+            $table->index('city', 'idx_master_companies_city');
+            $table->index('state', 'idx_master_companies_state');
+            $table->index(['company_name', 'city', 'state'], 'idx_master_companies_search');
+            $table->index('created_at', 'idx_master_companies_created_at');
         });
     }
 

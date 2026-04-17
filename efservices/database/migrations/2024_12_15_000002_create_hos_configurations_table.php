@@ -19,6 +19,18 @@ return new class extends Migration
             $table->unsignedInteger('warning_threshold_minutes')->default(60);
             $table->unsignedInteger('violation_threshold_minutes')->default(0);
             $table->boolean('is_active')->default(true);
+            // FMCSA Texas Intrastate specific
+            $table->boolean('fmcsa_texas_mode')->default(true);
+            $table->boolean('allow_24_hour_reset')->default(true);
+            // Break requirements
+            $table->boolean('require_30_min_break')->default(true);
+            $table->integer('break_after_hours')->default(8);
+            // Weekly cycle limits
+            $table->integer('weekly_limit_60_minutes')->default(3600);
+            $table->integer('weekly_limit_70_minutes')->default(4200);
+            // Ghost log detection
+            $table->boolean('enable_ghost_log_detection')->default(true);
+            $table->integer('ghost_log_threshold_minutes')->default(30);
             $table->timestamps();
         });
     }

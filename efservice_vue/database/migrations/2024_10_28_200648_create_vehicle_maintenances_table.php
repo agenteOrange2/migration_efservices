@@ -15,9 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('vehicle_id')->constrained('vehicles')->onDelete('cascade');
             $table->string('unit');
-            $table->timestamp('service_date');
+            // service_date uses useCurrent() only — no ON UPDATE to prevent auto-updates
+            $table->timestamp('service_date')->useCurrent();
             $table->timestamp('next_service_date')->nullable();
-            $table->text('notes')->nullable();            
+            $table->text('notes')->nullable();
             $table->string('service_tasks');
             $table->string('vendor_mechanic');
             $table->text('description')->nullable();
@@ -25,6 +26,8 @@ return new class extends Migration
             $table->integer('odometer')->nullable();
             $table->boolean('status')->default(false);
             $table->boolean('is_historical')->default(false);
+            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('updated_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
         });
     }

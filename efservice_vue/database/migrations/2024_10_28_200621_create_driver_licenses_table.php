@@ -23,6 +23,11 @@ return new class extends Migration
             $table->enum('status', ['active', 'expired', 'revoked', 'suspended'])->default('active');
             $table->boolean('is_primary')->default(false);
             $table->timestamps();
+
+            // Performance indexes
+            $table->index('user_driver_detail_id', 'idx_driver_licenses_driver_id');
+            $table->index('expiration_date', 'idx_driver_licenses_expiration');
+            $table->index('status', 'idx_driver_licenses_status');
         });
     }
 
