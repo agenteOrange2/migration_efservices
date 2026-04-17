@@ -1,12 +1,20 @@
 <?php
 
 use App\Http\Controllers\Auth\DriverRegistrationController;
+use App\Http\Controllers\Driver\DriverApplicationWizardController;
 use App\Http\Controllers\Driver\DriverDashboardController;
+use App\Http\Controllers\Driver\DriverDocumentController;
 use App\Http\Controllers\Driver\DriverEmergencyRepairController;
+use App\Http\Controllers\Driver\DriverHosController;
+use App\Http\Controllers\Driver\DriverHosCycleController;
+use App\Http\Controllers\Driver\DriverHosDocumentController;
+use App\Http\Controllers\Driver\DriverInspectionController;
 use App\Http\Controllers\Driver\DriverLicenseController;
 use App\Http\Controllers\Driver\DriverMaintenanceController;
 use App\Http\Controllers\Driver\DriverMedicalController;
+use App\Http\Controllers\Driver\MessagesController;
 use App\Http\Controllers\Driver\DriverProfileController;
+use App\Http\Controllers\Driver\DriverTestingController;
 use App\Http\Controllers\Driver\DriverTripController;
 use App\Http\Controllers\Driver\DriverTrainingController;
 use App\Http\Controllers\Driver\DriverVehicleController;
@@ -72,6 +80,41 @@ Route::middleware(['auth', 'check.driver.status'])->group(function () {
     Route::get('profile', [DriverDashboardController::class, 'profile'])->name('profile');
     Route::get('profile/download-documents', [DriverDashboardController::class, 'downloadDocuments'])->name('profile.download-documents');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Driver Application Wizard
+    |--------------------------------------------------------------------------
+    | These routes allow the driver to fill their own application after
+    | registration. They mirror the admin wizard but are scoped to the
+    | authenticated driver only.
+    |
+    | Alias: registration/continue → application/wizard (used by middleware)
+    */
+    Route::get('registration/continue', [DriverApplicationWizardController::class, 'show'])
+        ->name('registration.continue');
+
+    Route::prefix('application')->name('application.')->group(function () {
+        // GET – show wizard (driver resolved from auth, step from ?step=N)
+        Route::get('wizard', [DriverApplicationWizardController::class, 'show'])
+            ->name('wizard');
+
+        // PUT|POST – save a single step (step 1 uses method-spoofing POST)
+        Route::match(['put', 'post'], 'wizard/{driver}/{step}', [DriverApplicationWizardController::class, 'updateStep'])
+            ->name('wizard.update-step');
+
+        // Employment verification helpers
+        Route::prefix('employment')->name('employment.')->group(function () {
+            Route::get('search-companies', [DriverApplicationWizardController::class, 'employmentSearchCompanies'])
+                ->name('search-companies');
+            Route::post('{driver}/employment/{company}/send-email', [DriverApplicationWizardController::class, 'employmentSendEmail'])
+                ->name('send-email');
+            Route::post('{driver}/employment/{company}/resend-email', [DriverApplicationWizardController::class, 'employmentResendEmail'])
+                ->name('resend-email');
+            Route::post('{driver}/employment/{company}/mark-email-status', [DriverApplicationWizardController::class, 'employmentMarkEmailStatus'])
+                ->name('mark-email-status');
+        });
+    });
+
     Route::prefix('licenses')->name('licenses.')->group(function () {
         Route::get('/', [DriverLicenseController::class, 'index'])->name('index');
         Route::get('/{license}', [DriverLicenseController::class, 'show'])->name('show');
@@ -79,6 +122,56 @@ Route::middleware(['auth', 'check.driver.status'])->group(function () {
 
     Route::prefix('medical')->name('medical.')->group(function () {
         Route::get('/', [DriverMedicalController::class, 'index'])->name('index');
+    });
+
+    Route::prefix('testing')->name('testing.')->group(function () {
+        Route::get('/', [DriverTestingController::class, 'index'])->name('index');
+        Route::get('/{testing}', [DriverTestingController::class, 'show'])->name('show');
+        Route::post('/{testing}/upload-results', [DriverTestingController::class, 'uploadResults'])->name('upload-results');
+    });
+
+    Route::prefix('inspections')->name('inspections.')->group(function () {
+        Route::get('/', [DriverInspectionController::class, 'index'])->name('index');
+        Route::get('/{inspection}', [DriverInspectionController::class, 'show'])->name('show');
+    });
+
+    Route::prefix('messages')->name('messages.')->group(function () {
+        Route::get('/', [MessagesController::class, 'index'])->name('index');
+        Route::get('/{messageRecipient}', [MessagesController::class, 'show'])->name('show');
+        Route::post('/{messageRecipient}/reply', [MessagesController::class, 'reply'])->name('reply');
+    });
+
+    Route::prefix('documents')->name('documents.')->group(function () {
+        Route::get('/', [DriverDocumentController::class, 'index'])->name('index');
+        Route::get('/pending', [DriverDocumentController::class, 'pending'])->name('pending');
+        Route::get('/upload', [DriverDocumentController::class, 'create'])->name('create');
+        Route::post('/upload', [DriverDocumentController::class, 'store'])->name('store');
+        Route::get('/download-all', [DriverDocumentController::class, 'downloadAll'])->name('download-all');
+        Route::delete('/{media}', [DriverDocumentController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('hos')->name('hos.')->group(function () {
+        Route::get('/', [DriverHosController::class, 'dashboard'])->name('dashboard');
+        Route::post('/status', [DriverHosController::class, 'changeStatus'])->name('status.change');
+        Route::get('/history', [DriverHosController::class, 'history'])->name('history');
+        Route::put('/entries/{entry}', [DriverHosController::class, 'updateEntry'])->name('entries.update');
+        Route::delete('/entries/{entry}', [DriverHosController::class, 'deleteEntry'])->name('entries.destroy');
+        Route::post('/entries/bulk-delete', [DriverHosController::class, 'bulkDeleteEntries'])->name('entries.bulk-destroy');
+
+        Route::prefix('cycle')->name('cycle.')->group(function () {
+            Route::get('/', [DriverHosCycleController::class, 'index'])->name('index');
+            Route::post('/request', [DriverHosCycleController::class, 'requestChange'])->name('request');
+            Route::post('/cancel', [DriverHosCycleController::class, 'cancelRequest'])->name('cancel');
+        });
+
+        Route::prefix('documents')->name('documents.')->group(function () {
+            Route::get('/', [DriverHosDocumentController::class, 'index'])->name('index');
+            Route::post('/generate-daily-log', [DriverHosDocumentController::class, 'generateDailyLog'])->name('generate-daily-log');
+            Route::post('/generate-monthly-summary', [DriverHosDocumentController::class, 'generateMonthlySummary'])->name('generate-monthly-summary');
+            Route::post('/generate-fmcsa-monthly', [DriverHosDocumentController::class, 'generateFmcsaMonthly'])->name('generate-fmcsa-monthly');
+            Route::get('/{media}/preview', [DriverHosDocumentController::class, 'preview'])->name('preview');
+            Route::get('/{media}/download', [DriverHosDocumentController::class, 'download'])->name('download');
+        });
     });
 
     Route::prefix('trainings')->name('trainings.')->group(function () {

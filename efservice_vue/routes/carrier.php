@@ -45,8 +45,7 @@ Route::middleware('guest')->group(function () {
         Route::post('/step1', [CarrierWizardController::class, 'processStep1'])->name('step1.process');
 
         Route::post('/check-uniqueness', [CarrierWizardController::class, 'checkUniqueness'])
-            ->name('check.uniqueness')
-            ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+            ->name('check.uniqueness');
     });
 
     Route::get('/register', fn () => redirect()->route('carrier.wizard.step1'))->name('register');

@@ -3,8 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
-
 class CarrierBasicInfoRequest extends FormRequest
 {
     /**
@@ -26,14 +24,14 @@ class CarrierBasicInfoRequest extends FormRequest
                 'string',
                 'min:2',
                 'max:100',
-                'regex:/^[a-zA-Z\s\-\']+$/' // Solo letras, espacios, guiones y apostrofes
+                "regex:/^[\pL\s\-\']+$/u",
             ],
             'email' => [
                 'required',
-                'email:rfc,dns',
+                'email:rfc',
                 'max:255',
                 'unique:users,email',
-                'not_regex:/\+.*@/' // No permitir emails con + (alias)
+                'not_regex:/\+.*@/'
             ],
             'phone' => [
                 'required',
@@ -101,12 +99,6 @@ class CarrierBasicInfoRequest extends FormRequest
             'password.required' => 'Please enter a password.',
             'password.confirmed' => 'Password confirmation does not match.',
             'password.min' => 'Password must be at least 8 characters.',
-            'password.letters' => 'Password must contain at least one letter.',
-            'password.mixed_case' => 'Password must contain both uppercase and lowercase letters.',
-            'password.numbers' => 'Password must contain at least one number.',
-            'password.symbols' => 'Password must contain at least one symbol.',
-            'password.uncompromised' => 'This password has been compromised in a data breach. Please choose a different password.',
-            
             'terms_accepted.required' => 'You must accept the terms and conditions to continue.',
             'terms_accepted.accepted' => 'You must accept the terms and conditions to continue.',
         ];
@@ -137,7 +129,7 @@ class CarrierBasicInfoRequest extends FormRequest
         $this->merge([
             'email' => strtolower(trim($this->email)),
             'full_name' => trim($this->full_name),
-            'phone' => preg_replace('/[^\d+]/', '', $this->phone), // Limpiar formato
+            'phone' => preg_replace('/[^\d+]/', '', $this->phone),
             'marketing_consent' => $this->boolean('marketing_consent')
         ]);
     }

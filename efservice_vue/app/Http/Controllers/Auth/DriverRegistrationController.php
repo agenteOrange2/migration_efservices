@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Admin\Driver\DriverApplication;
 use App\Notifications\Admin\Driver\NewDriverRegisteredNotification;
 
 class DriverRegistrationController extends Controller
@@ -187,10 +188,7 @@ class DriverRegistrationController extends Controller
 
         $this->notifyNewDriverRegistration($user, $carrier);
 
-        return redirect()->route('driver.registration.success')->with([
-            'message'      => 'Registration successful! Please check your email to confirm your account.',
-            'carrier_name' => $carrier->name,
-        ]);
+        return $this->loginAndRedirectToWizard($user);
     }
 
     /**
@@ -207,10 +205,7 @@ class DriverRegistrationController extends Controller
 
             $this->notifyNewDriverRegistration($user, $carrier);
 
-            return redirect()->route('driver.registration.success')->with([
-                'message'      => 'Registration successful! Please check your email to confirm your account.',
-                'carrier_name' => $carrier->name,
-            ]);
+            return $this->loginAndRedirectToWizard($user);
         } catch (\Exception $e) {
             Log::error('Error in registerIndependent', ['error' => $e->getMessage()]);
             return back()->withErrors(['error' => 'Error processing registration. Please try again.']);
@@ -224,13 +219,41 @@ class DriverRegistrationController extends Controller
     {
         $driver = UserDriverDetail::where('confirmation_token', $token)->firstOrFail();
 
-        $driver->update([
-            'confirmation_token' => null,
-            'email_verified_at'  => now(),
-        ]);
+        // Clear the token on the driver record
+        $driver->update(['confirmation_token' => null]);
+
+        // Mark the User account as email-verified (email_verified_at lives on users table)
+        $driver->user()->update(['email_verified_at' => now()]);
 
         return redirect()->route('login')
-            ->with('success', 'Email confirmed. Please log in to complete your registration.');
+            ->with('success', 'Email confirmed successfully. Please log in to complete your registration.');
+    }
+
+    /**
+     * Log the newly registered driver in and send them directly to the
+     * application wizard. The driver fills their application immediately
+     * after registration — admin review happens only after they submit.
+     */
+    private function loginAndRedirectToWizard(User $user): RedirectResponse
+    {
+        Auth::login($user);
+
+        request()->session()->regenerate();
+
+        // Create the DriverApplication in DRAFT status so the wizard can open.
+        $driverDetails = $user->driverDetails;
+        if ($driverDetails && ! $user->driverApplication) {
+            DriverApplication::create([
+                'user_id' => $user->id,
+                'status'  => DriverApplication::STATUS_DRAFT,
+            ]);
+        }
+
+        Log::info('Driver auto-login after registration', ['user_id' => $user->id]);
+
+        return redirect()
+            ->route('driver.application.wizard', ['step' => 1])
+            ->with('success', 'Account created! Please complete your application below.');
     }
 
     private function validateTokenAndCarrier(Carrier $carrier, ?string $token): bool

@@ -57,6 +57,7 @@ class HandleInertiaRequests extends Middleware
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'avatar' => $user->profile_photo_url,
             'status' => $user->status,
             'created_at' => $user->created_at,
             'roles' => $user->roles->pluck('name')->toArray(),

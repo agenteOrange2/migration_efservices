@@ -320,13 +320,13 @@ class DriverAdminWizardController extends Controller
     }
 
     // =========================================================================
-    // PRIVATE – helpers
+    // PROTECTED – helpers (accessible by child controllers like DriverApplicationWizardController)
     // =========================================================================
 
     /**
      * Convert MM/DD/YYYY → Y-m-d for MySQL. Passes through Y-m-d and null unchanged.
      */
-    private function toDbDate(?string $value): ?string
+    protected function toDbDate(?string $value): ?string
     {
         if (!$value) return null;
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) return $value;
@@ -337,11 +337,11 @@ class DriverAdminWizardController extends Controller
     }
 
     // =========================================================================
-    // PRIVATE – step savers
+    // PROTECTED – step savers
     // =========================================================================
 
     /** Step 1 – General Info */
-    private function saveStep1(Request $request, UserDriverDetail $driver): void
+    protected function saveStep1(Request $request, UserDriverDetail $driver): void
     {
         $validated = $request->validate([
             'carrier_id'       => 'required|exists:carriers,id',
@@ -391,7 +391,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 2 – Address */
-    private function saveStep2(Request $request, UserDriverDetail $driver): void
+    protected function saveStep2(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'address_line1'   => 'required|string|max:255',
@@ -452,7 +452,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 3 – Application Details */
-    private function saveStep3(Request $request, UserDriverDetail $driver): void
+    protected function saveStep3(Request $request, UserDriverDetail $driver): void
     {
         \Illuminate\Support\Facades\Log::info('STEP3_ENTRY', [
             'driver_id'        => $driver->id,
@@ -700,7 +700,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 4 – License */
-    private function saveStep4(Request $request, UserDriverDetail $driver): void
+    protected function saveStep4(Request $request, UserDriverDetail $driver): void
     {
         \Illuminate\Support\Facades\Log::info('STEP4_INPUT', [
             'all' => $request->except(['license_front', 'license_back', '_method']),
@@ -802,7 +802,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 5 – Medical */
-    private function saveStep5(Request $request, UserDriverDetail $driver): void
+    protected function saveStep5(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'hire_date'                        => 'nullable|date',
@@ -856,7 +856,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 6 – Training */
-    private function saveStep6(Request $request, UserDriverDetail $driver): void
+    protected function saveStep6(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'schools'                                  => 'nullable|array',
@@ -965,7 +965,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 7 – Traffic Convictions */
-    private function saveStep7(Request $request, UserDriverDetail $driver): void
+    protected function saveStep7(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'no_traffic_convictions'            => 'boolean',
@@ -1023,7 +1023,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 8 – Accidents */
-    private function saveStep8(Request $request, UserDriverDetail $driver): void
+    protected function saveStep8(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'no_accidents'                          => 'boolean',
@@ -1086,7 +1086,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 9 – FMCSR Data */
-    private function saveStep9(Request $request, UserDriverDetail $driver): void
+    protected function saveStep9(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'is_disqualified'             => 'boolean',
@@ -1129,7 +1129,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 10 – Employment History */
-    private function saveStep10(Request $request, UserDriverDetail $driver): void
+    protected function saveStep10(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'companies'                                => 'nullable|array',
@@ -1225,7 +1225,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 11 – Company Policy */
-    private function saveStep11(Request $request, UserDriverDetail $driver): void
+    protected function saveStep11(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'consent_all_policies_attached' => 'boolean',
@@ -1248,7 +1248,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 12 – Criminal History */
-    private function saveStep12(Request $request, UserDriverDetail $driver): void
+    protected function saveStep12(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'has_criminal_charges'       => 'boolean',
@@ -1271,7 +1271,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 13 – W-9 */
-    private function saveStep13(Request $request, UserDriverDetail $driver): void
+    protected function saveStep13(Request $request, UserDriverDetail $driver): void
     {
         $taxClass = $request->input('tax_classification', '');
 
@@ -1341,7 +1341,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 14 – Certification */
-    private function saveStep14(Request $request, UserDriverDetail $driver): void
+    protected function saveStep14(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'signature'   => 'required|string',
@@ -1377,7 +1377,7 @@ class DriverAdminWizardController extends Controller
         app(\App\Services\ApplicationPdfService::class)->generate($driver, $signature);
     }
 
-    private function regenerateW9WithSignature(UserDriverDetail $driver, string $signature): void
+    protected function regenerateW9WithSignature(UserDriverDetail $driver, string $signature): void
     {
         try {
             $w9 = $driver->w9Form;
@@ -1401,7 +1401,7 @@ class DriverAdminWizardController extends Controller
         }
     }
 
-    private function regenerateDotPolicyWithSignature(UserDriverDetail $driver, string $signature): void
+    protected function regenerateDotPolicyWithSignature(UserDriverDetail $driver, string $signature): void
     {
         try {
             $carrier = $driver->carrier ?? Carrier::find($driver->carrier_id);
@@ -1425,7 +1425,7 @@ class DriverAdminWizardController extends Controller
     }
 
     /** Step 15 – Clearinghouse / Finalize */
-    private function saveStep15(Request $request, UserDriverDetail $driver): void
+    protected function saveStep15(Request $request, UserDriverDetail $driver): void
     {
         $request->validate([
             'clearinghouse_consent'       => 'boolean',
@@ -1450,7 +1450,7 @@ class DriverAdminWizardController extends Controller
     // PRIVATE – data formatters
     // =========================================================================
 
-    private function formatDriverBase(UserDriverDetail $driver): array
+    protected function formatDriverBase(UserDriverDetail $driver): array
     {
         return [
             'id'                   => $driver->id,
@@ -1471,7 +1471,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function buildAllStepData(UserDriverDetail $driver): array
+    protected function buildAllStepData(UserDriverDetail $driver): array
     {
         $app = $driver->application;
 
@@ -1493,7 +1493,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatAddressData(?DriverApplication $app): array
+    protected function formatAddressData(?DriverApplication $app): array
     {
         if (!$app) return ['primary' => null, 'previous' => []];
 
@@ -1524,7 +1524,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatApplicationData(?DriverApplication $app): array
+    protected function formatApplicationData(?DriverApplication $app): array
     {
         $details = $app?->details;
         if (!$details) return [];
@@ -1557,7 +1557,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function deriveAssignmentType(\App\Models\Admin\Driver\DriverApplicationDetail $d): string
+    protected function deriveAssignmentType(\App\Models\Admin\Driver\DriverApplicationDetail $d): string
     {
         return match ($d->applying_position) {
             'owner_operator'     => 'owner_operator',
@@ -1570,7 +1570,7 @@ class DriverAdminWizardController extends Controller
      * Load only vehicles registered/assigned to this specific driver.
      * Vehicles are personal (owner_operator / third_party) — not shared across drivers.
      */
-    private function loadDriverVehicles(?int $driverDetailId): array
+    protected function loadDriverVehicles(?int $driverDetailId): array
     {
         if (!$driverDetailId) return [];
         return Vehicle::whereHas('driverAssignments', function ($q) use ($driverDetailId) {
@@ -1582,7 +1582,7 @@ class DriverAdminWizardController extends Controller
             ->toArray();
     }
 
-    private function formatLicenseData(UserDriverDetail $driver): array
+    protected function formatLicenseData(UserDriverDetail $driver): array
     {
         $driver->load('experiences');
         return [
@@ -1609,7 +1609,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatMedicalData(UserDriverDetail $driver): array
+    protected function formatMedicalData(UserDriverDetail $driver): array
     {
         $m = $driver->medicalQualification;
         if (!$m) return [];
@@ -1630,7 +1630,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatTrainingData(UserDriverDetail $driver): array
+    protected function formatTrainingData(UserDriverDetail $driver): array
     {
         return [
             'schools' => $driver->trainingSchools->map(fn($s) => [
@@ -1660,7 +1660,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatTrafficData(UserDriverDetail $driver): array
+    protected function formatTrafficData(UserDriverDetail $driver): array
     {
         return [
             'no_traffic_convictions' => $driver->trafficConvictions->isEmpty(),
@@ -1675,7 +1675,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatAccidentData(UserDriverDetail $driver): array
+    protected function formatAccidentData(UserDriverDetail $driver): array
     {
         return [
             'no_accidents' => $driver->accidents->isEmpty(),
@@ -1693,7 +1693,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatFmcsrData(UserDriverDetail $driver): array
+    protected function formatFmcsrData(UserDriverDetail $driver): array
     {
         $f = $driver->fmcsrData;
         if (!$f) return [];
@@ -1717,7 +1717,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatEmploymentData(UserDriverDetail $driver): array
+    protected function formatEmploymentData(UserDriverDetail $driver): array
     {
         $driver->load('employmentCompanies.masterCompany', 'unemploymentPeriods', 'relatedEmployments');
 
@@ -1761,7 +1761,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatPolicyData(UserDriverDetail $driver): array
+    protected function formatPolicyData(UserDriverDetail $driver): array
     {
         $p = $driver->companyPolicy;
 
@@ -1797,7 +1797,7 @@ class DriverAdminWizardController extends Controller
         ]);
     }
 
-    private function resolvePolicyDocumentUrl(UserDriverDetail $driver): string
+    protected function resolvePolicyDocumentUrl(UserDriverDetail $driver): string
     {
         $carrierId = $driver->carrier_id;
 
@@ -1849,7 +1849,7 @@ class DriverAdminWizardController extends Controller
         return asset('storage/documents/company_policy.pdf');
     }
 
-    private function formatCriminalData(UserDriverDetail $driver): array
+    protected function formatCriminalData(UserDriverDetail $driver): array
     {
         // Reference display data (read-only)
         $ssn = $driver->medicalQualification?->social_security_number;
@@ -1878,7 +1878,7 @@ class DriverAdminWizardController extends Controller
         ]);
     }
 
-    private function formatW9Data(UserDriverDetail $driver): array
+    protected function formatW9Data(UserDriverDetail $driver): array
     {
         $w = $driver->w9Form;
 
@@ -1933,7 +1933,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatCertificationData(UserDriverDetail $driver): array
+    protected function formatCertificationData(UserDriverDetail $driver): array
     {
         // Employment history for the Safety Performance History table
         $employmentHistory = $driver->employmentCompanies()
@@ -1967,7 +1967,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function formatClearinghouseData(UserDriverDetail $driver): array
+    protected function formatClearinghouseData(UserDriverDetail $driver): array
     {
         $calculator = app(StepCompletionCalculator::class);
         $summary    = $calculator->getCompletionSummary($driver->id);
@@ -2004,7 +2004,7 @@ class DriverAdminWizardController extends Controller
         ];
     }
 
-    private function saveCertificationSignature(DriverCertification $cert, string $base64): void
+    protected function saveCertificationSignature(DriverCertification $cert, string $base64): void
     {
         // Decode base64 data URL → PNG file → Spatie Media Library
         if (!str_starts_with($base64, 'data:image')) return;

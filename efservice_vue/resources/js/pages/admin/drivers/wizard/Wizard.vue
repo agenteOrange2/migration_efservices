@@ -127,8 +127,18 @@ const steps = [
     { number: 15, label: 'Clearinghouse', icon: 'Database' },
 ]
 
+function canGoToStep(n: number): boolean {
+    // Drivers filling their own application (carrierLocked) can only visit
+    // steps they have already completed or the very next pending step.
+    if (props.carrierLocked) {
+        return n <= (completedStep.value + 1)
+    }
+    // Admin edit mode: free navigation
+    return isEditMode.value
+}
+
 function goToStep(n: number) {
-    if (isEditMode.value) {
+    if (canGoToStep(n)) {
         currentStep.value = n
     }
 }
@@ -1216,12 +1226,12 @@ function submitStep15() {
                     v-for="step in steps"
                     :key="step.number"
                     @click="goToStep(step.number)"
-                    :disabled="!isEditMode && step.number > 1"
+                    :disabled="!canGoToStep(step.number)"
                     class="flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium rounded-t-lg transition-colors"
                     :class="{
                         'bg-white dark:bg-darkmode-600 border border-b-white dark:border-b-darkmode-600 border-slate-200 dark:border-slate-600 text-primary -mb-px': currentStep === step.number,
-                        'text-slate-500 hover:text-slate-700 hover:bg-slate-50': currentStep !== step.number && (isEditMode || step.number === 1),
-                        'text-slate-300 cursor-not-allowed': !isEditMode && step.number > 1,
+                        'text-slate-500 hover:text-slate-700 hover:bg-slate-50': currentStep !== step.number && canGoToStep(step.number),
+                        'text-slate-300 cursor-not-allowed': !canGoToStep(step.number),
                     }"
                 >
                     <Lucide
@@ -1284,14 +1294,14 @@ function submitStep15() {
                         <label class="block text-sm font-medium mb-1">Confirm Password</label>
                         <FormInput v-model="step1.password_confirmation" type="password" placeholder="Repeat password" />
                     </div>
-                    <div>
+                    <div v-if="!carrierLocked">
                         <label class="block text-sm font-medium mb-1">HOS Cycle</label>
                         <TomSelect v-model="step1.hos_cycle_type">
                             <option value="70_8">70 hours / 8 days</option>
                             <option value="60_7">60 hours / 7 days</option>
                         </TomSelect>
                     </div>
-                    <div>
+                    <div v-if="!carrierLocked">
                         <label class="block text-sm font-medium mb-1">Driver Status</label>
                         <TomSelect v-model="step1.status">
                             <option value="1">Active</option>
@@ -1317,7 +1327,7 @@ function submitStep15() {
                     </div>
                     <p v-if="errors.terms_accepted" class="text-xs text-danger -mt-2">{{ errors.terms_accepted }}</p>
 
-                    <div class="border border-slate-200 rounded-lg p-4">
+                    <div v-if="!carrierLocked" class="border border-slate-200 rounded-lg p-4">
                         <div class="flex items-start gap-3">
                             <FormCheck.Input v-model="step1.use_custom_dates" type="checkbox" class="mt-0.5" />
                             <div>
