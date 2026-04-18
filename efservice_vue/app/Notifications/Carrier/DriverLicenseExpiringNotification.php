@@ -55,7 +55,7 @@ class DriverLicenseExpiringNotification extends Notification implements ShouldQu
             'title' => 'Driver License Expiring',
             'message' => $driverName . '\'s license expires in ' . $this->daysRemaining . ' days.',
             'type' => 'driver_license_expiring',
-            'category' => 'drivers',
+            'category' => 'driver_compliance',
             'icon' => 'CreditCard',
             'urgent' => $this->daysRemaining <= 7,
             'driver_id' => $this->driver->id,

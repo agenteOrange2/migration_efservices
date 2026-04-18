@@ -50,7 +50,7 @@ class VehicleRegistrationExpiringNotification extends Notification implements Sh
             'title' => 'Vehicle Registration Expiring',
             'message' => 'Unit #' . ($this->vehicle->company_unit_number ?? $this->vehicle->id) . ' registration expires in ' . $this->daysRemaining . ' days.',
             'type' => 'vehicle_registration_expiring',
-            'category' => 'vehicles',
+            'category' => 'vehicle_compliance',
             'icon' => 'Truck',
             'urgent' => $this->daysRemaining <= 7,
             'vehicle_id' => $this->vehicle->id,

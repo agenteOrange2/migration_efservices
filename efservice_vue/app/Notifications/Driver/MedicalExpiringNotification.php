@@ -45,7 +45,7 @@ class MedicalExpiringNotification extends Notification implements ShouldQueue
             'title' => 'Medical Card Expiring Soon',
             'message' => 'Your medical card expires in ' . $this->daysRemaining . ' days.',
             'type' => 'medical_expiring',
-            'category' => 'personal',
+            'category' => 'personal_compliance',
             'icon' => 'Heart',
             'urgent' => $this->daysRemaining <= 7,
             'days_remaining' => $this->daysRemaining,

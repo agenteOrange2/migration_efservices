@@ -116,6 +116,7 @@ class DriverAdminWizardController extends Controller
             ]);
 
             $user->assignRole('user_driver');
+            app(\App\Services\Notification\NotificationPreferenceService::class)->createDefaultPreferences($user);
 
             $driver = UserDriverDetail::create([
                 'user_id'          => $user->id,

@@ -45,7 +45,7 @@ class LicenseExpiringNotification extends Notification implements ShouldQueue
             'title' => 'License Expiring Soon',
             'message' => 'Your license expires in ' . $this->daysRemaining . ' days.',
             'type' => 'license_expiring',
-            'category' => 'personal',
+            'category' => 'personal_compliance',
             'icon' => 'CreditCard',
             'urgent' => $this->daysRemaining <= 7,
             'days_remaining' => $this->daysRemaining,

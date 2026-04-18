@@ -32,6 +32,7 @@ use App\Http\Controllers\Carrier\CarrierVehicleController;
 use App\Http\Controllers\Carrier\CarrierVehicleDocumentController;
 use App\Http\Controllers\Carrier\CarrierVehicleMakeController;
 use App\Http\Controllers\Carrier\CarrierVehicleTypeController;
+use App\Http\Controllers\Carrier\NotificationsController as CarrierNotificationsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -306,6 +307,15 @@ Route::middleware(['auth', 'check.carrier.status'])->group(function () {
         Route::delete('/{message}/recipients/{recipient}', [MessagesController::class, 'removeRecipient'])->name('remove-recipient');
         Route::post('/{message}/duplicate', [MessagesController::class, 'duplicate'])->name('duplicate');
         Route::post('/{message}/resend', [MessagesController::class, 'resend'])->name('resend');
+    });
+
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [CarrierNotificationsController::class, 'index'])->name('index');
+        Route::post('/mark-all-read', [CarrierNotificationsController::class, 'markAllAsRead'])->name('mark-all-read');
+        Route::delete('/', [CarrierNotificationsController::class, 'deleteAll'])->name('delete-all');
+        Route::post('/{notification}/mark-as-read', [CarrierNotificationsController::class, 'markAsRead'])->name('mark-as-read');
+        Route::post('/{notification}/mark-as-unread', [CarrierNotificationsController::class, 'markAsUnread'])->name('mark-as-unread');
+        Route::delete('/{notification}', [CarrierNotificationsController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('trips')->name('trips.')->group(function () {

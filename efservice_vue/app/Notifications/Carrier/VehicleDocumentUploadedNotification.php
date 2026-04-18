@@ -30,11 +30,13 @@ class VehicleDocumentUploadedNotification extends Notification implements Should
 
     public function toMail(object $notifiable): MailMessage
     {
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
+
         return (new MailMessage)
-            ->subject('New Vehicle Document Uploaded: ' . $this->vehicle->unit_number)
+            ->subject('New Vehicle Document Uploaded: ' . $unit)
             ->greeting('Hello,')
             ->line('A new document has been uploaded for a vehicle.')
-            ->line('**Vehicle:** ' . $this->vehicle->unit_number)
+            ->line('**Vehicle:** ' . $unit)
             ->line('**Document Type:** ' . $this->documentType)
             ->when($this->documentName, fn($mail) => $mail->line('**Document Name:** ' . $this->documentName))
             ->action('View Vehicle', route('carrier.vehicles.show', $this->vehicle->id))
@@ -43,14 +45,16 @@ class VehicleDocumentUploadedNotification extends Notification implements Should
 
     public function toArray(object $notifiable): array
     {
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
+
         return [
             'title' => 'Vehicle Document Uploaded',
-            'message' => 'New ' . $this->documentType . ' uploaded for vehicle ' . $this->vehicle->unit_number,
+            'message' => 'New ' . $this->documentType . ' uploaded for vehicle ' . $unit,
             'type' => 'vehicle_document_uploaded',
-            'category' => 'vehicles',
+            'category' => 'vehicle_documents',
             'icon' => 'FileUp',
             'vehicle_id' => $this->vehicle->id,
-            'vehicle_unit' => $this->vehicle->unit_number,
+            'vehicle_unit' => $unit,
             'document_type' => $this->documentType,
             'document_name' => $this->documentName,
             'url' => route('carrier.vehicles.show', $this->vehicle->id),

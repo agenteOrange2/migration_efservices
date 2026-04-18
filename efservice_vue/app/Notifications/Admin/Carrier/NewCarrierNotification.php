@@ -79,10 +79,10 @@ class NewCarrierNotification extends Notification implements ShouldQueue
     {
         return [
             'carrier_id' => $this->carrier->id,
-            'title' => 'New carrier created',
-            'message' => "New carrier registered: {$this->carrier->name}",
+            'title' => 'New carrier registered',
+            'message' => "Carrier {$this->carrier->name} was created and is ready for review.",
             'icon' => 'Building2',
-            'category' => 'carriers',
+            'category' => 'carrier_registration',
             'url' => route('admin.carriers.show', $this->carrier),
         ];
     }
@@ -92,7 +92,10 @@ class NewCarrierNotification extends Notification implements ShouldQueue
         return [
             'carrier_id' => $this->carrier->id,
             'carrier_name' => $this->carrier->name,
-            'category' => 'carriers',
+            'title' => 'New carrier registered',
+            'message' => "Carrier {$this->carrier->name} was created and is ready for review.",
+            'icon' => 'Building2',
+            'category' => 'carrier_registration',
             'url' => route('admin.carriers.show', $this->carrier),
         ];
     }

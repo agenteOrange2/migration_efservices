@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Services\BrandingService;
 use App\Models\UserNotificationPreference;
 use App\Services\Notification\NotificationPreferenceService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -43,6 +44,11 @@ class SettingsController extends Controller
             'route' => 'admin.settings-preferences',
             'icon' => 'SlidersHorizontal',
         ],
+        'branding' => [
+            'label' => 'Branding',
+            'route' => 'admin.settings-branding',
+            'icon' => 'Image',
+        ],
         'two-factor-authentication' => [
             'label' => 'Two-Factor Authentication',
             'route' => 'admin.settings-two-factor-authentication',
@@ -70,7 +76,12 @@ class SettingsController extends Controller
         ],
     ];
 
-    public function index(Request $request, NotificationPreferenceService $notificationPreferenceService, string $page = 'profile-info'): Response
+    public function index(
+        Request $request,
+        NotificationPreferenceService $notificationPreferenceService,
+        BrandingService $brandingService,
+        string $page = 'profile-info'
+    ): Response
     {
         $user = $request->user();
         $page = $this->normalizePage((string) $request->route('page', $page));
@@ -101,6 +112,7 @@ class SettingsController extends Controller
             'notificationPreferences' => $this->buildNotificationPreferences($user, $notificationPreferenceService),
             'deviceSessions' => $this->buildDeviceSessions($request),
             'connectedServices' => $this->buildConnectedServices($user),
+            'branding' => $brandingService->getSharedData(),
         ]);
     }
 
@@ -194,6 +206,65 @@ class SettingsController extends Controller
         }
 
         return to_route('admin.settings-notification-settings')->with('success', 'Notification preferences updated successfully.');
+    }
+
+    public function updateBranding(Request $request, BrandingService $brandingService): RedirectResponse
+    {
+        $validated = $request->validate([
+            'app_name' => ['required', 'string', 'max:255'],
+            'login_title' => ['required', 'string', 'max:255'],
+            'login_subtitle' => ['nullable', 'string', 'max:500'],
+            'login_heading' => ['required', 'string', 'max:255'],
+            'login_description' => ['nullable', 'string', 'max:500'],
+            'logo' => ['nullable', 'image', 'max:4096'],
+            'login_background' => ['nullable', 'image', 'max:8192'],
+            'favicon' => ['nullable', 'file', 'mimes:ico,png,svg,webp,jpg,jpeg', 'max:2048'],
+        ]);
+
+        $branding = $brandingService->getModel();
+        $branding->fill([
+            'app_name' => $validated['app_name'],
+            'login_title' => $validated['login_title'],
+            'login_subtitle' => $validated['login_subtitle'] ?? null,
+            'login_heading' => $validated['login_heading'],
+            'login_description' => $validated['login_description'] ?? null,
+        ])->save();
+
+        if ($request->hasFile('logo')) {
+            $branding->clearMediaCollection('branding_logo');
+            $branding->addMediaFromRequest('logo')->toMediaCollection('branding_logo');
+        }
+
+        if ($request->hasFile('favicon')) {
+            $branding->clearMediaCollection('branding_favicon');
+            $branding->addMediaFromRequest('favicon')->toMediaCollection('branding_favicon');
+        }
+
+        if ($request->hasFile('login_background')) {
+            $branding->clearMediaCollection('login_background');
+            $branding->addMediaFromRequest('login_background')->toMediaCollection('login_background');
+        }
+
+        return to_route('admin.settings-branding')->with('success', 'Branding updated successfully.');
+    }
+
+    public function deleteBrandingAsset(string $collection, BrandingService $brandingService): RedirectResponse
+    {
+        $allowedCollections = [
+            'branding_logo',
+            'branding_favicon',
+            'login_background',
+        ];
+
+        if (! in_array($collection, $allowedCollections, true)) {
+            throw ValidationException::withMessages([
+                'asset' => 'The selected branding asset is invalid.',
+            ]);
+        }
+
+        $brandingService->getModel()->clearMediaCollection($collection);
+
+        return to_route('admin.settings-branding')->with('success', 'Branding asset deleted successfully.');
     }
 
     public function logoutOtherDevices(Request $request): RedirectResponse

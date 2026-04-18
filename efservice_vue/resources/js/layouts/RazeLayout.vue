@@ -60,6 +60,7 @@ type FlattenedMenuRoute = {
 const page = usePage();
 const auth = computed(() => (page.props.auth as any) ?? {});
 const user = computed(() => auth.value.user ?? null);
+const branding = computed(() => ((page.props as any).branding ?? {}) as Record<string, any>);
 const userRoles = computed<string[]>(() => Array.isArray(user.value?.roles) ? user.value.roles : []);
 const isAdmin = computed(() => userRoles.value.includes('superadmin'));
 const isCarrier = computed(() => userRoles.value.includes('user_carrier'));
@@ -167,6 +168,22 @@ const roleBadgeClass = computed(() => {
   if (isCarrier.value) return 'bg-primary/10 text-primary';
   if (isDriver.value) return 'bg-info/10 text-info';
   return 'bg-slate-100 text-slate-600';
+});
+
+const sidebarBrandName = computed(() => {
+  if (isCarrier.value && user.value?.carrier_name) {
+    return user.value.carrier_name;
+  }
+
+  return branding.value?.appName || (page.props as any).name || 'EF Services';
+});
+
+const sidebarLogoUrl = computed(() => {
+  if (isCarrier.value) {
+    return user.value?.carrier_logo_url || branding.value?.logoUrl || null;
+  }
+
+  return branding.value?.logoUrl || null;
 });
 
 const homeHref = computed(() => {
@@ -697,14 +714,20 @@ onBeforeUnmount(() => {
       >
         <div class="flex-none hidden xl:flex items-center z-10 px-5 h-[65px] w-[275px] overflow-hidden relative duration-300 group-[.side-menu--collapsed]:xl:w-[91px] group-[.side-menu--collapsed.side-menu--on-hover]:xl:w-[275px]">
           <Link
-            href="/"
+            :href="homeHref"
             class="flex items-center transition-[margin] duration-300 group-[.side-menu--collapsed]:xl:ml-2 group-[.side-menu--collapsed.side-menu--on-hover]:xl:ml-0"
           >
-            <div class="flex items-center justify-center w-[34px] rounded-lg h-[34px] bg-white/8 transition-transform ease-in-out group-[.side-menu--collapsed.side-menu--on-hover]:xl:-rotate-180">
-              <Lucide icon="Truck" class="w-5 h-5 text-white" />
+            <div class="flex items-center justify-center w-[34px] rounded-lg h-[34px] overflow-hidden bg-white/8 transition-transform ease-in-out group-[.side-menu--collapsed.side-menu--on-hover]:xl:-rotate-180">
+              <img
+                v-if="sidebarLogoUrl"
+                :src="sidebarLogoUrl"
+                :alt="sidebarBrandName"
+                class="h-full w-full object-contain bg-white/10 p-1"
+              />
+              <Lucide v-else icon="Truck" class="w-5 h-5 text-white" />
             </div>
             <div class="ml-3.5 group-[.side-menu--collapsed.side-menu--on-hover]:xl:opacity-100 group-[.side-menu--collapsed]:xl:opacity-0 transition-opacity font-medium text-white">
-              EFService
+              {{ sidebarBrandName }}
             </div>
           </Link>
           <a

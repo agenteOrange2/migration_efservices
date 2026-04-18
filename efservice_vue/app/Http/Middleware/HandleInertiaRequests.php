@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Main\SideMenu;
 use App\Main\CarrierSideMenu;
 use App\Main\DriverSideMenu;
+use App\Services\BrandingService;
 use App\Services\NotificationCenterService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -22,10 +23,12 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
         $notificationCenter = app(NotificationCenterService::class);
+        $branding = app(BrandingService::class)->getSharedData();
 
         return [
             ...parent::share($request),
-            'name' => config('app.name'),
+            'name' => $branding['appName'] ?? config('app.name'),
+            'branding' => $branding,
             'auth' => [
                 'user' => $user ? $this->getUserData($user) : null,
             ],
@@ -53,7 +56,9 @@ class HandleInertiaRequests extends Middleware
 
     protected function getUserData($user): array
     {
-        $user->load('roles:id,name', 'permissions:id,name');
+        $user->loadMissing('roles:id,name', 'permissions:id,name', 'carrierDetails.carrier:id,name');
+
+        $carrier = $user->carrierDetails?->carrier;
 
         return [
             'id' => $user->id,
@@ -65,6 +70,8 @@ class HandleInertiaRequests extends Middleware
             'roles' => $user->roles->pluck('name')->toArray(),
             'permissions' => $user->permissions->pluck('name')->toArray(),
             'all_permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+            'carrier_name' => $carrier?->name,
+            'carrier_logo_url' => $carrier?->logo_url,
         ];
     }
 

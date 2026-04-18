@@ -58,7 +58,7 @@ class VehicleDocumentExpiringNotification extends Notification implements Should
             'title' => 'Vehicle ' . $this->documentType . ' Expiring',
             'message' => 'Unit #' . $unitNumber . ' ' . $this->documentType . ' expires in ' . $this->daysRemaining . ' days.',
             'type' => 'vehicle_document_expiring',
-            'category' => 'vehicles',
+            'category' => 'vehicle_documents',
             'icon' => 'Truck',
             'urgent' => $this->daysRemaining <= 7,
             'vehicle_id' => $this->vehicle->id,

@@ -39,18 +39,19 @@ class NotifyCarrierOfCompletedApplication
 
         try {
             $notification = new DriverApplicationCompletedNotification($user, $carrier, $driver);
+            $notificationService = app(\App\Services\NotificationService::class);
 
             // Notificar a superadmins
             $admins = User::role('superadmin')->get();
             foreach ($admins as $admin) {
-                $admin->notify($notification);
+                $notificationService->sendWithPreferences($admin, $notification, 'driver_registration');
             }
 
             // Notificar a usuarios del carrier
             $carrierUsers = $carrier->userCarriers()->with('user')->get();
             foreach ($carrierUsers as $carrierDetail) {
                 if ($carrierDetail->user) {
-                    $carrierDetail->user->notify($notification);
+                    $notificationService->sendWithPreferences($carrierDetail->user, $notification, 'driver_registration');
                 }
             }
 

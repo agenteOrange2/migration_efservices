@@ -57,8 +57,9 @@ class AdminNewUserCreatedNotification extends Notification implements ShouldQueu
             'user_id' => $this->newUser->id,
             'title' => 'New user created',
             'message' => "New user registered: {$this->newUser->name}",
-            'icon' => 'UserPlus', // Icono para usar en la UI                        
-            'action_url' => '/admin/users/' . $this->newUser->id
+            'icon' => 'UserPlus', // Icono para usar en la UI
+            'category' => 'system_alerts',
+            'url' => route('admin.users.edit', $this->newUser->id),
         ];
     }
 }

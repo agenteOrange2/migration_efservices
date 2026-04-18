@@ -111,6 +111,10 @@ class CustomPathGenerator implements PathGenerator
             return "memberships/{$model->id}/";
         }
 
+        if ($model instanceof \App\Models\SiteBranding) {
+            return "branding/";
+        }
+
         if ($model instanceof \App\Models\Carrier) {
             return "carriers/{$model->id}/";
         }

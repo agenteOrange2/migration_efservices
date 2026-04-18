@@ -192,6 +192,11 @@ class Carrier extends Model implements HasMedia
         return asset('images/default-safety-data-system.png');
     }
 
+    public function getLogoUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('logo_carrier') ?: null;
+    }
+
     // Método de acceso para obtener el nombre del status
     public function getStatusNameAttribute(): string
     {

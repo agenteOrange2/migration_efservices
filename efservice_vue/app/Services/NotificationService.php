@@ -13,6 +13,7 @@ use App\Models\Carrier;
 use App\Mail\NewCarrierAdminNotification;
 use App\Mail\AdminNotificationMail;
 use App\Notifications\CarrierNotification;
+use App\Notifications\ChannelControlledNotification;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -250,32 +251,71 @@ class NotificationService
         // Prepare notification content based on event type
         $title = '';
         $message = '';
-        
+        $category = 'system_alerts';
+        $icon = 'Bell';
+        $url = route('admin.users.edit', $user);
+
         switch ($eventType) {
             case 'step_completed':
-                $title = 'Paso Completado';
-                $message = "El usuario {$user->name} ha completado el paso: {$step}";
+                $title = match ($step) {
+                    'step1' => 'Carrier User Registration Started',
+                    'step2' => 'Carrier Company Information Completed',
+                    'step3' => 'Carrier Membership Selected',
+                    default => 'Carrier Registration Step Completed',
+                };
+                $message = match ($step) {
+                    'step1' => "{$user->name} created a carrier user account and completed the initial registration step.",
+                    'step2' => $carrier
+                        ? "{$user->name} completed the company information step for {$carrier->name}."
+                        : "{$user->name} completed the company information step.",
+                    'step3' => $carrier
+                        ? "{$user->name} selected a membership and completed step 3 for {$carrier->name}."
+                        : "{$user->name} completed the membership selection step.",
+                    default => "{$user->name} completed a carrier registration step.",
+                };
+                $category = 'carrier_registration';
+                $icon = 'Building2';
+                $url = $carrier
+                    ? route('admin.carriers.show', $carrier)
+                    : route('admin.users.edit', $user);
                 break;
             case 'registration_completed':
-                $title = 'Registro Completado';
-                $message = "El carrier {" . ($carrier ? $carrier->company_name : $user->name) . "} ha completado su registro";
+                $title = 'Carrier Registration Completed';
+                $message = $carrier
+                    ? "{$carrier->name} completed the full carrier registration workflow."
+                    : "{$user->name} completed the full carrier registration workflow.";
+                $category = 'carrier_registration';
+                $icon = 'CircleCheckBig';
+                $url = $carrier
+                    ? route('admin.carriers.show', $carrier)
+                    : route('admin.users.edit', $user);
                 break;
             case 'user_carrier':
-                $title = 'Nueva Actividad de Carrier';
-                $message = "Nueva actividad del carrier {$user->name}";
+                $title = 'New Carrier User Activity';
+                $message = "New carrier activity was recorded for {$user->name}.";
+                $category = 'carrier_registration';
+                $icon = 'UserRoundPlus';
+                $url = route('admin.users.edit', $user);
                 break;
             default:
-                $title = 'Nueva Notificación';
-                $message = "Nueva actividad del usuario {$user->name}";
+                $title = 'New System Notification';
+                $message = "New activity was detected for {$user->name}.";
         }
-        
+
         // Send notification to each configured recipient
         foreach ($admins as $admin) {
+            if (! $admin->isNotificationInAppEnabled($category)) {
+                continue;
+            }
+
             $admin->notify(new CarrierNotification(
                 $title,
                 $message,
                 'info',
                 [
+                    'category' => $category,
+                    'icon' => $icon,
+                    'url' => $url,
                     'user_id' => $user->id,
                     'carrier_id' => $carrier ? $carrier->id : null,
                     'event_type' => $eventType,
@@ -504,7 +544,7 @@ class NotificationService
                 return false;
             }
 
-            // Modificar los canales de la notificación según preferencias
+            // Modificar los canales de la notificación según preferencias reales
             $channels = [];
             if ($inAppEnabled) {
                 $channels[] = 'database';
@@ -513,8 +553,17 @@ class NotificationService
                 $channels[] = 'mail';
             }
 
+            if (empty($channels)) {
+                Log::info('Notification skipped because no channels are enabled', [
+                    'user_id' => $user->id,
+                    'category' => $category,
+                    'notification' => get_class($notification),
+                ]);
+                return false;
+            }
+
             // Enviar notificación
-            $user->notify($notification);
+            $user->notify(new ChannelControlledNotification($notification, $channels));
 
             Log::info('Notification sent with preferences', [
                 'user_id' => $user->id,

@@ -32,11 +32,13 @@ class VehicleEmergencyRepairNotification extends Notification implements ShouldQ
 
     public function toMail(object $notifiable): MailMessage
     {
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
+
         return (new MailMessage)
-            ->subject('URGENT: Emergency Repair Request - ' . $this->vehicle->unit_number)
+            ->subject('URGENT: Emergency Repair Request - ' . $unit)
             ->greeting('Hello,')
             ->line('An emergency repair has been requested for a vehicle.')
-            ->line('**Vehicle:** ' . $this->vehicle->unit_number)
+            ->line('**Vehicle:** ' . $unit)
             ->when($this->driverName, fn($mail) => $mail->line('**Driver:** ' . $this->driverName))
             ->when($this->location, fn($mail) => $mail->line('**Location:** ' . $this->location))
             ->line('**Issue:** ' . $this->repairDescription)
@@ -46,15 +48,17 @@ class VehicleEmergencyRepairNotification extends Notification implements ShouldQ
 
     public function toArray(object $notifiable): array
     {
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
+
         return [
             'title' => 'Emergency Repair Request',
-            'message' => 'Vehicle ' . $this->vehicle->unit_number . ' requires emergency repair: ' . $this->repairDescription,
+            'message' => 'Vehicle ' . $unit . ' requires emergency repair: ' . $this->repairDescription,
             'type' => 'vehicle_emergency_repair',
-            'category' => 'vehicles',
+            'category' => 'vehicle_repairs',
             'icon' => 'AlertTriangle',
             'urgent' => true,
             'vehicle_id' => $this->vehicle->id,
-            'vehicle_unit' => $this->vehicle->unit_number,
+            'vehicle_unit' => $unit,
             'repair_description' => $this->repairDescription,
             'driver_name' => $this->driverName,
             'location' => $this->location,

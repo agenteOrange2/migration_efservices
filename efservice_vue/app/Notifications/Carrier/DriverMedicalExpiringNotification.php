@@ -52,7 +52,7 @@ class DriverMedicalExpiringNotification extends Notification implements ShouldQu
             'title' => 'Driver Medical Card Expiring',
             'message' => $driverName . '\'s medical card expires in ' . $this->daysRemaining . ' days.',
             'type' => 'driver_medical_expiring',
-            'category' => 'drivers',
+            'category' => 'driver_compliance',
             'icon' => 'Heart',
             'urgent' => $this->daysRemaining <= 7,
             'driver_id' => $this->driver->id,

@@ -29,11 +29,13 @@ class VehicleAssignedNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
+
         return (new MailMessage)
-            ->subject('Vehicle Assigned: ' . $this->vehicle->unit_number)
+            ->subject('Vehicle Assigned: ' . $unit)
             ->greeting('Hello,')
             ->line('A vehicle has been assigned to a driver.')
-            ->line('**Vehicle:** ' . $this->vehicle->unit_number)
+            ->line('**Vehicle:** ' . $unit)
             ->line('**Make/Model:** ' . ($this->vehicle->make ?? '') . ' ' . ($this->vehicle->model ?? ''))
             ->line('**Driver:** ' . $this->driver->full_name)
             ->action('View Vehicle', route('carrier.vehicles.show', $this->vehicle->id))
@@ -42,14 +44,16 @@ class VehicleAssignedNotification extends Notification implements ShouldQueue
 
     public function toArray(object $notifiable): array
     {
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
+
         return [
             'title' => 'Vehicle Assigned',
-            'message' => 'Vehicle ' . $this->vehicle->unit_number . ' assigned to ' . $this->driver->full_name,
+            'message' => 'Vehicle ' . $unit . ' assigned to ' . $this->driver->full_name,
             'type' => 'vehicle_assigned',
-            'category' => 'vehicles',
+            'category' => 'vehicle_assignment',
             'icon' => 'Truck',
             'vehicle_id' => $this->vehicle->id,
-            'vehicle_unit' => $this->vehicle->unit_number,
+            'vehicle_unit' => $unit,
             'driver_id' => $this->driver->id,
             'driver_name' => $this->driver->full_name,
             'url' => route('carrier.vehicles.show', $this->vehicle->id),

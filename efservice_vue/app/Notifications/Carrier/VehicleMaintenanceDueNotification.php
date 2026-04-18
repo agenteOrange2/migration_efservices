@@ -32,11 +32,13 @@ class VehicleMaintenanceDueNotification extends Notification implements ShouldQu
 
     public function toMail(object $notifiable): MailMessage
     {
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
+
         return (new MailMessage)
-            ->subject('Vehicle Maintenance Due: ' . $this->vehicle->unit_number)
+            ->subject('Vehicle Maintenance Due: ' . $unit)
             ->greeting('Hello,')
             ->line('A vehicle has scheduled maintenance coming due.')
-            ->line('**Vehicle:** ' . $this->vehicle->unit_number)
+            ->line('**Vehicle:** ' . $unit)
             ->line('**Maintenance Type:** ' . $this->maintenanceType)
             ->line('**Due Date:** ' . ($this->dueDate ?? 'N/A'))
             ->line('**Days Remaining:** ' . $this->daysRemaining)
@@ -46,14 +48,16 @@ class VehicleMaintenanceDueNotification extends Notification implements ShouldQu
 
     public function toArray(object $notifiable): array
     {
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
+
         return [
             'title' => 'Vehicle Maintenance Due',
-            'message' => 'Vehicle ' . $this->vehicle->unit_number . ' has ' . $this->maintenanceType . ' due in ' . $this->daysRemaining . ' days.',
+            'message' => 'Vehicle ' . $unit . ' has ' . $this->maintenanceType . ' due in ' . $this->daysRemaining . ' days.',
             'type' => 'vehicle_maintenance_due',
-            'category' => 'vehicles',
+            'category' => 'vehicle_maintenance',
             'icon' => 'Wrench',
             'vehicle_id' => $this->vehicle->id,
-            'vehicle_unit' => $this->vehicle->unit_number,
+            'vehicle_unit' => $unit,
             'maintenance_type' => $this->maintenanceType,
             'days_remaining' => $this->daysRemaining,
             'due_date' => $this->dueDate,

@@ -7,6 +7,7 @@ use App\Models\Membership;
 use App\Models\DocumentType;
 use App\Models\CarrierDocument;
 use App\Models\CarrierBankingDetail;
+use App\Models\User;
 use App\Helpers\Constants;
 use App\Http\Controllers\Controller;
 use App\Services\CarrierService;
@@ -16,6 +17,7 @@ use App\Traits\SendsCustomNotifications;
 use App\Mail\PaymentValidatedMail;
 use App\Mail\BankingRejectedMail;
 use App\Mail\BankingPendingMail;
+use App\Notifications\Admin\Carrier\NewCarrierNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -124,6 +126,11 @@ class CarrierController extends Controller
         try {
             $carrier = $this->carrierService->createCarrier($validated, $request->file('logo_carrier'));
             $this->generateDotPolicyPdf($carrier);
+
+            foreach (User::role('superadmin')->get() as $admin) {
+                app(\App\Services\NotificationService::class)
+                    ->sendWithPreferences($admin, new NewCarrierNotification($carrier), 'carrier_registration');
+            }
 
             return redirect()
                 ->route('admin.carriers.show', $carrier)

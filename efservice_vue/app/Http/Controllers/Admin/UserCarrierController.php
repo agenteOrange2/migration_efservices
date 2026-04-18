@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Carrier;
 use App\Models\UserCarrierDetail;
+use App\Notifications\Admin\Carrier\NewUserCarrierNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -76,6 +77,7 @@ class UserCarrierController extends Controller
             ]);
 
             $user->assignRole('user_carrier');
+            app(\App\Services\Notification\NotificationPreferenceService::class)->createDefaultPreferences($user);
 
             $user->carrierDetails()->create([
                 'carrier_id' => $carrier->id,
@@ -89,6 +91,11 @@ class UserCarrierController extends Controller
                 $user->addMediaFromRequest('profile_photo')
                     ->usingFileName($fileName)
                     ->toMediaCollection('profile_photo_carrier');
+            }
+
+            foreach (User::role('superadmin')->get() as $admin) {
+                app(\App\Services\NotificationService::class)
+                    ->sendWithPreferences($admin, new NewUserCarrierNotification($user, $carrier), 'carrier_registration');
             }
 
             return back()->with('success', 'User Carrier created successfully.');

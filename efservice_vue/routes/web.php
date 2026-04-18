@@ -1,11 +1,11 @@
 <?php
 
+use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
 
-Route::inertia('/', 'Welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::get('/', [LandingPageController::class, 'index'])->name('home');
+Route::post('/contact', [LandingPageController::class, 'submitContact'])->name('landing.contact.store');
+Route::post('/plan-request', [LandingPageController::class, 'submitPlanRequest'])->name('landing.plan-request.store');
 
 Route::inertia('/terms', 'legal/Terms')->name('terms');
 Route::inertia('/privacy', 'legal/Privacy')->name('privacy');

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Carrier;
+use App\Notifications\ChannelControlledNotification;
 use App\Services\Notification\EmailNotificationService;
 use App\Services\Notification\DatabaseNotificationService;
 use App\Services\Notification\NotificationPreferenceService;
@@ -74,22 +75,28 @@ class NotificationServiceRefactored
     public function sendWithPreferences(User $user, BaseNotification $notification, string $category): bool
     {
         $sent = false;
+        $channels = [];
 
         try {
             // Check database notification preference
             if ($this->preferenceService->isNotificationEnabled($user, $category, 'database')) {
-                $user->notify($notification);
-                $sent = true;
-
-                $this->logService->logSuccess($user, $category, 'database', [
-                    'notification_class' => get_class($notification),
-                ]);
+                $channels[] = 'database';
             }
 
             // Check email notification preference
             if ($this->preferenceService->isNotificationEnabled($user, $category, 'email')) {
-                // The notification itself should handle email via mail channel
+                if (method_exists($notification, 'toMail')) {
+                    $channels[] = 'mail';
+                }
+            }
+
+            if (! empty($channels)) {
+                $user->notify(new ChannelControlledNotification($notification, $channels));
                 $sent = true;
+
+                $this->logService->logSuccess($user, $category, implode('+', $channels), [
+                    'notification_class' => get_class($notification),
+                ]);
             }
 
             return $sent;

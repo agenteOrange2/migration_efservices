@@ -59,6 +59,7 @@ class CarrierWizardController extends Controller
             ]);
 
             $user->assignRole('user_carrier');
+            app(\App\Services\Notification\NotificationPreferenceService::class)->createDefaultPreferences($user);
 
             $processedData = $request->getProcessedData();
 

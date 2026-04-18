@@ -36,18 +36,22 @@ class DriverDocumentUploadedNotification extends Notification implements ShouldQ
 
     public function toArray(object $notifiable): array
     {
+        $isAdmin = method_exists($notifiable, 'hasRole') && $notifiable->hasRole('superadmin');
+
         return [
             'title' => 'New Document Uploaded',
             'message' => $this->driverUser->name . ' uploaded a ' . $this->documentType . ' document.',
             'type' => 'driver_document_uploaded',
-            'category' => 'drivers',
+            'category' => 'driver_documents',
             'icon' => 'FileUp',
             'driver_id' => $this->driverDetail->id,
             'driver_name' => $this->driverUser->name,
             'carrier_id' => $this->carrier->id,
             'document_type' => $this->documentType,
             'document_name' => $this->documentName,
-            'url' => '/carrier/drivers/' . $this->driverDetail->id,
+            'url' => $isAdmin
+                ? route('admin.drivers.show', $this->driverDetail)
+                : route('carrier.drivers.show', $this->driverDetail),
         ];
     }
 }

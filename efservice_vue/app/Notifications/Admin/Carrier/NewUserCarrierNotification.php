@@ -83,7 +83,20 @@ class NewUserCarrierNotification extends Notification implements ShouldQueue
             'title' => 'New carrier user created',
             'message' => "New user registered for carrier {$this->carrier->name}: {$this->user->name}",
             'icon' => 'UserPlus',
-            'category' => 'carriers',
+            'category' => 'carrier_registration',
+            'url' => route('admin.carriers.users.index', $this->carrier),
+        ];
+    }
+
+    public function toArray(object $notifiable): array
+    {
+        return [
+            'user_id' => $this->user->id,
+            'carrier_id' => $this->carrier->id,
+            'title' => 'New carrier user created',
+            'message' => "New user registered for carrier {$this->carrier->name}: {$this->user->name}",
+            'icon' => 'UserPlus',
+            'category' => 'carrier_registration',
             'url' => route('admin.carriers.users.index', $this->carrier),
         ];
     }

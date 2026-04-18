@@ -122,6 +122,7 @@ Route::prefix('settings')->group(function () {
     Route::get('email-settings', [SettingsController::class, 'index'])->defaults('page', 'email-settings')->name('settings-email-settings');
     Route::get('security', [SettingsController::class, 'index'])->defaults('page', 'security')->name('settings-security');
     Route::get('preferences', [SettingsController::class, 'index'])->defaults('page', 'preferences')->name('settings-preferences');
+    Route::get('branding', [SettingsController::class, 'index'])->defaults('page', 'branding')->name('settings-branding');
     Route::get('two-factor-authentication', [SettingsController::class, 'index'])->defaults('page', 'two-factor-authentication')->name('settings-two-factor-authentication');
     Route::get('device-history', [SettingsController::class, 'index'])->defaults('page', 'device-history')->name('settings-device-history');
     Route::get('notification-settings', [SettingsController::class, 'index'])->defaults('page', 'notification-settings')->name('settings-notification-settings');
@@ -131,6 +132,8 @@ Route::prefix('settings')->group(function () {
     Route::patch('profile', [SettingsController::class, 'updateProfile'])->name('settings.update-profile');
     Route::put('email-settings', [SettingsController::class, 'updateEmail'])->name('settings.update-email');
     Route::put('security/password', [SettingsController::class, 'updatePassword'])->name('settings.update-password');
+    Route::post('branding', [SettingsController::class, 'updateBranding'])->name('settings.update-branding');
+    Route::delete('branding/{collection}', [SettingsController::class, 'deleteBrandingAsset'])->name('settings.delete-branding-asset');
     Route::post('profile-photo', [SettingsController::class, 'updatePhoto'])->name('settings.update-photo');
     Route::delete('profile-photo', [SettingsController::class, 'deletePhoto'])->name('settings.delete-photo');
     Route::put('notification-settings', [SettingsController::class, 'updateNotificationSettings'])->name('settings.update-notification-settings');

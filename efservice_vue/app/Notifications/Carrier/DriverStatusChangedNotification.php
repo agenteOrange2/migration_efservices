@@ -35,18 +35,22 @@ class DriverStatusChangedNotification extends Notification implements ShouldQueu
 
     public function toArray(object $notifiable): array
     {
+        $isAdmin = method_exists($notifiable, 'hasRole') && $notifiable->hasRole('superadmin');
+
         return [
             'title' => 'Driver Status Changed',
             'message' => $this->driverUser->name . ' status changed from ' . $this->oldStatus . ' to ' . $this->newStatus . '.',
             'type' => 'driver_status_changed',
-            'category' => 'drivers',
+            'category' => 'driver_registration',
             'icon' => 'UserCog',
             'driver_id' => $this->driverDetail->id,
             'driver_name' => $this->driverUser->name,
             'carrier_id' => $this->carrier->id,
             'old_status' => $this->oldStatus,
             'new_status' => $this->newStatus,
-            'url' => '/carrier/drivers/' . $this->driverDetail->id,
+            'url' => $isAdmin
+                ? route('admin.drivers.show', $this->driverDetail)
+                : route('carrier.drivers.show', $this->driverDetail),
         ];
     }
 }

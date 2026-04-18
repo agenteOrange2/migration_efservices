@@ -63,7 +63,7 @@ class NotificationPreferenceService
     {
         $defaultCategories = $this->getDefaultCategoriesForRole($user->getRoleNames()->first() ?? 'user');
 
-        foreach ($defaultCategories as $category) {
+        foreach (array_keys($defaultCategories) as $category) {
             UserNotificationPreference::firstOrCreate(
                 [
                     'user_id' => $user->id,
@@ -84,27 +84,41 @@ class NotificationPreferenceService
     {
         return match ($role) {
             'superadmin', 'admin' => [
-                'carrier_registration',
-                'driver_application',
-                'document_uploads',
-                'system_alerts',
+                'carrier_registration' => 'Carrier Registration',
+                'driver_registration' => 'Driver Registration',
+                'driver_documents' => 'Driver Documents',
+                'driver_compliance' => 'Driver Compliance',
+                'vehicle_documents' => 'Vehicle Documents',
+                'vehicle_compliance' => 'Vehicle Compliance',
+                'driver_training' => 'Driver Training',
+                'system_alerts' => 'System Alerts',
             ],
             'user_carrier' => [
-                'driver_assignments',
-                'document_status',
-                'trip_updates',
-                'maintenance_alerts',
-                'hos_violations',
+                'driver_registration' => 'Driver Registration',
+                'driver_documents' => 'Driver Documents',
+                'driver_compliance' => 'Driver Compliance',
+                'driver_training' => 'Driver Training',
+                'vehicle_documents' => 'Vehicle Documents',
+                'vehicle_compliance' => 'Vehicle Compliance',
+                'vehicle_maintenance' => 'Vehicle Maintenance',
+                'vehicle_repairs' => 'Emergency Repairs',
+                'hos_violations' => 'HOS Violations',
+                'trips' => 'Trip Updates',
+                'messages' => 'Messages',
             ],
             'user_driver' => [
-                'trip_assignments',
-                'document_expiry',
-                'license_expiry',
-                'medical_expiry',
-                'hos_alerts',
+                'personal_documents' => 'My Documents',
+                'personal_compliance' => 'My Compliance',
+                'training' => 'Training Assignments',
+                'vehicle_assignment' => 'Vehicle Assignments',
+                'hos_limits' => 'HOS Limit Warnings',
+                'hos_violations' => 'HOS Violations',
+                'maintenance' => 'Vehicle Maintenance',
+                'repairs' => 'Emergency Repairs',
+                'messages' => 'Messages',
             ],
             default => [
-                'general',
+                'general' => 'General',
             ],
         };
     }

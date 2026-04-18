@@ -20,7 +20,7 @@ class NotificationCenterService
             ->latest()
             ->limit($limit)
             ->get()
-            ->map(fn (DatabaseNotification $notification) => $this->transformNotification($notification))
+            ->map(fn (DatabaseNotification $notification) => $this->transformNotification($notification, $user))
             ->all();
     }
 
@@ -29,7 +29,7 @@ class NotificationCenterService
         return $this->applyFilters($this->queryForUser($user), $filters)
             ->latest()
             ->paginate($perPage)
-            ->through(fn (DatabaseNotification $notification) => $this->transformNotification($notification));
+            ->through(fn (DatabaseNotification $notification) => $this->transformNotification($notification, $user));
     }
 
     public function getAvailableTypes(User $user): array
@@ -115,12 +115,12 @@ class NotificationCenterService
         return $this->applyFilters($this->queryForUser($user), $filters)->delete();
     }
 
-    public function transformNotification(DatabaseNotification $notification): array
+    public function transformNotification(DatabaseNotification $notification, ?User $viewer = null): array
     {
         $payload = $this->normalizePayload($notification->data ?? []);
         $title = $this->resolveTitle($notification, $payload);
         $message = $this->resolveMessage($payload);
-        $url = $this->resolveUrl($payload);
+        $url = $this->resolveUrl($payload, $viewer);
         $category = $this->resolveCategory($notification, $payload);
         $level = $this->resolveLevel($payload);
 
@@ -222,18 +222,18 @@ class NotificationCenterService
         return $message !== '' ? $message : 'You have a new notification.';
     }
 
-    private function resolveUrl(array $payload): ?string
+    private function resolveUrl(array $payload, ?User $viewer = null): ?string
     {
         $url = $payload['url'] ?? $payload['link'] ?? $payload['action_url'] ?? null;
 
-        $resolved = $this->resolveLegacyUrl($url, $payload);
+        $resolved = $this->resolveLegacyUrl($url, $payload, $viewer);
 
         if ($resolved) {
             return $resolved;
         }
 
         if (! is_string($url) || trim($url) === '') {
-            return $this->resolveUrlFromPayload($payload);
+            return $this->resolveUrlFromPayload($payload, $viewer);
         }
 
         return trim($url);
@@ -316,7 +316,7 @@ class NotificationCenterService
         return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
     }
 
-    private function resolveLegacyUrl(mixed $url, array $payload): ?string
+    private function resolveLegacyUrl(mixed $url, array $payload, ?User $viewer = null): ?string
     {
         if (! is_string($url) || trim($url) === '') {
             return null;
@@ -329,34 +329,64 @@ class NotificationCenterService
         }
 
         if (preg_match('#^/admin/carriers/[^/]+/drivers/(\d+)/edit$#', $url, $matches)) {
-            return route('admin.drivers.show', (int) ($payload['driver_detail_id'] ?? $matches[1]));
+            $driverId = (int) ($payload['driver_detail_id'] ?? $payload['driver_id'] ?? $matches[1]);
+
+            if ($viewer?->hasRole('user_carrier')) {
+                return route('carrier.drivers.show', $driverId);
+            }
+
+            return route('admin.drivers.show', $driverId);
         }
 
         if (preg_match('#^/admin/users/(\d+)$#', $url, $matches)) {
             return route('admin.users.edit', (int) ($payload['user_id'] ?? $matches[1]));
         }
 
-        if (preg_match('#^/admin/vehicles/(\d+)$#', $url, $matches) && ! empty($payload['category']) && $payload['category'] === 'vehicles') {
-            if (isset($payload['recipient_type']) && $payload['recipient_type'] === 'carrier') {
-                return route('carrier.vehicles.show', (int) $matches[1]);
+        if (preg_match('#^/admin/vehicles/(\d+)$#', $url, $matches)) {
+            $vehicleId = (int) ($payload['vehicle_id'] ?? $matches[1]);
+
+            if ($viewer?->hasRole('user_carrier')) {
+                return route('carrier.vehicles.show', $vehicleId);
             }
+
+            if ($viewer?->hasRole('user_driver')) {
+                return route('driver.vehicles.show', $vehicleId);
+            }
+
+            return route('admin.vehicles.show', $vehicleId);
         }
 
         return null;
     }
 
-    private function resolveUrlFromPayload(array $payload): ?string
+    private function resolveUrlFromPayload(array $payload, ?User $viewer = null): ?string
     {
-        if (! empty($payload['carrier_id']) && ($payload['category'] ?? null) === 'carriers') {
+        $category = $payload['category'] ?? null;
+
+        if (! empty($payload['carrier_id']) && in_array($category, ['carriers', 'carrier_registration'], true)) {
             return route('admin.carriers.show', $payload['carrier_id']);
         }
 
-        if (! empty($payload['driver_detail_id'])) {
-            return route('admin.drivers.show', $payload['driver_detail_id']);
+        $driverId = $payload['driver_detail_id'] ?? $payload['driver_id'] ?? null;
+
+        if ($driverId && in_array($category, ['drivers', 'driver_registration', 'driver_documents', 'driver_compliance'], true)) {
+            if ($viewer?->hasRole('user_carrier')) {
+                return route('carrier.drivers.show', $driverId);
+            }
+
+            return route('admin.drivers.show', $driverId);
         }
 
-        if (! empty($payload['driver_id']) && ($payload['category'] ?? null) === 'drivers') {
-            return route('admin.drivers.show', $payload['driver_id']);
+        if (! empty($payload['vehicle_id']) && in_array($category, ['vehicles', 'vehicle_documents', 'vehicle_compliance', 'vehicle_maintenance'], true)) {
+            if ($viewer?->hasRole('user_carrier')) {
+                return route('carrier.vehicles.show', $payload['vehicle_id']);
+            }
+
+            if ($viewer?->hasRole('user_driver')) {
+                return route('driver.vehicles.show', $payload['vehicle_id']);
+            }
+
+            return route('admin.vehicles.show', $payload['vehicle_id']);
         }
 
         if (! empty($payload['user_id']) && ($payload['category'] ?? null) === 'users') {

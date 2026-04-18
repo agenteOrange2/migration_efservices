@@ -3,7 +3,7 @@ import { Form, Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onUnmounted, ref } from 'vue';
 import Button from '@/components/Base/Button/Button.vue';
 import Lucide from '@/components/Base/Lucide';
-import { FormInput, FormLabel, FormSwitch } from '@/components/Base/Form';
+import { FormInput, FormLabel, FormSwitch, FormTextarea } from '@/components/Base/Form';
 import AlertError from '@/components/AlertError.vue';
 import TwoFactorRecoveryCodes from '@/components/TwoFactorRecoveryCodes.vue';
 import TwoFactorSetupModal from '@/components/TwoFactorSetupModal.vue';
@@ -47,6 +47,17 @@ type ConnectedService = {
   icon: string;
 };
 
+type BrandingSettings = {
+  appName: string;
+  loginTitle: string;
+  loginSubtitle: string | null;
+  loginHeading: string;
+  loginDescription: string | null;
+  logoUrl: string | null;
+  faviconUrl: string | null;
+  loginBackgroundUrl: string | null;
+};
+
 type Props = {
   title: string;
   currentPage: string;
@@ -59,6 +70,7 @@ type Props = {
   notificationPreferences: NotificationPreference[];
   deviceSessions: DeviceSession[];
   connectedServices: ConnectedService[];
+  branding: BrandingSettings;
 };
 
 const props = defineProps<Props>();
@@ -110,6 +122,26 @@ const notificationForm = useForm({
   ) as Record<string, { in_app_enabled: boolean; email_enabled: boolean }>,
 });
 
+const brandingForm = useForm<{
+  app_name: string;
+  login_title: string;
+  login_subtitle: string;
+  login_heading: string;
+  login_description: string;
+  logo: File | null;
+  favicon: File | null;
+  login_background: File | null;
+}>({
+  app_name: props.branding.appName,
+  login_title: props.branding.loginTitle,
+  login_subtitle: props.branding.loginSubtitle ?? '',
+  login_heading: props.branding.loginHeading,
+  login_description: props.branding.loginDescription ?? '',
+  logo: null,
+  favicon: null,
+  login_background: null,
+});
+
 const { appearance, updateAppearance } = useAppearance();
 const { hasSetupData, clearTwoFactorAuthData } = useTwoFactorAuth();
 const showSetupModal = ref(false);
@@ -148,6 +180,21 @@ const submitNotificationSettings = () => {
   });
 };
 
+const submitBranding = () => {
+  brandingForm.post(route('admin.settings.update-branding'), {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      brandingForm.reset('logo', 'favicon', 'login_background');
+
+      ['admin-branding-logo', 'admin-branding-favicon', 'admin-branding-background'].forEach((id) => {
+        const input = document.getElementById(id) as HTMLInputElement | null;
+        if (input) input.value = '';
+      });
+    },
+  });
+};
+
 const submitLogoutOtherDevices = () => {
   logoutDevicesForm.post(route('admin.settings.logout-other-devices'), {
     preserveScroll: true,
@@ -179,10 +226,24 @@ const removeProfilePhoto = () => {
   });
 };
 
+const deleteBrandingAsset = (collection: 'branding_logo' | 'branding_favicon' | 'login_background') => {
+  brandingForm.delete(route('admin.settings.delete-branding-asset', { collection }), {
+    preserveScroll: true,
+  });
+};
+
 const onPhotoSelected = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0] ?? null;
   photoForm.photo = file;
+};
+
+const onBrandingFileSelected = (
+  event: Event,
+  field: 'logo' | 'favicon' | 'login_background',
+) => {
+  const target = event.target as HTMLInputElement;
+  brandingForm[field] = target.files?.[0] ?? null;
 };
 
 const toggleCriticalPreference = (category: string) => {
@@ -585,6 +646,225 @@ const isCurrentPage = (pageKey: string) => activeTab.value === pageKey;
               </div>
             </div>
           </div>
+        </div>
+
+        <div v-else-if="isCurrentPage('branding')" class="box box--stacked p-5">
+          <div class="mb-6 border-b border-dashed border-slate-300/70 pb-5 text-[0.94rem] font-medium">
+            Branding
+          </div>
+
+          <div class="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div class="grid gap-4 lg:grid-cols-3">
+              <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Logo</div>
+                <div class="mt-4 flex h-24 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                  <img
+                    v-if="props.branding.logoUrl"
+                    :src="props.branding.logoUrl"
+                    alt="Brand logo"
+                    class="max-h-16 max-w-full object-contain"
+                  />
+                  <Lucide v-else icon="Image" class="h-7 w-7 text-slate-400" />
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Favicon</div>
+                <div class="mt-4 flex h-24 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                  <img
+                    v-if="props.branding.faviconUrl"
+                    :src="props.branding.faviconUrl"
+                    alt="Favicon"
+                    class="h-12 w-12 object-contain"
+                  />
+                  <Lucide v-else icon="Globe" class="h-7 w-7 text-slate-400" />
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Login Background</div>
+                <div class="mt-4 h-24 overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                  <img
+                    v-if="props.branding.loginBackgroundUrl"
+                    :src="props.branding.loginBackgroundUrl"
+                    alt="Login background"
+                    class="h-full w-full object-cover"
+                  />
+                  <div v-else class="flex h-full items-center justify-center">
+                    <Lucide icon="MonitorPlay" class="h-7 w-7 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <form class="space-y-6" @submit.prevent="submitBranding">
+            <div class="grid gap-5 md:grid-cols-2">
+              <div>
+                <FormLabel for="admin-branding-app-name">Application Name</FormLabel>
+                <FormInput
+                  id="admin-branding-app-name"
+                  v-model="brandingForm.app_name"
+                  type="text"
+                  placeholder="Enter the application name"
+                  class="mt-2"
+                />
+                <div v-if="brandingForm.errors.app_name" class="mt-2 text-sm text-danger">
+                  {{ brandingForm.errors.app_name }}
+                </div>
+              </div>
+
+              <div>
+                <FormLabel for="admin-branding-login-title">Login Card Title</FormLabel>
+                <FormInput
+                  id="admin-branding-login-title"
+                  v-model="brandingForm.login_title"
+                  type="text"
+                  placeholder="Welcome back"
+                  class="mt-2"
+                />
+                <div v-if="brandingForm.errors.login_title" class="mt-2 text-sm text-danger">
+                  {{ brandingForm.errors.login_title }}
+                </div>
+              </div>
+            </div>
+
+            <div class="grid gap-5 md:grid-cols-2">
+              <div>
+                <FormLabel for="admin-branding-login-heading">Right Panel Heading</FormLabel>
+                <FormInput
+                  id="admin-branding-login-heading"
+                  v-model="brandingForm.login_heading"
+                  type="text"
+                  placeholder="Transportation compliance in one place"
+                  class="mt-2"
+                />
+                <div v-if="brandingForm.errors.login_heading" class="mt-2 text-sm text-danger">
+                  {{ brandingForm.errors.login_heading }}
+                </div>
+              </div>
+
+              <div>
+                <FormLabel for="admin-branding-login-subtitle">Login Card Subtitle</FormLabel>
+                <FormInput
+                  id="admin-branding-login-subtitle"
+                  v-model="brandingForm.login_subtitle"
+                  type="text"
+                  placeholder="Sign in to continue to your workspace"
+                  class="mt-2"
+                />
+                <div v-if="brandingForm.errors.login_subtitle" class="mt-2 text-sm text-danger">
+                  {{ brandingForm.errors.login_subtitle }}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <FormLabel for="admin-branding-login-description">Right Panel Description</FormLabel>
+              <FormTextarea
+                id="admin-branding-login-description"
+                v-model="brandingForm.login_description"
+                rows="3"
+                placeholder="Describe what users can manage after signing in."
+                class="mt-2"
+              />
+              <div v-if="brandingForm.errors.login_description" class="mt-2 text-sm text-danger">
+                {{ brandingForm.errors.login_description }}
+              </div>
+            </div>
+
+            <div class="grid gap-5 md:grid-cols-3">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <FormLabel for="admin-branding-logo">Company Logo</FormLabel>
+                <input
+                  id="admin-branding-logo"
+                  type="file"
+                  accept="image/*"
+                  class="mt-3 block w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:font-medium file:text-primary"
+                  @change="onBrandingFileSelected($event, 'logo')"
+                />
+                <Button
+                  v-if="props.branding.logoUrl"
+                  variant="outline-secondary"
+                  type="button"
+                  class="mt-3"
+                  @click="deleteBrandingAsset('branding_logo')"
+                >
+                  Remove Logo
+                </Button>
+                <div v-if="brandingForm.errors.logo" class="mt-2 text-sm text-danger">
+                  {{ brandingForm.errors.logo }}
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <FormLabel for="admin-branding-favicon">Favicon</FormLabel>
+                <input
+                  id="admin-branding-favicon"
+                  type="file"
+                  accept=".ico,.png,.svg,.webp,.jpg,.jpeg"
+                  class="mt-3 block w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:font-medium file:text-primary"
+                  @change="onBrandingFileSelected($event, 'favicon')"
+                />
+                <Button
+                  v-if="props.branding.faviconUrl"
+                  variant="outline-secondary"
+                  type="button"
+                  class="mt-3"
+                  @click="deleteBrandingAsset('branding_favicon')"
+                >
+                  Remove Favicon
+                </Button>
+                <div v-if="brandingForm.errors.favicon" class="mt-2 text-sm text-danger">
+                  {{ brandingForm.errors.favicon }}
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <FormLabel for="admin-branding-background">Login Background Image</FormLabel>
+                <input
+                  id="admin-branding-background"
+                  type="file"
+                  accept="image/*"
+                  class="mt-3 block w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:font-medium file:text-primary"
+                  @change="onBrandingFileSelected($event, 'login_background')"
+                />
+                <Button
+                  v-if="props.branding.loginBackgroundUrl"
+                  variant="outline-secondary"
+                  type="button"
+                  class="mt-3"
+                  @click="deleteBrandingAsset('login_background')"
+                >
+                  Remove Background
+                </Button>
+                <div v-if="brandingForm.errors.login_background" class="mt-2 text-sm text-danger">
+                  {{ brandingForm.errors.login_background }}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3 pt-2">
+              <Button variant="primary" type="submit" :disabled="brandingForm.processing">
+                <Lucide icon="Save" class="mr-2 h-4 w-4" />
+                Save Branding
+              </Button>
+              <Button
+                variant="outline-secondary"
+                type="button"
+                @click="
+                  brandingForm.reset();
+                  brandingForm.app_name = props.branding.appName;
+                  brandingForm.login_title = props.branding.loginTitle;
+                  brandingForm.login_subtitle = props.branding.loginSubtitle ?? '';
+                  brandingForm.login_heading = props.branding.loginHeading;
+                  brandingForm.login_description = props.branding.loginDescription ?? '';
+                "
+              >
+                Reset
+              </Button>
+            </div>
+          </form>
         </div>
 
         <div v-else-if="isCurrentPage('two-factor-authentication')" class="box box--stacked p-5">

@@ -32,18 +32,19 @@ class DriverNotificationService
             $notification = new \App\Notifications\Carrier\DriverDocumentUploadedNotification(
                 $user, $carrier, $driver, $documentType, $documentName
             );
+            $notificationService = app(\App\Services\NotificationService::class);
 
             // Notificar a superadmins
             $admins = User::role('superadmin')->get();
             foreach ($admins as $admin) {
-                $admin->notify($notification);
+                $notificationService->sendWithPreferences($admin, $notification, 'driver_documents');
             }
 
             // Notificar a usuarios del carrier
             $carrierUsers = $carrier->userCarriers()->with('user')->get();
             foreach ($carrierUsers as $carrierDetail) {
                 if ($carrierDetail->user) {
-                    $carrierDetail->user->notify($notification);
+                    $notificationService->sendWithPreferences($carrierDetail->user, $notification, 'driver_documents');
                 }
             }
 
@@ -84,18 +85,19 @@ class DriverNotificationService
             $notification = new \App\Notifications\Carrier\DriverStatusChangedNotification(
                 $user, $carrier, $driver, $newLabel, $oldLabel
             );
+            $notificationService = app(\App\Services\NotificationService::class);
 
             // Notificar a superadmins
             $admins = User::role('superadmin')->get();
             foreach ($admins as $admin) {
-                $admin->notify($notification);
+                $notificationService->sendWithPreferences($admin, $notification, 'driver_registration');
             }
 
             // Notificar a usuarios del carrier
             $carrierUsers = $carrier->userCarriers()->with('user')->get();
             foreach ($carrierUsers as $carrierDetail) {
                 if ($carrierDetail->user) {
-                    $carrierDetail->user->notify($notification);
+                    $notificationService->sendWithPreferences($carrierDetail->user, $notification, 'driver_registration');
                 }
             }
 

@@ -31,18 +31,25 @@ class DriverApplicationCompletedNotification extends Notification
 
     public function toMail($notifiable): MailMessage
     {
+        $isAdmin = method_exists($notifiable, 'hasRole') && $notifiable->hasRole('superadmin');
+        $url = $isAdmin
+            ? route('admin.drivers.show', $this->driverDetail)
+            : route('carrier.drivers.show', $this->driverDetail);
+
         return (new MailMessage)
             ->subject('Driver Application Completed')
-            ->greeting('Hello Admin!')
+            ->greeting($isAdmin ? 'Hello Admin!' : 'Hello Carrier Team!')
             ->line('A driver has completed their application and is pending review.')
             ->line('Driver Name: ' . $this->driver->name)
             ->line('Carrier: ' . $this->carrier->name)
-            ->action('Review Application', route('admin.drivers.show', $this->driverDetail))
+            ->action($isAdmin ? 'Review Application' : 'View Driver', $url)
             ->line('Please review the application as soon as possible.');
     }
 
     public function toDatabase($notifiable): array
     {
+        $isAdmin = method_exists($notifiable, 'hasRole') && $notifiable->hasRole('superadmin');
+
         return [
             'driver_id' => $this->driver->id,
             'driver_detail_id' => $this->driverDetail->id,
@@ -50,8 +57,10 @@ class DriverApplicationCompletedNotification extends Notification
             'title' => 'Driver application completed',
             'message' => "Driver {$this->driver->name} from {$this->carrier->name} has completed their application",
             'icon' => 'CircleCheckBig',
-            'category' => 'drivers',
-            'url' => route('admin.drivers.show', $this->driverDetail),
+            'category' => 'driver_registration',
+            'url' => $isAdmin
+                ? route('admin.drivers.show', $this->driverDetail)
+                : route('carrier.drivers.show', $this->driverDetail),
         ];
     }
 }

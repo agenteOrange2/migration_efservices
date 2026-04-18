@@ -282,6 +282,7 @@ class DriverRegistrationController extends Controller
         ]);
 
         $user->assignRole('user_driver');
+        app(\App\Services\Notification\NotificationPreferenceService::class)->createDefaultPreferences($user);
 
         return $user;
     }
@@ -305,15 +306,18 @@ class DriverRegistrationController extends Controller
     {
         try {
             $notification = new NewDriverRegisteredNotification($user, $carrier);
+            $notificationService = app(\App\Services\NotificationService::class);
 
             $admins = User::role('superadmin')->get();
             foreach ($admins as $admin) {
-                $admin->notify($notification);
+                $notificationService->sendWithPreferences($admin, $notification, 'driver_registration');
             }
 
             $carrierUsers = $carrier->userCarriers()->with('user')->get();
             foreach ($carrierUsers as $carrierDetail) {
-                $carrierDetail->user?->notify($notification);
+                if ($carrierDetail->user) {
+                    $notificationService->sendWithPreferences($carrierDetail->user, $notification, 'driver_registration');
+                }
             }
 
             Log::info('New driver registration notifications sent', [

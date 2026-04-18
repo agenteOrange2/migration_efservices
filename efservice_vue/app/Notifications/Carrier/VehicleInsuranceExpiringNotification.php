@@ -33,12 +33,13 @@ class VehicleInsuranceExpiringNotification extends Notification implements Shoul
     public function toMail(object $notifiable): MailMessage
     {
         $urgency = $this->daysRemaining <= 7 ? 'URGENT: ' : '';
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
         
         return (new MailMessage)
-            ->subject($urgency . 'Vehicle Insurance Expiring: ' . $this->vehicle->unit_number)
+            ->subject($urgency . 'Vehicle Insurance Expiring: ' . $unit)
             ->greeting('Hello,')
             ->line('A vehicle insurance policy is expiring soon.')
-            ->line('**Vehicle:** ' . $this->vehicle->unit_number)
+            ->line('**Vehicle:** ' . $unit)
             ->when($this->policyNumber, fn($mail) => $mail->line('**Policy Number:** ' . $this->policyNumber))
             ->line('**Expiration Date:** ' . ($this->expirationDate ?? 'N/A'))
             ->line('**Days Remaining:** ' . $this->daysRemaining)
@@ -48,15 +49,17 @@ class VehicleInsuranceExpiringNotification extends Notification implements Shoul
 
     public function toArray(object $notifiable): array
     {
+        $unit = $this->vehicle->company_unit_number ?? $this->vehicle->id;
+
         return [
             'title' => 'Vehicle Insurance Expiring',
-            'message' => 'Vehicle ' . $this->vehicle->unit_number . ' insurance expires in ' . $this->daysRemaining . ' days.',
+            'message' => 'Vehicle ' . $unit . ' insurance expires in ' . $this->daysRemaining . ' days.',
             'type' => 'vehicle_insurance_expiring',
-            'category' => 'vehicles',
+            'category' => 'vehicle_compliance',
             'icon' => 'Shield',
             'urgent' => $this->daysRemaining <= 7,
             'vehicle_id' => $this->vehicle->id,
-            'vehicle_unit' => $this->vehicle->unit_number,
+            'vehicle_unit' => $unit,
             'policy_number' => $this->policyNumber,
             'days_remaining' => $this->daysRemaining,
             'expiration_date' => $this->expirationDate,

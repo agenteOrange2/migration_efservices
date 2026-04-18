@@ -30,12 +30,14 @@ class NewDriverRegistrationNotification extends Notification
         $isSuperAdmin = $notifiable->hasRole('superadmin');
         
         if ($isSuperAdmin) {
+            $driverDetailId = $this->user->driverDetails?->id ?? $this->user->id;
+
             return (new MailMessage)
                 ->subject('New Driver Registration')
                 ->line("A new driver has registered:")
                 ->line("Name: {$this->user->name}")
                 ->line("Carrier: {$this->carrier->name}")
-                ->action('Review Driver', url("/admin/drivers/{$this->user->id}"));
+                ->action('Review Driver', route('admin.drivers.show', $driverDetailId));
         }
 
         return (new MailMessage)
@@ -55,7 +57,8 @@ class NewDriverRegistrationNotification extends Notification
             'carrier_name' => $this->carrier->name,
             'message' => $notifiable->hasRole('superadmin') 
                 ? 'New driver registration'
-                : 'Welcome to ' . $this->carrier->name
+                : 'Welcome to ' . $this->carrier->name,
+            'category' => 'driver_registration',
         ];
     }
 }

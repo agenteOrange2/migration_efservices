@@ -29,20 +29,27 @@ class NewDriverRegisteredNotification extends Notification
     public function toMail($notifiable): MailMessage
     {
         $driverDetailId = $this->driver->driverDetails?->id ?? $this->driver->id;
+        $isAdmin = method_exists($notifiable, 'hasRole') && $notifiable->hasRole('superadmin');
+        $url = $isAdmin
+            ? route('admin.drivers.show', $driverDetailId)
+            : route('carrier.drivers.show', $driverDetailId);
+        $greeting = $isAdmin ? 'Hello Admin!' : 'Hello Carrier Team!';
+        $cta = $isAdmin ? 'Review Driver' : 'View Driver';
 
         return (new MailMessage)
             ->subject('New Driver Registration')
-            ->greeting('Hello Admin!')
+            ->greeting($greeting)
             ->line('A new driver has registered on the platform.')
             ->line('Driver Name: ' . $this->driver->name)
             ->line('Carrier: ' . $this->carrier->name)
-            ->action('Review Driver', route('admin.drivers.show', $driverDetailId))
+            ->action($cta, $url)
             ->line('Please review their application.');
     }
 
     public function toDatabase($notifiable): array
     {
         $driverDetailId = $this->driver->driverDetails?->id;
+        $isAdmin = method_exists($notifiable, 'hasRole') && $notifiable->hasRole('superadmin');
 
         return [
             'driver_id' => $this->driver->id,
@@ -51,10 +58,12 @@ class NewDriverRegisteredNotification extends Notification
             'title' => 'New driver registered',
             'message' => "New driver registered for {$this->carrier->name}: {$this->driver->name}",
             'icon' => 'UserPlus',
-            'category' => 'drivers',
+            'category' => 'driver_registration',
             'url' => $driverDetailId
-                ? route('admin.drivers.show', $driverDetailId)
-                : route('admin.drivers.index'),
+                ? ($isAdmin
+                    ? route('admin.drivers.show', $driverDetailId)
+                    : route('carrier.drivers.show', $driverDetailId))
+                : ($isAdmin ? route('admin.drivers.index') : route('carrier.drivers.index')),
         ];
     }
 
@@ -66,7 +75,7 @@ class NewDriverRegisteredNotification extends Notification
             'driver_name' => $this->driver->name,
             'carrier_id' => $this->carrier->id,
             'carrier_name' => $this->carrier->name,
-            'category' => 'drivers',
+            'category' => 'driver_registration',
             'message' => 'New driver registration',
         ];
     }

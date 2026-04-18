@@ -18,6 +18,7 @@ use App\Http\Controllers\Driver\DriverTestingController;
 use App\Http\Controllers\Driver\DriverTripController;
 use App\Http\Controllers\Driver\DriverTrainingController;
 use App\Http\Controllers\Driver\DriverVehicleController;
+use App\Http\Controllers\Driver\NotificationsController as DriverNotificationsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -139,6 +140,15 @@ Route::middleware(['auth', 'check.driver.status'])->group(function () {
         Route::get('/', [MessagesController::class, 'index'])->name('index');
         Route::get('/{messageRecipient}', [MessagesController::class, 'show'])->name('show');
         Route::post('/{messageRecipient}/reply', [MessagesController::class, 'reply'])->name('reply');
+    });
+
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [DriverNotificationsController::class, 'index'])->name('index');
+        Route::post('/mark-all-read', [DriverNotificationsController::class, 'markAllAsRead'])->name('mark-all-read');
+        Route::delete('/', [DriverNotificationsController::class, 'deleteAll'])->name('delete-all');
+        Route::post('/{notification}/mark-as-read', [DriverNotificationsController::class, 'markAsRead'])->name('mark-as-read');
+        Route::post('/{notification}/mark-as-unread', [DriverNotificationsController::class, 'markAsUnread'])->name('mark-as-unread');
+        Route::delete('/{notification}', [DriverNotificationsController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('documents')->name('documents.')->group(function () {

@@ -50,7 +50,7 @@ class VehicleInspectionExpiringNotification extends Notification implements Shou
             'title' => 'Vehicle Inspection Expiring',
             'message' => 'Unit #' . ($this->vehicle->company_unit_number ?? $this->vehicle->id) . ' inspection expires in ' . $this->daysRemaining . ' days.',
             'type' => 'vehicle_inspection_expiring',
-            'category' => 'vehicles',
+            'category' => 'vehicle_compliance',
             'icon' => 'ClipboardCheck',
             'urgent' => $this->daysRemaining <= 7,
             'vehicle_id' => $this->vehicle->id,

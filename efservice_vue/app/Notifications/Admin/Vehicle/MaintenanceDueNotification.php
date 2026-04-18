@@ -46,7 +46,7 @@ class MaintenanceDueNotification extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         $vehicle = $this->maintenance->vehicle;
-        $url = url('/admin/vehicles/' . $vehicle->id);
+        $url = route('admin.vehicles.show', $vehicle);
         $unitLabel = $vehicle->company_unit_number ?? $vehicle->id;
         $urgency = $this->daysRemaining <= 7 ? 'URGENT: ' : '';
         
@@ -76,11 +76,11 @@ class MaintenanceDueNotification extends Notification implements ShouldQueue
         return [
             'title' => 'Vehicle Maintenance Due',
             'message' => 'Unit #' . $unitLabel . ' (' . ($vehicle->make ?? '') . ' ' . ($vehicle->model ?? '') . ') maintenance due in ' . $this->daysRemaining . ' days. Service: ' . ($this->maintenance->service_tasks ?? 'N/A'),
-            'type' => 'maintenance_due',
-            'category' => 'vehicles',
+            'type' => 'vehicle_maintenance_due',
+            'category' => 'vehicle_maintenance',
             'icon' => 'Wrench',
             'urgent' => $this->daysRemaining <= 7,
-            'url' => '/admin/vehicles/' . $vehicle->id,
+            'url' => route('admin.vehicles.show', $vehicle),
             'vehicle_id' => $vehicle->id,
             'vehicle_unit' => $unitLabel,
             'maintenance_id' => $this->maintenance->id,
