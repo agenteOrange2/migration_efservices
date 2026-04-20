@@ -76,9 +76,9 @@ function money(value: number) {
 
 function statusBadge(status: string) {
     const normalized = String(status || '').toLowerCase()
-    if (['active', 'completed'].includes(normalized)) return 'bg-primary/10 text-primary'
-    if (['pending', 'in_progress', 'upcoming'].includes(normalized)) return 'bg-slate-100 text-slate-700'
-    if (['overdue', 'expired', 'out_of_service', 'suspended'].includes(normalized)) return 'bg-slate-200 text-slate-700'
+    if (['active', 'completed'].includes(normalized)) return 'bg-success/10 text-success'
+    if (['pending', 'in_progress', 'upcoming'].includes(normalized)) return 'bg-warning/10 text-warning'
+    if (['overdue', 'expired', 'out_of_service', 'suspended'].includes(normalized)) return 'bg-danger/10 text-danger'
     return 'bg-slate-100 text-slate-600'
 }
 
@@ -165,31 +165,31 @@ function trendHeight(count: number) {
                         <Lucide icon="Truck" class="w-8 h-8 text-primary" />
                     </div>
                 </div>
-                <div class="box box--stacked p-5">
+                <div class="box box--stacked p-5 border border-success/20 bg-success/5">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm text-slate-500">Active</p>
-                            <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.active_vehicles }}</p>
+                            <p class="mt-1 text-2xl font-semibold text-success">{{ stats.active_vehicles }}</p>
                         </div>
-                        <Lucide icon="CheckCircle2" class="w-8 h-8 text-primary" />
+                        <Lucide icon="CheckCircle2" class="w-8 h-8 text-success" />
                     </div>
                 </div>
-                <div class="box box--stacked p-5 border border-primary/10 bg-primary/5">
+                <div class="box box--stacked p-5 border border-danger/20 bg-danger/5">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm text-slate-500">Out of Service</p>
-                            <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.out_of_service }}</p>
+                            <p class="mt-1 text-2xl font-semibold text-danger">{{ stats.out_of_service }}</p>
                         </div>
-                        <Lucide icon="CircleOff" class="w-8 h-8 text-primary" />
+                        <Lucide icon="CircleOff" class="w-8 h-8 text-danger" />
                     </div>
                 </div>
-                <div class="box box--stacked p-5 border border-primary/10 bg-primary/5">
+                <div class="box box--stacked p-5 border border-danger/20 bg-danger/5">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm text-slate-500">Suspended</p>
-                            <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.suspended }}</p>
+                            <p class="mt-1 text-2xl font-semibold text-danger">{{ stats.suspended }}</p>
                         </div>
-                        <Lucide icon="AlertTriangle" class="w-8 h-8 text-primary" />
+                        <Lucide icon="AlertTriangle" class="w-8 h-8 text-danger" />
                     </div>
                 </div>
             </div>
@@ -204,13 +204,13 @@ function trendHeight(count: number) {
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs uppercase tracking-wide text-slate-500">Total</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ maintenanceStats.total }}</p></div>
-                        <div class="rounded-lg bg-primary/5 p-4"><p class="text-xs uppercase tracking-wide text-primary">Completed</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ maintenanceStats.completed }}</p></div>
-                        <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs uppercase tracking-wide text-slate-600">Pending</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ maintenanceStats.pending }}</p></div>
-                        <div class="rounded-lg bg-slate-100 p-4"><p class="text-xs uppercase tracking-wide text-slate-700">Overdue</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ maintenanceStats.overdue }}</p></div>
+                        <div class="rounded-lg bg-success/5 p-4"><p class="text-xs uppercase tracking-wide text-success">Completed</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ maintenanceStats.completed }}</p></div>
+                        <div class="rounded-lg bg-warning/5 p-4"><p class="text-xs uppercase tracking-wide text-warning">Pending</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ maintenanceStats.pending }}</p></div>
+                        <div class="rounded-lg bg-danger/5 p-4"><p class="text-xs uppercase tracking-wide text-danger">Overdue</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ maintenanceStats.overdue }}</p></div>
                     </div>
-                    <div class="mt-4 rounded-lg border border-dashed border-slate-200 p-4">
+                    <div class="mt-4 rounded-lg border border-dashed border-info/30 bg-info/5 p-4">
                         <p class="text-sm text-slate-500">Upcoming maintenance within 15 days</p>
-                        <p class="mt-1 text-xl font-semibold text-slate-800">{{ maintenanceStats.upcoming }}</p>
+                        <p class="mt-1 text-xl font-semibold text-info">{{ maintenanceStats.upcoming }}</p>
                     </div>
                 </div>
 
@@ -221,9 +221,9 @@ function trendHeight(count: number) {
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs uppercase tracking-wide text-slate-500">Total</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ emergencyStats.total }}</p></div>
-                        <div class="rounded-lg bg-primary/5 p-4"><p class="text-xs uppercase tracking-wide text-primary">Completed</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ emergencyStats.completed }}</p></div>
-                        <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs uppercase tracking-wide text-slate-600">Pending</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ emergencyStats.pending }}</p></div>
-                        <div class="rounded-lg bg-primary/5 p-4"><p class="text-xs uppercase tracking-wide text-primary">Total Cost</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ money(emergencyStats.total_cost) }}</p></div>
+                        <div class="rounded-lg bg-success/5 p-4"><p class="text-xs uppercase tracking-wide text-success">Completed</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ emergencyStats.completed }}</p></div>
+                        <div class="rounded-lg bg-warning/5 p-4"><p class="text-xs uppercase tracking-wide text-warning">Pending</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ emergencyStats.pending }}</p></div>
+                        <div class="rounded-lg bg-info/5 p-4"><p class="text-xs uppercase tracking-wide text-info">Total Cost</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ money(emergencyStats.total_cost) }}</p></div>
                     </div>
                 </div>
 
@@ -233,11 +233,11 @@ function trendHeight(count: number) {
                         <Lucide icon="FileText" class="w-5 h-5 text-primary" />
                     </div>
                     <div class="space-y-3">
-                        <div class="rounded-lg bg-slate-50 p-4 flex items-center justify-between"><span class="text-slate-600">Total Documents</span><span class="font-semibold text-slate-800">{{ documentStats.total }}</span></div>
-                        <div class="rounded-lg bg-primary/5 p-4 flex items-center justify-between"><span class="text-primary">Docs Expiring Soon</span><span class="font-semibold text-slate-800">{{ documentStats.expiring_soon }}</span></div>
-                        <div class="rounded-lg bg-slate-100 p-4 flex items-center justify-between"><span class="text-slate-700">Expired Docs</span><span class="font-semibold text-slate-800">{{ documentStats.expired }}</span></div>
-                        <div class="rounded-lg border border-dashed border-slate-200 p-4 flex items-center justify-between"><span class="text-slate-600">Registrations expiring in 30 days</span><span class="font-semibold text-slate-800">{{ expiringRegistrations }}</span></div>
-                        <div class="rounded-lg border border-dashed border-slate-200 p-4 flex items-center justify-between"><span class="text-slate-600">Annual inspections expiring in 30 days</span><span class="font-semibold text-slate-800">{{ expiringInspections }}</span></div>
+                        <div class="rounded-lg bg-info/5 p-4 flex items-center justify-between"><span class="text-info">Total Documents</span><span class="font-semibold text-slate-800">{{ documentStats.total }}</span></div>
+                        <div class="rounded-lg bg-warning/5 p-4 flex items-center justify-between"><span class="text-warning">Docs Expiring Soon</span><span class="font-semibold text-slate-800">{{ documentStats.expiring_soon }}</span></div>
+                        <div class="rounded-lg bg-danger/5 p-4 flex items-center justify-between"><span class="text-danger">Expired Docs</span><span class="font-semibold text-slate-800">{{ documentStats.expired }}</span></div>
+                        <div class="rounded-lg border border-dashed border-warning/30 bg-warning/5 p-4 flex items-center justify-between"><span class="text-warning">Registrations expiring in 30 days</span><span class="font-semibold text-slate-800">{{ expiringRegistrations }}</span></div>
+                        <div class="rounded-lg border border-dashed border-warning/30 bg-warning/5 p-4 flex items-center justify-between"><span class="text-warning">Annual inspections expiring in 30 days</span><span class="font-semibold text-slate-800">{{ expiringInspections }}</span></div>
                     </div>
                 </div>
             </div>

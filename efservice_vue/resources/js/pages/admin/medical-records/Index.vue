@@ -100,9 +100,9 @@ const subtitle = computed(() => props.isCarrierContext
 
 const tabs = computed(() => ([
     { key: 'all', label: 'Total Records', icon: 'Files', count: props.stats.total, tone: 'text-slate-600 bg-slate-100 border-slate-200' },
-    { key: 'active', label: 'Active', icon: 'BadgeCheck', count: props.stats.active, tone: 'text-emerald-700 bg-emerald-100 border-emerald-200' },
-    { key: 'expiring', label: 'Expiring Soon', icon: 'Clock3', count: props.stats.expiring, tone: 'text-amber-700 bg-amber-100 border-amber-200' },
-    { key: 'expired', label: 'Expired', icon: 'AlertTriangle', count: props.stats.expired, tone: 'text-red-700 bg-red-100 border-red-200' },
+    { key: 'active', label: 'Active', icon: 'BadgeCheck', count: props.stats.active, tone: 'text-success bg-success/10 border-success/20' },
+    { key: 'expiring', label: 'Expiring Soon', icon: 'Clock3', count: props.stats.expiring, tone: 'text-warning bg-warning/10 border-warning/20' },
+    { key: 'expired', label: 'Expired', icon: 'AlertTriangle', count: props.stats.expired, tone: 'text-danger bg-danger/10 border-danger/20' },
 ]))
 
 function formatDate(value: string | null) {
@@ -183,9 +183,9 @@ function confirmDelete() {
 
 function statusClass(status: string) {
     return {
-        active: 'bg-emerald-100 text-emerald-700',
-        expiring: 'bg-amber-100 text-amber-700',
-        expired: 'bg-red-100 text-red-700',
+        active: 'bg-success/10 text-success',
+        expiring: 'bg-warning/10 text-warning',
+        expired: 'bg-danger/10 text-danger',
     }[status] ?? 'bg-slate-100 text-slate-600'
 }
 
@@ -248,11 +248,11 @@ function statusLabel(status: string) {
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                <div v-if="stats.expiring > 0" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex items-start gap-3">
+                <div v-if="stats.expiring > 0" class="rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning flex items-start gap-3">
                     <Lucide icon="Clock3" class="w-5 h-5 flex-shrink-0 mt-0.5" />
                     <span><strong>{{ stats.expiring }}</strong> medical records are expiring within 30 days.</span>
                 </div>
-                <div v-if="stats.expired > 0" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start gap-3">
+                <div v-if="stats.expired > 0" class="rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger flex items-start gap-3">
                     <Lucide icon="AlertTriangle" class="w-5 h-5 flex-shrink-0 mt-0.5" />
                     <span><strong>{{ stats.expired }}</strong> medical records have expired.</span>
                 </div>
@@ -380,13 +380,13 @@ function statusLabel(status: string) {
                                         >
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="namedRoute('documentsShow', record.id)" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-sky-500 hover:border-sky-200 hover:bg-sky-50">
+                                        <Link :href="namedRoute('documentsShow', record.id)" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-info hover:border-info/20 hover:bg-info/10">
                                             <Lucide icon="Files" class="w-4 h-4" />
                                         </Link>
                                         <Link :href="namedRoute('edit', record.id)" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-primary hover:border-primary/30 hover:bg-primary/5">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
-                                        <button type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50" @click="openDeleteModal(record)">
+                                        <button type="button" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-danger hover:border-danger/20 hover:bg-danger/10" @click="openDeleteModal(record)">
                                             <Lucide icon="Trash2" class="w-4 h-4" />
                                         </button>
                                     </div>
@@ -437,7 +437,7 @@ function statusLabel(status: string) {
                     </button>
                 </div>
 
-                <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border-2 border-red-600 text-red-600">
+                <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border-2 border-danger text-danger">
                     <Lucide icon="X" class="w-8 h-8" />
                 </div>
 
@@ -458,7 +458,7 @@ function statusLabel(status: string) {
                     </button>
                     <button
                         type="button"
-                        class="min-w-[110px] rounded-xl bg-red-600 px-6 py-3 text-lg font-semibold text-white hover:bg-red-700"
+                        class="min-w-[110px] rounded-xl bg-danger px-6 py-3 text-lg font-semibold text-white hover:bg-danger/90"
                         @click="confirmDelete"
                     >
                         Delete

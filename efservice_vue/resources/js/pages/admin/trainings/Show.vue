@@ -93,10 +93,10 @@ function submitAssignment() {
 }
 
 function assignmentStatusClass(status: string) {
-    if (status === 'completed') return 'bg-primary/10 text-primary'
-    if (status === 'overdue') return 'bg-red-100 text-red-600'
-    if (status === 'in_progress') return 'bg-slate-200 text-slate-700'
-    return 'bg-slate-100 text-slate-600'
+    if (status === 'completed') return 'bg-success/10 text-success'
+    if (status === 'overdue') return 'bg-danger/10 text-danger'
+    if (status === 'in_progress') return 'bg-info/10 text-info'
+    return 'bg-warning/10 text-warning'
 }
 </script>
 
@@ -110,10 +110,19 @@ function assignmentStatusClass(status: string) {
                     <div>
                         <h1 class="text-xl font-bold text-slate-800">{{ training.title }}</h1>
                         <div class="flex items-center gap-2 mt-2">
-                            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize" :class="training.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'">
+                            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize" :class="training.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
                                 {{ training.status }}
                             </span>
-                            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize" :class="training.content_type === 'file' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'">
+                            <span
+                                class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize"
+                                :class="training.content_type === 'file'
+                                    ? 'bg-info/10 text-info'
+                                    : training.content_type === 'video'
+                                        ? 'bg-primary/10 text-primary'
+                                        : training.content_type === 'url'
+                                            ? 'bg-warning/10 text-warning'
+                                            : 'bg-slate-100 text-slate-600'"
+                            >
                                 {{ training.content_type }}
                             </span>
                         </div>
@@ -187,7 +196,7 @@ function assignmentStatusClass(status: string) {
                             <a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition">
                                 <Lucide icon="Eye" class="w-4 h-4" />
                             </a>
-                            <button type="button" @click="deleteDocument(document.id)" class="p-1.5 text-slate-400 hover:text-red-500 transition">
+                            <button type="button" @click="deleteDocument(document.id)" class="p-1.5 text-slate-400 hover:text-danger transition">
                                 <Lucide icon="Trash2" class="w-4 h-4" />
                             </button>
                         </div>
@@ -246,23 +255,23 @@ function assignmentStatusClass(status: string) {
                 <div class="space-y-3">
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-center justify-between">
                         <span class="text-sm text-slate-600">Total</span>
-                        <span class="font-semibold text-slate-800">{{ assignmentStats.total }}</span>
+                        <span class="font-semibold text-primary">{{ assignmentStats.total }}</span>
                     </div>
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-center justify-between">
                         <span class="text-sm text-slate-600">Completed</span>
-                        <span class="font-semibold text-slate-800">{{ assignmentStats.completed }}</span>
+                        <span class="font-semibold text-success">{{ assignmentStats.completed }}</span>
                     </div>
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-center justify-between">
                         <span class="text-sm text-slate-600">In Progress</span>
-                        <span class="font-semibold text-slate-800">{{ assignmentStats.in_progress }}</span>
+                        <span class="font-semibold text-info">{{ assignmentStats.in_progress }}</span>
                     </div>
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-center justify-between">
                         <span class="text-sm text-slate-600">Pending</span>
-                        <span class="font-semibold text-slate-800">{{ assignmentStats.pending }}</span>
+                        <span class="font-semibold text-warning">{{ assignmentStats.pending }}</span>
                     </div>
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-center justify-between">
                         <span class="text-sm text-slate-600">Overdue</span>
-                        <span class="font-semibold text-slate-800">{{ assignmentStats.overdue }}</span>
+                        <span class="font-semibold text-danger">{{ assignmentStats.overdue }}</span>
                     </div>
                 </div>
             </div>

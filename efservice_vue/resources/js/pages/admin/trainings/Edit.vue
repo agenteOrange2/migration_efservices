@@ -65,7 +65,8 @@ const form = useForm({
 })
 
 function submit() {
-    form.put(route(props.routeNames.update, props.training.id), { forceFormData: true })
+    form.transform((data) => ({ ...data, _method: 'PUT' }))
+        .post(route(props.routeNames.update, props.training.id), { forceFormData: true })
 }
 </script>
 

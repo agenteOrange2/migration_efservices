@@ -136,6 +136,26 @@ class CustomPathGenerator implements PathGenerator
             return "carrier_document/default/{$documentTypeName}/";
         }
 
+        if ($model instanceof \App\Models\Admin\Driver\DriverEmploymentCompany) {
+            $driverId = $model->user_driver_detail_id ?? 'unknown';
+            return "driver/{$driverId}/employment_verification/{$model->getKey()}/";
+        }
+
+        if ($model instanceof \App\Models\Admin\Vehicle\VehicleDocument) {
+            $vehicleId = $model->vehicle_id ?? 'unknown';
+            return "vehicles/{$vehicleId}/documents/";
+        }
+
+        if ($model instanceof \App\Models\Admin\Vehicle\VehicleMaintenance) {
+            $vehicleId = $model->vehicle_id ?? 'unknown';
+            return "vehicles/{$vehicleId}/maintenance/{$model->getKey()}/";
+        }
+
+        if ($model instanceof \App\Models\EmergencyRepair) {
+            $vehicleId = $model->vehicle_id ?? 'unknown';
+            return "vehicles/{$vehicleId}/emergency_repairs/{$model->getKey()}/";
+        }
+
         return "others/{$model->getKey()}/";
     }
 

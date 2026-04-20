@@ -40,6 +40,25 @@ function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
     return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
 }
 
+function vehicleStatusClass(status: string) {
+    const normalized = String(status ?? '').trim().toLowerCase().replace(/[_-]+/g, ' ')
+
+    if (['active', 'available', 'assigned'].includes(normalized)) return 'bg-success/10 text-success'
+    if (['pending', 'scheduled', 'in progress'].includes(normalized)) return 'bg-warning/10 text-warning'
+    if (['maintenance', 'under maintenance', 'inspection due'].includes(normalized)) return 'bg-info/10 text-info'
+    if (['out of service', 'suspended', 'expired'].includes(normalized)) return 'bg-danger/10 text-danger'
+
+    return 'bg-slate-100 text-slate-600'
+}
+
+function healthSummaryClass(vehicle: any) {
+    if (Number(vehicle.expired_documents_count ?? 0) > 0) return 'text-danger'
+    if (vehicle.next_expiring_document) return 'text-warning'
+    if (Number(vehicle.active_documents_count ?? 0) > 0) return 'text-success'
+
+    return 'text-slate-600'
+}
+
 function applyFilters() {
     router.get(namedRoute('documentsOverview'), {
         search: filters.search || undefined,
@@ -88,11 +107,11 @@ function resetFilters() {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Vehicles</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.vehicles }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Documents</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.documents }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Active</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.active }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Expired</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.expired }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Expiring Soon</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.expiring_soon }}</p></div>
+                <div class="box box--stacked rounded-xl border border-primary/20 bg-primary/5 p-5"><p class="text-sm text-slate-500">Vehicles</p><p class="mt-1 text-2xl font-semibold text-primary">{{ stats.vehicles }}</p></div>
+                <div class="box box--stacked rounded-xl border border-info/20 bg-info/5 p-5"><p class="text-sm text-slate-500">Documents</p><p class="mt-1 text-2xl font-semibold text-info">{{ stats.documents }}</p></div>
+                <div class="box box--stacked rounded-xl border border-success/20 bg-success/5 p-5"><p class="text-sm text-slate-500">Active</p><p class="mt-1 text-2xl font-semibold text-success">{{ stats.active }}</p></div>
+                <div class="box box--stacked rounded-xl border border-danger/20 bg-danger/5 p-5"><p class="text-sm text-slate-500">Expired</p><p class="mt-1 text-2xl font-semibold text-danger">{{ stats.expired }}</p></div>
+                <div class="box box--stacked rounded-xl border border-warning/20 bg-warning/5 p-5"><p class="text-sm text-slate-500">Expiring Soon</p><p class="mt-1 text-2xl font-semibold text-warning">{{ stats.expiring_soon }}</p></div>
             </div>
 
             <div class="box box--stacked p-5 mb-6">
@@ -164,17 +183,17 @@ function resetFilters() {
                                 </td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ vehicle.carrier_name ?? 'N/A' }}</td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="vehicle.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'">
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="vehicleStatusClass(vehicle.status)">
                                         {{ vehicle.status_label }}
                                     </span>
                                 </td>
                                 <td class="px-5 py-4 text-sm text-slate-600">
                                     <div>Total: {{ vehicle.documents_count }}</div>
-                                    <div class="text-xs text-slate-500">Active {{ vehicle.active_documents_count }} · Expired {{ vehicle.expired_documents_count }} · Pending {{ vehicle.pending_documents_count }}</div>
+                                    <div class="text-xs" :class="healthSummaryClass(vehicle)">Active {{ vehicle.active_documents_count }} · Expired {{ vehicle.expired_documents_count }} · Pending {{ vehicle.pending_documents_count }}</div>
                                 </td>
                                 <td class="px-5 py-4 text-sm text-slate-600">
                                     <div>{{ vehicle.next_expiring_document?.document_type_label ?? 'No dated documents' }}</div>
-                                    <div class="text-xs text-slate-400">{{ vehicle.next_expiring_document?.expiration_date ?? 'N/A' }}</div>
+                                    <div class="text-xs" :class="vehicle.next_expiring_document ? 'text-warning' : 'text-slate-400'">{{ vehicle.next_expiring_document?.expiration_date ?? 'N/A' }}</div>
                                 </td>
                                 <td class="px-5 py-4 text-center">
                                     <Link :href="namedRoute('documentsIndex', vehicle.id)" class="inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10">

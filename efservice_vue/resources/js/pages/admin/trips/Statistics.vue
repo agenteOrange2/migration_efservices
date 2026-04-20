@@ -65,6 +65,14 @@ function applyFilters() {
         replace: true,
     })
 }
+
+function badgeClass(status: string) {
+    if (status === 'completed') return 'bg-success/10 text-success'
+    if (status === 'cancelled' || status === 'rejected' || status === 'failed') return 'bg-danger/10 text-danger'
+    if (status === 'in_progress' || status === 'accepted' || status === 'paused') return 'bg-warning/10 text-warning'
+    if (status === 'pending' || status === 'scheduled') return 'bg-info/10 text-info'
+    return 'bg-primary/10 text-primary'
+}
 </script>
 
 <template>
@@ -103,15 +111,15 @@ function applyFilters() {
 
         <div class="col-span-12">
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <div class="box box--stacked border border-primary/10 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total Trips</p><p class="mt-1 text-3xl font-semibold text-slate-800">{{ stats.total }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-3xl font-semibold text-slate-800">{{ stats.pending }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Accepted</p><p class="mt-1 text-3xl font-semibold text-slate-800">{{ stats.accepted }}</p></div>
-                <div class="box box--stacked border border-primary/10 bg-primary/5 p-5"><p class="text-sm text-slate-500">In Progress</p><p class="mt-1 text-3xl font-semibold text-slate-800">{{ stats.in_progress }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Paused</p><p class="mt-1 text-3xl font-semibold text-slate-800">{{ stats.paused }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-3xl font-semibold text-slate-800">{{ stats.completed }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Cancelled</p><p class="mt-1 text-3xl font-semibold text-slate-800">{{ stats.cancelled }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">With Violations</p><p class="mt-1 text-3xl font-semibold text-slate-800">{{ stats.with_violations }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Ghost Logs</p><p class="mt-1 text-3xl font-semibold text-slate-800">{{ stats.ghost_logs }}</p></div>
+                <div class="box box--stacked border border-primary/10 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total Trips</p><p class="mt-1 text-3xl font-semibold text-primary">{{ stats.total }}</p></div>
+                <div class="box box--stacked border border-info/10 bg-info/5 p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-3xl font-semibold text-info">{{ stats.pending }}</p></div>
+                <div class="box box--stacked border border-warning/10 bg-warning/5 p-5"><p class="text-sm text-slate-500">Accepted</p><p class="mt-1 text-3xl font-semibold text-warning">{{ stats.accepted }}</p></div>
+                <div class="box box--stacked border border-warning/10 bg-warning/5 p-5"><p class="text-sm text-slate-500">In Progress</p><p class="mt-1 text-3xl font-semibold text-warning">{{ stats.in_progress }}</p></div>
+                <div class="box box--stacked border border-warning/10 bg-warning/5 p-5"><p class="text-sm text-slate-500">Paused</p><p class="mt-1 text-3xl font-semibold text-warning">{{ stats.paused }}</p></div>
+                <div class="box box--stacked border border-success/10 bg-success/5 p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-3xl font-semibold text-success">{{ stats.completed }}</p></div>
+                <div class="box box--stacked border border-danger/10 bg-danger/5 p-5"><p class="text-sm text-slate-500">Cancelled</p><p class="mt-1 text-3xl font-semibold text-danger">{{ stats.cancelled }}</p></div>
+                <div class="box box--stacked border border-danger/10 bg-danger/5 p-5"><p class="text-sm text-slate-500">With Violations</p><p class="mt-1 text-3xl font-semibold text-danger">{{ stats.with_violations }}</p></div>
+                <div class="box box--stacked border border-warning/10 bg-warning/5 p-5"><p class="text-sm text-slate-500">Ghost Logs</p><p class="mt-1 text-3xl font-semibold text-warning">{{ stats.ghost_logs }}</p></div>
             </div>
         </div>
 
@@ -141,7 +149,11 @@ function applyFilters() {
                                     <div class="mt-1 text-xs text-slate-500">{{ trip.driver_name }}</div>
                                 </td>
                                 <td class="px-5 py-4 text-slate-600">{{ trip.vehicle_label }}</td>
-                                <td class="px-5 py-4 text-slate-600">{{ trip.status.replaceAll('_', ' ') }}</td>
+                                <td class="px-5 py-4">
+                                    <span class="rounded-full px-3 py-1 text-xs font-medium capitalize" :class="badgeClass(trip.status)">
+                                        {{ trip.status.replaceAll('_', ' ') }}
+                                    </span>
+                                </td>
                                 <td class="px-5 py-4 text-slate-600">{{ trip.scheduled_start || 'N/A' }}</td>
                             </tr>
                             <tr v-if="!recentTrips.length">

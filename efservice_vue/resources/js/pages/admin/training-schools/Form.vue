@@ -49,12 +49,12 @@ function onDocumentsChange(event: Event) {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div v-if="!props.isCarrierContext">
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-danger">*</span></label>
                     <TomSelect v-model="form.carrier_id">
                         <option value="">Select carrier</option>
                         <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                     </TomSelect>
-                    <p v-if="form.errors.carrier_id" class="text-red-500 text-xs mt-1">{{ form.errors.carrier_id }}</p>
+                    <p v-if="form.errors.carrier_id" class="text-danger text-xs mt-1">{{ form.errors.carrier_id }}</p>
                 </div>
 
                 <div v-else class="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
@@ -63,14 +63,14 @@ function onDocumentsChange(event: Event) {
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-danger">*</span></label>
                     <TomSelect v-model="form.user_driver_detail_id">
                         <option value="">Select driver</option>
                         <option v-for="driver in filteredDrivers" :key="driver.id" :value="String(driver.id)">
                             {{ driver.name }}{{ !props.isCarrierContext && driver.carrier_name ? ` - ${driver.carrier_name}` : '' }}
                         </option>
                     </TomSelect>
-                    <p v-if="form.errors.user_driver_detail_id" class="text-red-500 text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
+                    <p v-if="form.errors.user_driver_detail_id" class="text-danger text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
                 </div>
             </div>
         </div>
@@ -83,24 +83,24 @@ function onDocumentsChange(event: Event) {
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">School Name <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">School Name <span class="text-danger">*</span></label>
                     <FormInput v-model="form.school_name" type="text" placeholder="Enter school name" />
-                    <p v-if="form.errors.school_name" class="text-red-500 text-xs mt-1">{{ form.errors.school_name }}</p>
+                    <p v-if="form.errors.school_name" class="text-danger text-xs mt-1">{{ form.errors.school_name }}</p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">City <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">City <span class="text-danger">*</span></label>
                     <FormInput v-model="form.city" type="text" placeholder="Enter city" />
-                    <p v-if="form.errors.city" class="text-red-500 text-xs mt-1">{{ form.errors.city }}</p>
+                    <p v-if="form.errors.city" class="text-danger text-xs mt-1">{{ form.errors.city }}</p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">State <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">State <span class="text-danger">*</span></label>
                     <TomSelect v-model="form.state">
                         <option value="">Select state</option>
                         <option v-for="(label, code) in states" :key="code" :value="code">{{ label }}</option>
                     </TomSelect>
-                    <p v-if="form.errors.state" class="text-red-500 text-xs mt-1">{{ form.errors.state }}</p>
+                    <p v-if="form.errors.state" class="text-danger text-xs mt-1">{{ form.errors.state }}</p>
                 </div>
             </div>
         </div>
@@ -113,15 +113,15 @@ function onDocumentsChange(event: Event) {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Start Date <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Start Date <span class="text-danger">*</span></label>
                     <Litepicker v-model="form.date_start" :options="pickerOptions" />
-                    <p v-if="form.errors.date_start" class="text-red-500 text-xs mt-1">{{ form.errors.date_start }}</p>
+                    <p v-if="form.errors.date_start" class="text-danger text-xs mt-1">{{ form.errors.date_start }}</p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">End Date <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">End Date <span class="text-danger">*</span></label>
                     <Litepicker v-model="form.date_end" :options="pickerOptions" />
-                    <p v-if="form.errors.date_end" class="text-red-500 text-xs mt-1">{{ form.errors.date_end }}</p>
+                    <p v-if="form.errors.date_end" class="text-danger text-xs mt-1">{{ form.errors.date_end }}</p>
                 </div>
             </div>
         </div>
@@ -165,7 +165,7 @@ function onDocumentsChange(event: Event) {
                     <span class="text-sm font-medium text-slate-700">{{ label }}</span>
                 </label>
             </div>
-            <p v-if="form.errors.training_skills" class="text-red-500 text-xs mt-2">{{ form.errors.training_skills }}</p>
+            <p v-if="form.errors.training_skills" class="text-danger text-xs mt-2">{{ form.errors.training_skills }}</p>
         </div>
 
         <div class="box box--stacked p-6">
@@ -189,7 +189,7 @@ function onDocumentsChange(event: Event) {
             <label class="block text-xs font-medium text-slate-600 mb-1.5">Upload Documents</label>
             <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" @change="onDocumentsChange" />
             <p class="text-xs text-slate-400 mt-2">Accepted: PDF, JPG, PNG, DOC, DOCX. Dates should stay in M/D/YYYY format.</p>
-            <p v-if="form.errors.training_documents" class="text-red-500 text-xs mt-1">{{ form.errors.training_documents }}</p>
+            <p v-if="form.errors.training_documents" class="text-danger text-xs mt-1">{{ form.errors.training_documents }}</p>
         </div>
     </div>
 </template>

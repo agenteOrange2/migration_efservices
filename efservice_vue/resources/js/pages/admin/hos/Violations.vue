@@ -38,6 +38,14 @@ const pickerOptions = {
     format: 'M/D/YYYY',
 }
 
+function severityTone(severity: string) {
+    const value = String(severity || '').toLowerCase()
+    if (['high', 'critical', 'major'].some((item) => value.includes(item))) return 'bg-danger/10 text-danger'
+    if (['medium', 'moderate'].some((item) => value.includes(item))) return 'bg-warning/10 text-warning'
+    if (['low', 'minor'].some((item) => value.includes(item))) return 'bg-info/10 text-info'
+    return 'bg-primary/10 text-primary'
+}
+
 function applyFilters() {
     router.get(route(props.routeNames?.index ?? 'admin.hos.violations'), {
         carrier_id: filters.carrier_id || undefined,
@@ -83,10 +91,10 @@ function resetFilters() {
         </div>
 
         <div class="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Total</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.total }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Acknowledged</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.acknowledged }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Pending</div><div class="mt-2 text-3xl font-semibold text-primary">{{ stats.unacknowledged }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Forgiven</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.forgiven }}</div></div>
+            <div class="box box--stacked border border-primary/10 bg-primary/[0.04] p-5"><div class="text-sm text-slate-500">Total</div><div class="mt-2 text-3xl font-semibold text-primary">{{ stats.total }}</div></div>
+            <div class="box box--stacked border border-success/10 bg-success/[0.04] p-5"><div class="text-sm text-slate-500">Acknowledged</div><div class="mt-2 text-3xl font-semibold text-success">{{ stats.acknowledged }}</div></div>
+            <div class="box box--stacked border border-warning/10 bg-warning/[0.04] p-5"><div class="text-sm text-slate-500">Pending</div><div class="mt-2 text-3xl font-semibold text-warning">{{ stats.unacknowledged }}</div></div>
+            <div class="box box--stacked border border-info/10 bg-info/[0.04] p-5"><div class="text-sm text-slate-500">Forgiven</div><div class="mt-2 text-3xl font-semibold text-info">{{ stats.forgiven }}</div></div>
         </div>
 
         <div class="col-span-12">
@@ -141,14 +149,19 @@ function resetFilters() {
                             <tr v-for="violation in violations.data" :key="violation.id">
                                 <td class="px-5 py-4">
                                     <div class="font-medium text-slate-800">{{ violation.driver_name }}</div>
-                                    <div class="text-xs text-slate-500">{{ violation.severity }} · {{ violation.hours_exceeded }}h exceeded</div>
+                                    <div class="text-xs text-slate-500">
+                                        <span class="rounded-full px-2.5 py-1 font-medium" :class="severityTone(violation.severity)">{{ violation.severity }}</span>
+                                        · {{ violation.hours_exceeded }}h exceeded
+                                    </div>
                                 </td>
                                 <td class="px-5 py-4 text-slate-600">{{ violation.carrier_name || 'N/A' }}</td>
                                 <td class="px-5 py-4 text-slate-600">{{ violation.trip_number || 'N/A' }}</td>
                                 <td class="px-5 py-4">
                                     <div class="text-slate-700">{{ violation.violation_type }}</div>
-                                    <div class="text-xs" :class="violation.is_forgiven ? 'text-slate-500' : (violation.acknowledged ? 'text-slate-500' : 'text-primary')">
-                                        {{ violation.is_forgiven ? 'Forgiven' : (violation.acknowledged ? 'Acknowledged' : 'Pending acknowledgment') }}
+                                    <div class="mt-1">
+                                        <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="violation.is_forgiven ? 'bg-info/10 text-info' : (violation.acknowledged ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')">
+                                            {{ violation.is_forgiven ? 'Forgiven' : (violation.acknowledged ? 'Acknowledged' : 'Pending acknowledgment') }}
+                                        </span>
                                     </div>
                                 </td>
                                 <td class="px-5 py-4 text-slate-600">{{ violation.date || 'N/A' }}</td>

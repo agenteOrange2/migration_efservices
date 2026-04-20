@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import Button from '@/components/Base/Button'
+import { FormInput } from '@/components/Base/Form'
+import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 declare function route(name: string, params?: any): string
@@ -29,6 +31,8 @@ interface TrafficConviction { conviction_date: string | null; location: string |
 interface FmcsrData { is_disqualified: boolean; disqualified_details: string | null; is_license_suspended: boolean; suspension_details: string | null; is_license_denied: boolean; denial_details: string | null; has_positive_drug_test: boolean; has_duty_offenses: boolean; offense_details: string | null; consent_driving_record: boolean }
 interface CriminalHistory { has_criminal_charges: boolean; has_felony_conviction: boolean; has_minister_permit: boolean; fcra_consent: boolean }
 interface HosData { cycle_type: string; change_requested: boolean; change_requested_to: string | null; change_requested_at: string | null; change_approved_at: string | null }
+interface DriverTrip { id: number; trip_number: string | null; status: string; origin_address: string | null; destination_address: string | null; scheduled_start_date: string | null; scheduled_end_date: string | null; estimated_duration_minutes: number | null; vehicle: string | null }
+interface HosDocument { id: number; type_label: string; file_name: string; size_label: string; document_date: string | null; created_at: string | null; preview_url: string; download_url: string }
 interface WizardStep { step: number; label: string; status: string; percentage: number }
 interface MigrationHistory { id: number; migrated_at: string; migrated_at_raw: string; source_carrier: string; target_carrier: string; performed_by: string; reason: string | null; notes: string | null; status: string; can_rollback: boolean; rolled_back_at: string | null; rollback_reason: string | null }
 interface AvailableCarrier { id: number; name: string; dot_number: string | null; mc_number: string | null; state: string | null; address: string | null; current_drivers: number; max_drivers: number }
@@ -47,6 +51,7 @@ interface Driver {
     fmcsr_data: FmcsrData | null
     criminal_history: CriminalHistory | null
     hos_data: HosData
+    trips: DriverTrip[]
     wizard_steps: WizardStep[]
     wizard_total_pct: number
     migration_history: MigrationHistory[]
@@ -68,6 +73,7 @@ const props = withDefaults(defineProps<{
     driver: Driver
     documentsByCategory: Record<string, DocItem[]>
     stats: Stats
+    hosDocuments: HosDocument[]
     routeNames?: DriverShowRouteNames
     isCarrierContext?: boolean
 }>(), {
@@ -123,9 +129,9 @@ function formatNumber(n: number | null | undefined) {
 
 const statusBadge = (status: string) => {
     const map: Record<string, string> = {
-        active: 'bg-emerald-100 text-emerald-700', inactive: 'bg-red-100 text-red-700',
-        draft: 'bg-slate-100 text-slate-600', pending_review: 'bg-amber-100 text-amber-700',
-        approved: 'bg-blue-100 text-blue-700', rejected: 'bg-red-100 text-red-700',
+        active: 'bg-success/10 text-success', inactive: 'bg-danger/10 text-danger',
+        draft: 'bg-slate-100 text-slate-600', pending_review: 'bg-warning/10 text-warning',
+        approved: 'bg-primary/10 text-primary', rejected: 'bg-danger/10 text-danger',
     }
     return map[status] ?? 'bg-slate-100 text-slate-600'
 }
@@ -133,16 +139,16 @@ const statusBadge = (status: string) => {
 const testResultBadge = (result: string | null) => {
     if (!result) return 'bg-slate-100 text-slate-600'
     const r = result.toLowerCase()
-    if (r === 'negative') return 'bg-emerald-100 text-emerald-700'
-    if (r === 'positive' || r === 'refusal') return 'bg-red-100 text-red-700'
+    if (r === 'negative') return 'bg-success/10 text-success'
+    if (r === 'positive' || r === 'refusal') return 'bg-danger/10 text-danger'
     return 'bg-slate-100 text-slate-600'
 }
 
-const medicalBadge = (s: string) => ({ valid: 'bg-emerald-100 text-emerald-700', expiring_soon: 'bg-amber-100 text-amber-700', expired: 'bg-red-100 text-red-700' }[s] ?? 'bg-slate-100 text-slate-600')
+const medicalBadge = (s: string) => ({ valid: 'bg-success/10 text-success', expiring_soon: 'bg-warning/10 text-warning', expired: 'bg-danger/10 text-danger' }[s] ?? 'bg-slate-100 text-slate-600')
 const medicalLabel = (s: string) => ({ valid: 'Valid', expiring_soon: 'Expiring Soon', expired: 'Expired' }[s] ?? 'Unknown')
 
 const inspLevelBadge = (level: string | null) => {
-    const map: Record<string, string> = { 'I': 'bg-red-100 text-red-700', 'II': 'bg-orange-100 text-orange-700', 'III': 'bg-blue-100 text-blue-700' }
+    const map: Record<string, string> = { 'I': 'bg-danger/10 text-danger', 'II': 'bg-warning/10 text-warning', 'III': 'bg-primary/10 text-primary' }
     return map[level ?? ''] ?? 'bg-slate-100 text-slate-600'
 }
 
@@ -157,18 +163,72 @@ const categoryLabel = (key: string): string => ({
     inspections:                      'Inspections',
     testing:                          'Testing',
     records:                          'Records (MVR / Criminal / Clearing House)',
+    vehicle_verifications:            'Vehicle Verifications',
+    violation_reports:                'Violation Reports',
     application_forms:                'Application Forms',
     employment_verification:          'Employment Verification',
     employment_verification_attempts: 'Employment Verification Attempts',
     w9_documents:                     'W-9 Tax Form',
     dot_policy_documents:             'DOT Drug & Alcohol Policy',
     certification:                    'Certification',
+    other:                            'Other Documents',
 }[key] ?? key.replace(/_/g, ' '))
 const hosLabel: Record<string, string> = { '60_7': '60 hrs / 7 days', '70_8': '70 hrs / 8 days' }
+
+// ─── HOS Document generation forms ───────────────────────────────────────────
+const activeHosPanel = ref<'daily' | 'monthly' | 'fmcsa' | null>(null)
+const dailyLogForm   = reactive({ date: '' })
+const monthlyForm    = reactive({ year: String(new Date().getFullYear()), month: String(new Date().getMonth() + 1) })
+const fmcsaForm      = reactive({ year: String(new Date().getFullYear()), month: String(new Date().getMonth() + 1) })
+const generatingHos  = ref<string | null>(null)
+
+const pickerOptionsSingle = { autoApply: true, singleMode: true, numberOfColumns: 1, numberOfMonths: 1, format: 'M/D/YYYY' }
+
+function generateDailyLog() {
+    generatingHos.value = 'daily'
+    router.post(route('admin.hos.documents.generate-daily-log'), { driver_id: props.driver.id, date: dailyLogForm.date }, {
+        preserveScroll: true, onFinish: () => { generatingHos.value = null },
+    })
+}
+
+function generateMonthlySummary() {
+    generatingHos.value = 'monthly'
+    router.post(route('admin.hos.documents.generate-monthly-summary'), { driver_id: props.driver.id, year: monthlyForm.year, month: monthlyForm.month }, {
+        preserveScroll: true, onFinish: () => { generatingHos.value = null },
+    })
+}
+
+function generateFmcsaMonthly() {
+    generatingHos.value = 'fmcsa'
+    router.post(route('admin.hos.documents.generate-fmcsa-monthly'), { driver_id: props.driver.id, year: fmcsaForm.year, month: fmcsaForm.month }, {
+        preserveScroll: true, onFinish: () => { generatingHos.value = null },
+    })
+}
+
+function deleteHosDocument(id: number) {
+    if (!confirm('Delete this HOS document?')) return
+    router.delete(route('admin.hos.documents.destroy', id), { preserveScroll: true })
+}
+
+const tripStatusBadge = (status: string) => {
+    const map: Record<string, string> = {
+        pending:     'bg-warning/10 text-warning',
+        accepted:    'bg-primary/10 text-primary',
+        in_progress: 'bg-blue-100 text-blue-700',
+        paused:      'bg-amber-100 text-amber-700',
+        completed:   'bg-success/10 text-success',
+        cancelled:   'bg-danger/10 text-danger',
+    }
+    return map[status] ?? 'bg-slate-100 text-slate-600'
+}
+const tripStatusLabel = (status: string) => ({
+    pending: 'Pending', accepted: 'Accepted', in_progress: 'In Progress',
+    paused: 'Paused', completed: 'Completed', cancelled: 'Cancelled',
+}[status] ?? status)
 const stepStatusClass: Record<string, string> = {
-    completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    missing:   'bg-red-50 text-red-600 border-red-200',
-    pending:   'bg-amber-50 text-amber-700 border-amber-200',
+    completed: 'bg-success/10 text-success border-success/20',
+    missing:   'bg-danger/10 text-danger border-danger/20',
+    pending:   'bg-warning/10 text-warning border-warning/20',
 }
 
 const testTypeName: Record<string, string> = {
@@ -185,6 +245,26 @@ const alcoholTests = computed(() =>
     props.driver.testings.filter(t => t.test_type?.includes('alcohol')).sort((a, b) => (b.test_date ?? '').localeCompare(a.test_date ?? ''))
 )
 const isActive = computed(() => props.driver.effective_status === 'active')
+const medicalStatTone = computed(() => {
+    const value = String(props.stats.medical_status || '').toLowerCase()
+    if (value === 'valid') return 'text-success'
+    if (value.includes('expiring')) return 'text-warning'
+    return 'text-danger'
+})
+const testingStatTone = computed(() => {
+    const value = String(props.stats.testing_status || '').toLowerCase()
+    if (value.includes('negative') || value.includes('compliant') || value.includes('passed')) return 'text-success'
+    if (value.includes('pending') || value.includes('review')) return 'text-warning'
+    if (value.includes('positive') || value.includes('refusal')) return 'text-danger'
+    return 'text-primary'
+})
+const vehiclesStatTone = computed(() => {
+    const value = String(props.stats.vehicles_status || '').toLowerCase()
+    if (value.includes('active') || value.includes('assigned')) return 'text-success'
+    if (value.includes('pending') || value.includes('review')) return 'text-warning'
+    if (value.includes('inactive') || value.includes('unassigned')) return 'text-danger'
+    return 'text-primary'
+})
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 function activateDriver() {
@@ -380,11 +460,11 @@ function submitRollback() {
                             </Button>
                         </Link>
                         <button v-if="routeNames.activate && !isActive" @click="activateDriver"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition">
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success text-white text-sm font-medium hover:bg-success/90 transition">
                             <Lucide icon="UserCheck" class="w-4 h-4" /> Activate
                         </button>
                         <button v-else-if="routeNames.deactivate && isActive" @click="deactivateDriver"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition">
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger text-white text-sm font-medium hover:bg-danger/90 transition">
                             <Lucide icon="UserMinus" class="w-4 h-4" /> Deactivate
                         </button>
                         <a v-if="routeNames.documentsDownload && stats.total_documents > 0" :href="namedRoute('documentsDownload', driver.id)"
@@ -392,7 +472,7 @@ function submitRollback() {
                             <Lucide icon="Download" class="w-4 h-4" /> Download Docs
                         </a>
                         <Link v-if="routeNames.migrationWizard && isActive && !isCarrierContext" :href="namedRoute('migrationWizard', driver.id)"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition">
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning text-white text-sm font-medium hover:bg-warning/90 transition">
                             <Lucide icon="ArrowRightLeft" class="w-4 h-4" /> Migrate Carrier
                         </Link>
                     </div>
@@ -403,29 +483,29 @@ function submitRollback() {
         <!-- ══════════════════════════════════════════════════ STATS CARDS -->
         <div class="col-span-12">
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div class="box box--stacked p-4 text-center">
-                    <p class="text-2xl font-bold text-slate-800">{{ stats.total_documents }}</p>
+                <div class="box box--stacked p-4 text-center border border-info/10 bg-info/[0.04]">
+                    <p class="text-2xl font-bold text-info">{{ stats.total_documents }}</p>
                     <p class="text-xs text-slate-500 mt-1">Documents</p>
                 </div>
-                <div class="box box--stacked p-4 text-center">
-                    <p class="text-2xl font-bold text-slate-800">{{ stats.licenses_count }}</p>
+                <div class="box box--stacked p-4 text-center border border-primary/10 bg-primary/[0.04]">
+                    <p class="text-2xl font-bold text-primary">{{ stats.licenses_count }}</p>
                     <p class="text-xs text-slate-500 mt-1">Licenses</p>
                 </div>
-                <div class="box box--stacked p-4 text-center">
-                    <p class="text-2xl font-bold" :class="stats.medical_status === 'Valid' ? 'text-emerald-600' : 'text-red-600'">{{ stats.medical_status }}</p>
+                <div class="box box--stacked p-4 text-center border" :class="medicalStatTone === 'text-success' ? 'border-success/10 bg-success/[0.04]' : medicalStatTone === 'text-warning' ? 'border-warning/10 bg-warning/[0.04]' : 'border-danger/10 bg-danger/[0.04]'">
+                    <p class="text-2xl font-bold" :class="medicalStatTone">{{ stats.medical_status }}</p>
                     <p class="text-xs text-slate-500 mt-1">Medical</p>
                     <p v-if="stats.medical_expiration" class="text-xs text-slate-400">{{ formatDate(stats.medical_expiration) }}</p>
                 </div>
-                <div class="box box--stacked p-4 text-center">
-                    <p class="text-2xl font-bold text-slate-800">{{ stats.records_uploaded }}</p>
+                <div class="box box--stacked p-4 text-center border border-primary/10 bg-primary/[0.04]">
+                    <p class="text-2xl font-bold text-primary">{{ stats.records_uploaded }}</p>
                     <p class="text-xs text-slate-500 mt-1">Records</p>
                 </div>
-                <div class="box box--stacked p-4 text-center">
-                    <p class="text-2xl font-bold text-slate-800">{{ stats.testing_count }}</p>
+                <div class="box box--stacked p-4 text-center border" :class="testingStatTone === 'text-success' ? 'border-success/10 bg-success/[0.04]' : testingStatTone === 'text-warning' ? 'border-warning/10 bg-warning/[0.04]' : testingStatTone === 'text-danger' ? 'border-danger/10 bg-danger/[0.04]' : 'border-primary/10 bg-primary/[0.04]'">
+                    <p class="text-2xl font-bold" :class="testingStatTone">{{ stats.testing_count }}</p>
                     <p class="text-xs text-slate-500 mt-1">Tests</p>
                 </div>
-                <div class="box box--stacked p-4 text-center">
-                    <p class="text-2xl font-bold text-slate-800">{{ stats.vehicles_count }}</p>
+                <div class="box box--stacked p-4 text-center border" :class="vehiclesStatTone === 'text-success' ? 'border-success/10 bg-success/[0.04]' : vehiclesStatTone === 'text-warning' ? 'border-warning/10 bg-warning/[0.04]' : vehiclesStatTone === 'text-danger' ? 'border-danger/10 bg-danger/[0.04]' : 'border-primary/10 bg-primary/[0.04]'">
+                    <p class="text-2xl font-bold" :class="vehiclesStatTone">{{ stats.vehicles_count }}</p>
                     <p class="text-xs text-slate-500 mt-1">Vehicles</p>
                 </div>
             </div>
@@ -466,8 +546,8 @@ function submitRollback() {
                     </div>
                 </div>
                 <!-- Emergency Contact -->
-                <div v-if="driver.emergency_contact_name" class="mt-4 bg-amber-50/60 border border-amber-100 rounded-lg p-3">
-                    <p class="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1"><Lucide icon="Phone" class="w-3.5 h-3.5" /> Emergency Contact</p>
+                <div v-if="driver.emergency_contact_name" class="mt-4 bg-warning/10 border border-warning/20 rounded-lg p-3">
+                    <p class="text-xs font-semibold text-warning mb-2 flex items-center gap-1"><Lucide icon="Phone" class="w-3.5 h-3.5" /> Emergency Contact</p>
                     <div class="grid grid-cols-3 gap-2 text-sm">
                         <div><p class="text-xs text-slate-500">Name</p><p class="font-medium">{{ driver.emergency_contact_name }}</p></div>
                         <div><p class="text-xs text-slate-500">Phone</p><p class="font-medium">{{ driver.emergency_contact_phone || 'N/A' }}</p></div>
@@ -522,7 +602,7 @@ function submitRollback() {
                             :class="activeTab === tab.id ? 'border-primary text-primary bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'">
                             <Lucide :icon="asIcon(tab.icon)" class="w-4 h-4" />
                             {{ tab.label }}
-                            <span v-if="tab.id === 'documents' && stats.total_documents > 0" class="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs">{{ stats.total_documents }}</span>
+                            <span v-if="tab.id === 'documents' && stats.total_documents > 0" class="ml-1 px-1.5 py-0.5 rounded-full bg-success/10 text-success text-xs">{{ stats.total_documents }}</span>
                         </button>
                     </nav>
                 </div>
@@ -565,7 +645,7 @@ function submitRollback() {
                                             <p class="text-xs text-slate-500">{{ lic.state_of_issue || 'N/A' }} • Class {{ lic.license_class || 'N/A' }}</p>
                                         </div>
                                         <div class="flex gap-2">
-                                            <span v-if="lic.is_cdl" class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">CDL</span>
+                                            <span v-if="lic.is_cdl" class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">CDL</span>
                                             <span :class="[statusBadge(lic.status || 'none'), 'px-2 py-0.5 rounded-full text-xs font-medium capitalize']">{{ lic.status || 'N/A' }}</span>
                                         </div>
                                     </div>
@@ -607,7 +687,7 @@ function submitRollback() {
                                             <td class="px-4 py-3">{{ exp.years_experience ?? 'N/A' }}</td>
                                             <td class="px-4 py-3">{{ exp.miles_driven ? formatNumber(exp.miles_driven) : 'N/A' }}</td>
                                             <td class="px-4 py-3">
-                                                <span :class="exp.requires_cdl ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'" class="px-2 py-0.5 rounded-full text-xs">{{ exp.requires_cdl ? 'Yes' : 'No' }}</span>
+                                                <span :class="exp.requires_cdl ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'" class="px-2 py-0.5 rounded-full text-xs">{{ exp.requires_cdl ? 'Yes' : 'No' }}</span>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -624,8 +704,8 @@ function submitRollback() {
                             <div class="border border-slate-200 rounded-xl overflow-hidden">
                                 <!-- Card Header -->
                                 <div class="flex items-center gap-2 px-5 py-4 border-b border-slate-100 bg-slate-50">
-                                    <div class="p-1.5 bg-blue-100 rounded-lg">
-                                        <Lucide icon="Heart" class="w-4 h-4 text-blue-500" />
+                                    <div class="p-1.5 bg-primary/10 rounded-lg">
+                                        <Lucide icon="Heart" class="w-4 h-4 text-primary" />
                                     </div>
                                     <span class="font-semibold text-slate-800">Medical Qualification</span>
                                 </div>
@@ -719,10 +799,10 @@ function submitRollback() {
                                             <p class="text-xs text-slate-500 mt-0.5">{{ formatDate(emp.from_date) }} – {{ emp.to_date ? formatDate(emp.to_date) : 'Present' }}</p>
                                         </div>
                                         <div class="flex flex-col items-end gap-2 flex-shrink-0">
-                                            <span :class="emp.email_sent ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'" class="px-2 py-0.5 rounded-full text-xs font-medium">
+                                            <span :class="emp.email_sent ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-500'" class="px-2 py-0.5 rounded-full text-xs font-medium">
                                                 {{ emp.email_sent ? 'Email Sent' : 'Email Pending' }}
                                             </span>
-                                            <span v-if="emp.verification_status" :class="emp.verification_status === 'verified' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">
+                                            <span v-if="emp.verification_status" :class="emp.verification_status === 'verified' ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'" class="px-2 py-0.5 rounded-full text-xs font-medium capitalize">
                                                 {{ emp.verification_status }}
                                             </span>
                                         </div>
@@ -734,10 +814,10 @@ function submitRollback() {
                                         <div v-if="emp.reason_for_leaving"><p class="text-xs text-slate-500">Reason Left</p><p class="capitalize">{{ emp.reason_for_leaving }}</p></div>
                                     </div>
                                     <div class="flex flex-wrap gap-2">
-                                        <span :class="emp.subject_to_fmcsr ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500'" class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs">
+                                        <span :class="emp.subject_to_fmcsr ? 'bg-warning/10 text-warning' : 'bg-slate-100 text-slate-500'" class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs">
                                             <Lucide icon="AlertCircle" class="w-3 h-3" /> FMCSR: {{ emp.subject_to_fmcsr ? 'Yes' : 'No' }}
                                         </span>
-                                        <span :class="emp.safety_sensitive_function ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500'" class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs">
+                                        <span :class="emp.safety_sensitive_function ? 'bg-warning/10 text-warning' : 'bg-slate-100 text-slate-500'" class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs">
                                             <Lucide icon="Shield" class="w-3 h-3" /> Safety-Sensitive: {{ emp.safety_sensitive_function ? 'Yes' : 'No' }}
                                         </span>
                                     </div>
@@ -749,9 +829,9 @@ function submitRollback() {
 
                         <!-- Unemployment Periods -->
                         <div v-if="driver.unemployment_periods?.length">
-                            <h3 class="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><Lucide icon="Clock" class="w-4 h-4 text-amber-500" /> Unemployment Periods</h3>
+                            <h3 class="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><Lucide icon="Clock" class="w-4 h-4 text-warning" /> Unemployment Periods</h3>
                             <div class="space-y-2">
-                                <div v-for="(up, i) in driver.unemployment_periods" :key="i" class="flex items-center justify-between bg-amber-50 rounded-lg p-4 border border-amber-100">
+                                <div v-for="(up, i) in driver.unemployment_periods" :key="i" class="flex items-center justify-between bg-warning/10 rounded-lg p-4 border border-warning/20">
                                     <div>
                                         <p class="text-sm font-medium">{{ formatDate(up.from_date) }} – {{ up.to_date ? formatDate(up.to_date) : 'Present' }}</p>
                                         <p v-if="up.comments" class="text-xs text-slate-600 mt-0.5">{{ up.comments }}</p>
@@ -791,7 +871,7 @@ function submitRollback() {
                                             </p>
                                         </div>
                                         <div class="flex gap-2 flex-shrink-0">
-                                            <span v-if="ts.graduated !== null" :class="ts.graduated ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'" class="px-2 py-0.5 rounded-full text-xs">{{ ts.graduated ? 'Graduated' : 'Not Graduated' }}</span>
+                                            <span v-if="ts.graduated !== null" :class="ts.graduated ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-500'" class="px-2 py-0.5 rounded-full text-xs">{{ ts.graduated ? 'Graduated' : 'Not Graduated' }}</span>
                                             <a v-if="ts.certificate_url" :href="ts.certificate_url" target="_blank" class="text-xs text-primary hover:underline flex items-center gap-1">
                                                 <Lucide icon="FileText" class="w-3.5 h-3.5" /> Certificate
                                             </a>
@@ -817,7 +897,7 @@ function submitRollback() {
                                             </div>
                                         </div>
                                         <div class="flex gap-2 flex-shrink-0">
-                                            <span v-if="c.status" :class="c.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'" class="px-2 py-0.5 rounded-full text-xs capitalize">{{ c.status }}</span>
+                                            <span v-if="c.status" :class="c.status === 'completed' ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'" class="px-2 py-0.5 rounded-full text-xs capitalize">{{ c.status }}</span>
                                             <a v-if="c.certificate_url" :href="c.certificate_url" target="_blank" class="text-xs text-primary hover:underline flex items-center gap-1">
                                                 <Lucide icon="FileText" class="w-3.5 h-3.5" /> Certificate
                                             </a>
@@ -837,12 +917,12 @@ function submitRollback() {
                                 <p class="text-2xl font-bold text-slate-800">{{ driver.testings.length }}</p>
                                 <p class="text-xs text-slate-500 mt-1">Total Tests</p>
                             </div>
-                            <div class="bg-emerald-50 rounded-lg p-4 text-center border border-emerald-100">
-                                <p class="text-2xl font-bold text-emerald-600">{{ driver.testings.filter(t => t.test_result?.toLowerCase() === 'negative').length }}</p>
+                            <div class="bg-success/10 rounded-lg p-4 text-center border border-success/20">
+                                <p class="text-2xl font-bold text-success">{{ driver.testings.filter(t => t.test_result?.toLowerCase() === 'negative').length }}</p>
                                 <p class="text-xs text-slate-500 mt-1">Negative</p>
                             </div>
-                            <div class="bg-red-50 rounded-lg p-4 text-center border border-red-100">
-                                <p class="text-2xl font-bold text-red-600">{{ driver.testings.filter(t => t.test_result?.toLowerCase() === 'positive').length }}</p>
+                            <div class="bg-danger/10 rounded-lg p-4 text-center border border-danger/20">
+                                <p class="text-2xl font-bold text-danger">{{ driver.testings.filter(t => t.test_result?.toLowerCase() === 'positive').length }}</p>
                                 <p class="text-xs text-slate-500 mt-1">Positive</p>
                             </div>
                             <div class="bg-slate-50 rounded-lg p-4 text-center border border-slate-200">
@@ -858,7 +938,7 @@ function submitRollback() {
                         <!-- Drug / Alcohol Breakdown -->
                         <div v-if="drugTests.length || alcoholTests.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                                <h4 class="font-medium text-slate-700 mb-3 flex items-center gap-2"><Lucide icon="FlaskConical" class="w-4 h-4 text-blue-500" /> Drug Testing</h4>
+                                <h4 class="font-medium text-slate-700 mb-3 flex items-center gap-2"><Lucide icon="FlaskConical" class="w-4 h-4 text-primary" /> Drug Testing</h4>
                                 <div class="space-y-2 text-sm">
                                     <div class="flex justify-between"><span class="text-slate-500">Total</span><span class="font-medium">{{ drugTests.length }}</span></div>
                                     <div class="flex justify-between"><span class="text-slate-500">Last Date</span><span>{{ formatDate(drugTests[0]?.test_date ?? null) }}</span></div>
@@ -869,7 +949,7 @@ function submitRollback() {
                                 </div>
                             </div>
                             <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                                <h4 class="font-medium text-slate-700 mb-3 flex items-center gap-2"><Lucide icon="Wine" class="w-4 h-4 text-purple-500" /> Alcohol Testing</h4>
+                                <h4 class="font-medium text-slate-700 mb-3 flex items-center gap-2"><Lucide icon="Wine" class="w-4 h-4 text-warning" /> Alcohol Testing</h4>
                                 <div class="space-y-2 text-sm">
                                     <div class="flex justify-between"><span class="text-slate-500">Total</span><span class="font-medium">{{ alcoholTests.length }}</span></div>
                                     <div class="flex justify-between"><span class="text-slate-500">Last Date</span><span>{{ formatDate(alcoholTests[0]?.test_date ?? null) }}</span></div>
@@ -892,9 +972,9 @@ function submitRollback() {
                                         <p class="text-xs text-slate-500">{{ formatDate(t.test_date) }}</p>
                                         <p v-if="t.administered_by" class="text-xs text-slate-500">By: {{ t.administered_by }}</p>
                                         <div class="flex flex-wrap gap-1.5 mt-1.5">
-                                            <span v-if="t.is_random_test" class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">Random</span>
-                                            <span v-if="t.is_post_accident_test" class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 text-xs">Post-Accident</span>
-                                            <span v-if="t.is_pre_employment_test" class="px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-xs">Pre-Employment</span>
+                                            <span v-if="t.is_random_test" class="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs">Random</span>
+                                            <span v-if="t.is_post_accident_test" class="px-1.5 py-0.5 rounded bg-warning/10 text-warning text-xs">Post-Accident</span>
+                                            <span v-if="t.is_pre_employment_test" class="px-1.5 py-0.5 rounded bg-success/10 text-success text-xs">Pre-Employment</span>
                                         </div>
                                         <p v-if="t.next_test_due" class="text-xs text-slate-400 mt-1">Next due: {{ formatDate(t.next_test_due) }}</p>
                                     </div>
@@ -937,8 +1017,8 @@ function submitRollback() {
                                         <p class="text-xl font-bold text-slate-800">{{ driver.inspections.filter(i=>i.inspection_date?.startsWith(new Date().getFullYear().toString())).length }}</p>
                                         <p class="text-xs text-slate-500">This Year</p>
                                     </div>
-                                    <div class="bg-red-50 rounded-lg p-3 text-center border border-red-100">
-                                        <p class="text-xl font-bold text-red-600">{{ driver.inspections.filter(i=>i.defects_found).length }}</p>
+                                    <div class="bg-danger/10 rounded-lg p-3 text-center border border-danger/20">
+                                        <p class="text-xl font-bold text-danger">{{ driver.inspections.filter(i=>i.defects_found).length }}</p>
                                         <p class="text-xs text-slate-500">Defects Found</p>
                                     </div>
                                     <div class="bg-slate-50 rounded-lg p-3 text-center border border-slate-200">
@@ -970,8 +1050,8 @@ function submitRollback() {
                                                 <td class="px-4 py-3">{{ insp.inspector_name || 'N/A' }}</td>
                                                 <td class="px-4 py-3 max-w-[120px] truncate">{{ insp.location || 'N/A' }}</td>
                                                 <td class="px-4 py-3">
-                                                    <span v-if="insp.defects_found" class="flex items-center gap-1 text-red-600 text-xs"><Lucide icon="AlertCircle" class="w-3.5 h-3.5" /> Defects</span>
-                                                    <span v-else class="flex items-center gap-1 text-emerald-600 text-xs"><Lucide icon="CheckCircle" class="w-3.5 h-3.5" /> Clean</span>
+                                                    <span v-if="insp.defects_found" class="flex items-center gap-1 text-danger text-xs"><Lucide icon="AlertCircle" class="w-3.5 h-3.5" /> Defects</span>
+                                                    <span v-else class="flex items-center gap-1 text-success text-xs"><Lucide icon="CheckCircle" class="w-3.5 h-3.5" /> Clean</span>
                                                 </td>
                                                 <td class="px-4 py-3 text-xs">{{ insp.vehicle || 'N/A' }}</td>
                                             </tr>
@@ -990,8 +1070,8 @@ function submitRollback() {
                             <div v-if="driver.accidents?.length" class="space-y-3">
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                                     <div class="bg-slate-50 rounded-lg p-3 text-center border"><p class="text-xl font-bold">{{ driver.accidents.length }}</p><p class="text-xs text-slate-500">Total</p></div>
-                                    <div class="bg-red-50 rounded-lg p-3 text-center border border-red-100"><p class="text-xl font-bold text-red-600">{{ driver.accidents.filter(a=>a.had_fatalities).length }}</p><p class="text-xs text-slate-500">W/ Fatalities</p></div>
-                                    <div class="bg-orange-50 rounded-lg p-3 text-center border border-orange-100"><p class="text-xl font-bold text-orange-600">{{ driver.accidents.filter(a=>a.had_injuries).length }}</p><p class="text-xs text-slate-500">W/ Injuries</p></div>
+                                    <div class="bg-danger/10 rounded-lg p-3 text-center border border-danger/20"><p class="text-xl font-bold text-danger">{{ driver.accidents.filter(a=>a.had_fatalities).length }}</p><p class="text-xs text-slate-500">W/ Fatalities</p></div>
+                                    <div class="bg-warning/10 rounded-lg p-3 text-center border border-warning/20"><p class="text-xl font-bold text-warning">{{ driver.accidents.filter(a=>a.had_injuries).length }}</p><p class="text-xs text-slate-500">W/ Injuries</p></div>
                                     <div class="bg-slate-50 rounded-lg p-3 text-center border"><p class="text-sm font-medium">{{ formatDate(driver.accidents.slice().sort((a,b)=>(b.accident_date??'').localeCompare(a.accident_date??''))[0]?.accident_date ?? null) }}</p><p class="text-xs text-slate-500">Last Accident</p></div>
                                 </div>
                                 <div class="overflow-x-auto rounded-lg border border-slate-200">
@@ -1007,15 +1087,15 @@ function submitRollback() {
                                             <tr v-for="(acc, i) in driver.accidents" :key="i" class="border-t border-slate-100 hover:bg-slate-50/50">
                                                 <td class="px-4 py-3">{{ formatDate(acc.accident_date) }}</td>
                                                 <td class="px-4 py-3">{{ acc.nature_of_accident || 'N/A' }}</td>
-                                                <td class="px-4 py-3"><span :class="acc.had_fatalities ? 'text-red-600 font-medium' : 'text-slate-500'">{{ acc.had_fatalities ? acc.number_of_fatalities : 'None' }}</span></td>
-                                                <td class="px-4 py-3"><span :class="acc.had_injuries ? 'text-orange-600 font-medium' : 'text-slate-500'">{{ acc.had_injuries ? acc.number_of_injuries : 'None' }}</span></td>
+                                                <td class="px-4 py-3"><span :class="acc.had_fatalities ? 'text-danger font-medium' : 'text-slate-500'">{{ acc.had_fatalities ? acc.number_of_fatalities : 'None' }}</span></td>
+                                                <td class="px-4 py-3"><span :class="acc.had_injuries ? 'text-warning font-medium' : 'text-slate-500'">{{ acc.had_injuries ? acc.number_of_injuries : 'None' }}</span></td>
                                                 <td class="px-4 py-3 max-w-[150px] truncate text-xs text-slate-600">{{ acc.comments || '—' }}</td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                            <div v-else class="flex flex-col items-center py-10 text-emerald-600">
+                            <div v-else class="flex flex-col items-center py-10 text-success">
                                 <Lucide icon="CheckCircle" class="w-10 h-10 mb-2" />
                                 <p class="font-medium">No accident records — clean driving record</p>
                             </div>
@@ -1042,7 +1122,7 @@ function submitRollback() {
                                             <tr v-for="(tc, i) in driver.traffic_convictions" :key="i" class="border-t border-slate-100 hover:bg-slate-50/50">
                                                 <td class="px-4 py-3">{{ formatDate(tc.conviction_date) }}</td>
                                                 <td class="px-4 py-3 font-medium">{{ tc.charge || 'N/A' }}</td>
-                                                <td class="px-4 py-3"><span v-if="tc.conviction_type" class="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs capitalize">{{ tc.conviction_type }}</span><span v-else>N/A</span></td>
+                                                <td class="px-4 py-3"><span v-if="tc.conviction_type" class="px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs capitalize">{{ tc.conviction_type }}</span><span v-else>N/A</span></td>
                                                 <td class="px-4 py-3">{{ tc.location || 'N/A' }}</td>
                                                 <td class="px-4 py-3 text-xs">{{ tc.penalty || 'N/A' }}</td>
                                             </tr>
@@ -1050,7 +1130,7 @@ function submitRollback() {
                                     </table>
                                 </div>
                             </div>
-                            <div v-else class="flex flex-col items-center py-10 text-emerald-600">
+                            <div v-else class="flex flex-col items-center py-10 text-success">
                                 <Lucide icon="CheckCircle" class="w-10 h-10 mb-2" />
                                 <p class="font-medium">No traffic convictions — clean driving record</p>
                             </div>
@@ -1076,7 +1156,7 @@ function submitRollback() {
                                             <td class="px-4 py-3">{{ formatDate(va.start_date) }}</td>
                                             <td class="px-4 py-3">{{ va.end_date ? formatDate(va.end_date) : 'Ongoing' }}</td>
                                             <td class="px-4 py-3">
-                                                <span :class="va.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'" class="px-2 py-0.5 rounded-full text-xs capitalize">{{ va.status || 'N/A' }}</span>
+                                                <span :class="va.status === 'active' ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-500'" class="px-2 py-0.5 rounded-full text-xs capitalize">{{ va.status || 'N/A' }}</span>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -1100,33 +1180,33 @@ function submitRollback() {
                                 <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
                                     <div class="flex items-center justify-between">
                                         <span class="text-sm text-slate-600">License Disqualified</span>
-                                        <span :class="driver.fmcsr_data.is_disqualified ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.is_disqualified) }}</span>
+                                        <span :class="driver.fmcsr_data.is_disqualified ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.is_disqualified) }}</span>
                                     </div>
                                     <p v-if="driver.fmcsr_data.disqualified_details" class="text-xs text-slate-500 italic">{{ driver.fmcsr_data.disqualified_details }}</p>
                                     <div class="flex items-center justify-between">
                                         <span class="text-sm text-slate-600">License Suspended</span>
-                                        <span :class="driver.fmcsr_data.is_license_suspended ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.is_license_suspended) }}</span>
+                                        <span :class="driver.fmcsr_data.is_license_suspended ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.is_license_suspended) }}</span>
                                     </div>
                                     <p v-if="driver.fmcsr_data.suspension_details" class="text-xs text-slate-500 italic">{{ driver.fmcsr_data.suspension_details }}</p>
                                     <div class="flex items-center justify-between">
                                         <span class="text-sm text-slate-600">License Denied</span>
-                                        <span :class="driver.fmcsr_data.is_license_denied ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.is_license_denied) }}</span>
+                                        <span :class="driver.fmcsr_data.is_license_denied ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.is_license_denied) }}</span>
                                     </div>
                                     <p v-if="driver.fmcsr_data.denial_details" class="text-xs text-slate-500 italic">{{ driver.fmcsr_data.denial_details }}</p>
                                 </div>
                                 <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
                                     <div class="flex items-center justify-between">
                                         <span class="text-sm text-slate-600">Positive Drug Test</span>
-                                        <span :class="driver.fmcsr_data.has_positive_drug_test ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.has_positive_drug_test) }}</span>
+                                        <span :class="driver.fmcsr_data.has_positive_drug_test ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.has_positive_drug_test) }}</span>
                                     </div>
                                     <div class="flex items-center justify-between">
                                         <span class="text-sm text-slate-600">Duty Offenses</span>
-                                        <span :class="driver.fmcsr_data.has_duty_offenses ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.has_duty_offenses) }}</span>
+                                        <span :class="driver.fmcsr_data.has_duty_offenses ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.has_duty_offenses) }}</span>
                                     </div>
                                     <p v-if="driver.fmcsr_data.offense_details" class="text-xs text-slate-500 italic">{{ driver.fmcsr_data.offense_details }}</p>
                                     <div class="flex items-center justify-between">
                                         <span class="text-sm text-slate-600">Consent Driving Record</span>
-                                        <span :class="driver.fmcsr_data.consent_driving_record ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.consent_driving_record) }}</span>
+                                        <span :class="driver.fmcsr_data.consent_driving_record ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-500'" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ yesNo(driver.fmcsr_data.consent_driving_record) }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1136,16 +1216,16 @@ function submitRollback() {
                         <!-- Criminal History -->
                         <div class="border-t pt-6">
                             <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                                <Lucide icon="AlertTriangle" class="w-4 h-4 text-orange-500" /> Criminal History
+                                <Lucide icon="AlertTriangle" class="w-4 h-4 text-warning" /> Criminal History
                             </h3>
                             <div v-if="driver.criminal_history" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
                                     <p class="text-xs text-slate-500 mb-1">Criminal Charges</p>
-                                    <span :class="driver.criminal_history.has_criminal_charges ? 'text-red-600' : 'text-emerald-600'" class="text-lg font-bold">{{ yesNo(driver.criminal_history.has_criminal_charges) }}</span>
+                                    <span :class="driver.criminal_history.has_criminal_charges ? 'text-danger' : 'text-success'" class="text-lg font-bold">{{ yesNo(driver.criminal_history.has_criminal_charges) }}</span>
                                 </div>
                                 <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
                                     <p class="text-xs text-slate-500 mb-1">Felony Conviction</p>
-                                    <span :class="driver.criminal_history.has_felony_conviction ? 'text-red-600' : 'text-emerald-600'" class="text-lg font-bold">{{ yesNo(driver.criminal_history.has_felony_conviction) }}</span>
+                                    <span :class="driver.criminal_history.has_felony_conviction ? 'text-danger' : 'text-success'" class="text-lg font-bold">{{ yesNo(driver.criminal_history.has_felony_conviction) }}</span>
                                 </div>
                                 <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
                                     <p class="text-xs text-slate-500 mb-1">Minister's Permit</p>
@@ -1153,7 +1233,7 @@ function submitRollback() {
                                 </div>
                                 <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
                                     <p class="text-xs text-slate-500 mb-1">FCRA Consent</p>
-                                    <span :class="driver.criminal_history.fcra_consent ? 'text-emerald-600' : 'text-slate-500'" class="text-lg font-bold">{{ yesNo(driver.criminal_history.fcra_consent) }}</span>
+                                    <span :class="driver.criminal_history.fcra_consent ? 'text-success' : 'text-slate-500'" class="text-lg font-bold">{{ yesNo(driver.criminal_history.fcra_consent) }}</span>
                                 </div>
                             </div>
                             <div v-else class="text-slate-400 text-sm italic">No criminal history recorded.</div>
@@ -1178,16 +1258,159 @@ function submitRollback() {
                                 <p class="text-xs text-slate-500 mb-3">Change Request</p>
                                 <div v-if="driver.hos_data.change_requested" class="space-y-2">
                                     <div class="flex items-center gap-2">
-                                        <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">Pending Approval</span>
+                                        <span class="px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-medium">Pending Approval</span>
                                     </div>
                                     <p class="text-sm">Requesting: <strong>{{ hosLabel[driver.hos_data.change_requested_to ?? ''] ?? driver.hos_data.change_requested_to }}</strong></p>
                                     <p v-if="driver.hos_data.change_requested_at" class="text-xs text-slate-500">Requested: {{ driver.hos_data.change_requested_at }}</p>
                                 </div>
                                 <div v-else-if="driver.hos_data.change_approved_at" class="space-y-1">
-                                    <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">Approved</span>
+                                    <span class="px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium">Approved</span>
                                     <p class="text-xs text-slate-500 mt-1">Approved: {{ driver.hos_data.change_approved_at }}</p>
                                 </div>
                                 <p v-else class="text-sm text-slate-400 italic">No change request pending</p>
+                            </div>
+                        </div>
+
+                        <!-- HOS Documents -->
+                        <div class="mt-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                    <Lucide icon="FileText" class="w-4 h-4 text-primary" /> HOS Documents
+                                </h3>
+                                <div class="flex items-center gap-2">
+                                    <Button variant="primary" class="flex items-center gap-1.5 text-xs px-3 py-1.5 h-auto" :disabled="generatingHos !== null" @click="activeHosPanel = activeHosPanel === 'daily' ? null : 'daily'">
+                                        <Lucide icon="CalendarDays" class="w-3.5 h-3.5" /> Generate Daily Log
+                                    </Button>
+                                    <Button variant="outline-secondary" class="flex items-center gap-1.5 text-xs px-3 py-1.5 h-auto" :disabled="generatingHos !== null" @click="activeHosPanel = activeHosPanel === 'monthly' ? null : 'monthly'">
+                                        <Lucide icon="BarChart2" class="w-3.5 h-3.5" /> Monthly Summary
+                                    </Button>
+                                    <Button variant="warning" class="flex items-center gap-1.5 text-xs px-3 py-1.5 h-auto" :disabled="generatingHos !== null" @click="activeHosPanel = activeHosPanel === 'fmcsa' ? null : 'fmcsa'">
+                                        <Lucide icon="FileStack" class="w-3.5 h-3.5" /> FMCSA Monthly
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <!-- Generate Daily Log panel -->
+                            <div v-if="activeHosPanel === 'daily'" class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Daily Log — Select Date</p>
+                                <div class="flex items-end gap-3">
+                                    <div class="flex-1">
+                                        <Litepicker v-model="dailyLogForm.date" :options="pickerOptionsSingle" />
+                                    </div>
+                                    <Button variant="primary" class="text-xs px-4 h-9" :disabled="!dailyLogForm.date || generatingHos === 'daily'" @click="generateDailyLog">
+                                        {{ generatingHos === 'daily' ? 'Generating...' : 'Generate' }}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <!-- Generate Monthly Summary panel -->
+                            <div v-if="activeHosPanel === 'monthly'" class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Monthly Summary — Select Month & Year</p>
+                                <div class="flex items-end gap-3">
+                                    <FormInput v-model="monthlyForm.month" type="number" min="1" max="12" placeholder="Month" class="w-24" />
+                                    <FormInput v-model="monthlyForm.year" type="number" min="2020" placeholder="Year" class="w-28" />
+                                    <Button variant="primary" class="text-xs px-4 h-9" :disabled="generatingHos === 'monthly'" @click="generateMonthlySummary">
+                                        {{ generatingHos === 'monthly' ? 'Generating...' : 'Generate' }}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <!-- Generate FMCSA Monthly panel -->
+                            <div v-if="activeHosPanel === 'fmcsa'" class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">FMCSA Monthly Report — Select Month & Year</p>
+                                <div class="flex items-end gap-3">
+                                    <FormInput v-model="fmcsaForm.month" type="number" min="1" max="12" placeholder="Month" class="w-24" />
+                                    <FormInput v-model="fmcsaForm.year" type="number" min="2020" placeholder="Year" class="w-28" />
+                                    <Button variant="warning" class="text-xs px-4 h-9" :disabled="generatingHos === 'fmcsa'" @click="generateFmcsaMonthly">
+                                        {{ generatingHos === 'fmcsa' ? 'Generating...' : 'Generate' }}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <!-- Documents list -->
+                            <div v-if="hosDocuments && hosDocuments.length" class="overflow-x-auto rounded-xl border border-slate-200">
+                                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                                    <thead class="bg-slate-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">File</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Doc Date</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Generated</th>
+                                            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-slate-100">
+                                        <tr v-for="doc in hosDocuments" :key="doc.id" class="hover:bg-slate-50 transition-colors">
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">{{ doc.type_label }}</span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-slate-800 text-xs">{{ doc.file_name }}</div>
+                                                <div class="text-xs text-slate-400">{{ doc.size_label }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">{{ doc.document_date ?? '—' }}</td>
+                                            <td class="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{{ doc.created_at ?? '—' }}</td>
+                                            <td class="px-4 py-3 text-right">
+                                                <div class="flex justify-end gap-3 text-xs">
+                                                    <a :href="doc.preview_url" target="_blank" class="text-primary hover:underline">Preview</a>
+                                                    <a :href="doc.download_url" class="text-primary hover:underline">Download</a>
+                                                    <button class="text-danger hover:underline" @click="deleteHosDocument(doc.id)">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div v-else class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                                <Lucide icon="FileText" class="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                                <p class="text-sm font-medium text-slate-600">No HOS Documents</p>
+                                <p class="text-xs text-slate-400 mt-1">Generate daily logs or monthly summaries for this driver.</p>
+                            </div>
+                        </div>
+
+                        <!-- Trips Table -->
+                        <div class="mt-6">
+                            <h3 class="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                                <Lucide icon="Truck" class="w-4 h-4 text-primary" /> Trip History
+                            </h3>
+                            <div v-if="driver.trips && driver.trips.length" class="overflow-x-auto rounded-xl border border-slate-200">
+                                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                                    <thead class="bg-slate-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Trip #</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Start Date</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">End Date</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Origin</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Destination</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Vehicle</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Duration</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-slate-100">
+                                        <tr v-for="trip in driver.trips" :key="trip.id" class="hover:bg-slate-50 transition-colors">
+                                            <td class="px-4 py-3 font-mono text-xs font-medium text-primary whitespace-nowrap">
+                                                {{ trip.trip_number ?? '—' }}
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="tripStatusBadge(trip.status)">
+                                                    {{ tripStatusLabel(trip.status) }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ trip.scheduled_start_date ? formatDate(trip.scheduled_start_date) : '—' }}</td>
+                                            <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ trip.scheduled_end_date ? formatDate(trip.scheduled_end_date) : '—' }}</td>
+                                            <td class="px-4 py-3 text-slate-600 max-w-[180px] truncate" :title="trip.origin_address ?? ''">{{ trip.origin_address ?? '—' }}</td>
+                                            <td class="px-4 py-3 text-slate-600 max-w-[180px] truncate" :title="trip.destination_address ?? ''">{{ trip.destination_address ?? '—' }}</td>
+                                            <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ trip.vehicle ?? '—' }}</td>
+                                            <td class="px-4 py-3 text-slate-600 whitespace-nowrap">
+                                                {{ trip.estimated_duration_minutes ? Math.floor(trip.estimated_duration_minutes / 60) + 'h ' + (trip.estimated_duration_minutes % 60) + 'm' : '—' }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div v-else class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-400 italic">
+                                No trips found for this driver.
                             </div>
                         </div>
                     </div>
@@ -1210,7 +1433,7 @@ function submitRollback() {
                                 class="flex items-center gap-3 p-3 rounded-lg border text-sm"
                                 :class="stepStatusClass[step.status] ?? 'bg-slate-50 text-slate-600 border-slate-200'">
                                 <div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                                    :class="step.status === 'completed' ? 'bg-emerald-600 text-white' : step.status === 'missing' ? 'bg-red-500 text-white' : 'bg-amber-400 text-white'">
+                                    :class="step.status === 'completed' ? 'bg-success text-white' : step.status === 'missing' ? 'bg-danger text-white' : 'bg-warning text-white'">
                                     <Lucide v-if="step.status === 'completed'" icon="Check" class="w-3.5 h-3.5" />
                                     <Lucide v-else-if="step.status === 'missing'" icon="X" class="w-3.5 h-3.5" />
                                     <span v-else>{{ step.step }}</span>
@@ -1285,7 +1508,7 @@ function submitRollback() {
         <div v-if="driver.migration_history?.length" class="col-span-12">
             <div class="box box--stacked p-6">
                 <h2 class="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <Lucide icon="ArrowRightLeft" class="w-5 h-5 text-amber-500" />
+                    <Lucide icon="ArrowRightLeft" class="w-5 h-5 text-warning" />
                     Migration History
                 </h2>
                 <div class="overflow-x-auto rounded-lg border border-slate-200">
@@ -1311,13 +1534,13 @@ function submitRollback() {
                                 <td class="px-4 py-3 text-xs text-slate-600">{{ m.performed_by }}</td>
                                 <td class="px-4 py-3 text-xs text-slate-500 max-w-[160px] truncate">{{ m.reason || '—' }}</td>
                                 <td class="px-4 py-3">
-                                    <span v-if="m.status === 'completed'" class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Completed</span>
+                                    <span v-if="m.status === 'completed'" class="px-2 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">Completed</span>
                                     <span v-else class="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Rolled Back</span>
                                     <div v-if="m.status === 'rolled_back'" class="text-xs text-slate-400 mt-0.5">{{ m.rolled_back_at }}</div>
                                 </td>
                                 <td class="px-4 py-3">
                                     <button v-if="m.can_rollback" type="button" @click="openRollbackModal(m.id)"
-                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition">
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-danger/10 text-danger text-xs font-medium hover:bg-danger/15 transition">
                                         <Lucide icon="RotateCcw" class="w-3.5 h-3.5" /> Rollback
                                     </button>
                                     <span v-else class="text-xs text-slate-300">—</span>
@@ -1338,7 +1561,7 @@ function submitRollback() {
             <!-- Header -->
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
                 <div class="flex items-center gap-3">
-                    <div class="p-2 bg-amber-100 rounded-lg"><Lucide icon="ArrowRightLeft" class="w-5 h-5 text-amber-600" /></div>
+                    <div class="p-2 bg-warning/10 rounded-lg"><Lucide icon="ArrowRightLeft" class="w-5 h-5 text-warning" /></div>
                     <div>
                         <h2 class="text-base font-semibold text-slate-800">Migrate Driver to Another Carrier</h2>
                         <p class="text-xs text-slate-500">{{ driver.full_name }}</p>
@@ -1353,7 +1576,7 @@ function submitRollback() {
             <div class="flex border-b border-slate-100 flex-shrink-0">
                 <div v-for="s in [1,2,3,4]" :key="s"
                     class="flex-1 py-2.5 text-center text-xs font-medium transition"
-                    :class="migrationStep === s ? 'text-primary border-b-2 border-primary bg-primary/5' : migrationStep > s ? 'text-emerald-600' : 'text-slate-400'">
+                    :class="migrationStep === s ? 'text-primary border-b-2 border-primary bg-primary/5' : migrationStep > s ? 'text-success' : 'text-slate-400'">
                     <span class="mr-1">{{ ['1. Select Carrier','2. Validation','3. Confirm','4. Done'][s-1] }}</span>
                 </div>
             </div>
@@ -1401,8 +1624,8 @@ function submitRollback() {
                         <Lucide icon="Loader" class="w-8 h-8 animate-spin mb-2" /> Validating migration...
                     </div>
                     <div v-else-if="migrationError" class="flex flex-col items-center py-10 text-center">
-                        <Lucide icon="AlertCircle" class="w-10 h-10 text-red-400 mb-3" />
-                        <p class="text-sm font-medium text-red-600 mb-1">Validation Failed</p>
+                        <Lucide icon="AlertCircle" class="w-10 h-10 text-danger mb-3" />
+                        <p class="text-sm font-medium text-danger mb-1">Validation Failed</p>
                         <p class="text-xs text-slate-500 max-w-xs">{{ migrationError }}</p>
                         <button type="button" @click="migrationStep = 1; migrationError = null" class="mt-4 px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition">
                             Go Back
@@ -1414,21 +1637,21 @@ function submitRollback() {
                             <p class="font-semibold text-slate-800">{{ selectedCarrier?.name }}</p>
                         </div>
                         <div v-if="migrationValidation.errors.length" class="mb-4">
-                            <div class="flex items-center gap-2 mb-2 text-red-600 font-medium text-sm"><Lucide icon="XCircle" class="w-4 h-4" /> Blocking Issues</div>
+                            <div class="flex items-center gap-2 mb-2 text-danger font-medium text-sm"><Lucide icon="XCircle" class="w-4 h-4" /> Blocking Issues</div>
                             <div v-for="e in migrationValidation.errors" :key="e"
-                                class="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 mb-2">
+                                class="flex items-start gap-2 p-3 bg-danger/10 border border-danger/20 rounded-lg text-sm text-danger mb-2">
                                 <Lucide icon="AlertCircle" class="w-4 h-4 flex-shrink-0 mt-0.5" /> {{ e }}
                             </div>
                         </div>
                         <div v-if="migrationValidation.warnings.length" class="mb-4">
-                            <div class="flex items-center gap-2 mb-2 text-amber-600 font-medium text-sm"><Lucide icon="AlertTriangle" class="w-4 h-4" /> Warnings</div>
+                            <div class="flex items-center gap-2 mb-2 text-warning font-medium text-sm"><Lucide icon="AlertTriangle" class="w-4 h-4" /> Warnings</div>
                             <div v-for="w in migrationValidation.warnings" :key="w"
-                                class="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 mb-2">
+                                class="flex items-start gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg text-sm text-warning mb-2">
                                 <Lucide icon="AlertTriangle" class="w-4 h-4 flex-shrink-0 mt-0.5" /> {{ w }}
                             </div>
                         </div>
                         <div v-if="migrationValidation.is_valid && !migrationValidation.warnings.length"
-                            class="flex items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm">
+                            class="flex items-center gap-2 p-4 bg-success/10 border border-success/20 rounded-xl text-success text-sm">
                             <Lucide icon="CheckCircle" class="w-5 h-5" /> Driver is eligible for migration.
                         </div>
                     </div>
@@ -1446,7 +1669,7 @@ function submitRollback() {
                             <p class="font-semibold text-primary">{{ selectedCarrier?.name }}</p>
                         </div>
                     </div>
-                    <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex items-start gap-2">
+                    <div class="p-4 bg-warning/10 border border-warning/20 rounded-xl text-xs text-warning flex items-start gap-2">
                         <Lucide icon="Info" class="w-4 h-4 flex-shrink-0 mt-0.5" />
                         Driver status will be set to <strong>Pending</strong> after migration. All active vehicle assignments will be ended. You have 24 hours to rollback this action.
                     </div>
@@ -1460,13 +1683,13 @@ function submitRollback() {
                         <textarea v-model="migrationNotes" rows="2" placeholder="Any additional notes..."
                             class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"></textarea>
                     </div>
-                    <div v-if="migrationError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ migrationError }}</div>
+                    <div v-if="migrationError" class="p-3 bg-danger/10 border border-danger/20 rounded-lg text-sm text-danger">{{ migrationError }}</div>
                 </div>
 
                 <!-- Step 4: Done -->
                 <div v-else-if="migrationStep === 4" class="flex flex-col items-center py-8 text-center">
-                    <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-                        <Lucide icon="CheckCircle" class="w-8 h-8 text-emerald-600" />
+                    <div class="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mb-4">
+                        <Lucide icon="CheckCircle" class="w-8 h-8 text-success" />
                     </div>
                     <h3 class="text-lg font-semibold text-slate-800 mb-2">Migration Successful!</h3>
                     <p class="text-sm text-slate-500 mb-6">Driver has been successfully migrated to <strong>{{ migrationDone?.target_carrier }}</strong>.</p>
@@ -1493,7 +1716,7 @@ function submitRollback() {
                         Continue <Lucide icon="ChevronRight" class="w-4 h-4 inline" />
                     </button>
                     <button v-if="migrationStep === 3" type="button" @click="submitMigration" :disabled="migrationLoading"
-                        class="px-5 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition disabled:opacity-60 flex items-center gap-1.5">
+                        class="px-5 py-2 rounded-lg bg-warning text-white text-sm font-medium hover:bg-warning/90 transition disabled:opacity-60 flex items-center gap-1.5">
                         <Lucide v-if="migrationLoading" icon="Loader" class="w-4 h-4 animate-spin" />
                         Confirm Migration
                     </button>
@@ -1506,20 +1729,20 @@ function submitRollback() {
     <div v-if="rollbackModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div class="flex items-center gap-3 mb-5">
-                <div class="p-2 bg-red-100 rounded-lg"><Lucide icon="RotateCcw" class="w-5 h-5 text-red-600" /></div>
+                <div class="p-2 bg-danger/10 rounded-lg"><Lucide icon="RotateCcw" class="w-5 h-5 text-danger" /></div>
                 <h2 class="text-base font-semibold text-slate-800">Rollback Migration</h2>
             </div>
             <p class="text-sm text-slate-600 mb-4">This will restore the driver to their original carrier. This action can only be performed within 24 hours of the migration.</p>
             <div class="mb-4">
-                <label class="block text-sm font-medium text-slate-700 mb-1.5">Reason for Rollback <span class="text-red-500">*</span></label>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Reason for Rollback <span class="text-danger">*</span></label>
                 <textarea v-model="rollbackReason" rows="3" placeholder="Required..."
-                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"></textarea>
+                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-danger/30 resize-none"></textarea>
             </div>
             <div class="flex justify-end gap-2">
                 <button type="button" @click="rollbackModal = false"
                     class="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition">Cancel</button>
                 <button type="button" @click="submitRollback" :disabled="!rollbackReason.trim()"
-                    class="px-5 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition disabled:opacity-50">
+                    class="px-5 py-2 rounded-lg bg-danger text-white text-sm font-medium hover:bg-danger/90 transition disabled:opacity-50">
                     Confirm Rollback
                 </button>
             </div>

@@ -28,6 +28,7 @@ use App\Models\Admin\Driver\DriverTraining;
 use App\Models\Admin\Vehicle\VehicleDriverAssignment;
 use App\Models\OwnerOperatorDetail;
 use App\Models\ThirdPartyDetail;
+use App\Models\Trip;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -607,6 +608,11 @@ class UserDriverDetail extends Model implements HasMedia
     public function vehicleAssignments(): HasMany
     {
         return $this->hasMany(VehicleDriverAssignment::class);
+    }
+
+    public function trips(): HasMany
+    {
+        return $this->hasMany(Trip::class, 'user_driver_detail_id')->latest('scheduled_start_date');
     }
 
     /**

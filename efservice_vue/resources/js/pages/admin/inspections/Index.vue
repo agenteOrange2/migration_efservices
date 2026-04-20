@@ -42,6 +42,28 @@ function routeName(key: keyof typeof defaultRouteNames) {
     return props.routeNames?.[key] ?? defaultRouteNames[key]
 }
 
+function statusClass(status?: string | null) {
+    const normalized = String(status ?? '').trim().toLowerCase()
+
+    if (['pass', 'passed', 'completed', 'approved', 'safe', 'active', 'corrected'].includes(normalized)) {
+        return 'bg-success/10 text-success'
+    }
+
+    if (['pending', 'scheduled', 'in progress', 'in_progress', 'warning'].includes(normalized)) {
+        return 'bg-warning/10 text-warning'
+    }
+
+    if (['fail', 'failed', 'rejected', 'unsafe', 'out_of_service', 'out of service', 'violation'].includes(normalized)) {
+        return 'bg-danger/10 text-danger'
+    }
+
+    if (['needs repair', 'needs_repair', 'under review', 'under_review'].includes(normalized)) {
+        return 'bg-info/10 text-info'
+    }
+
+    return 'bg-slate-100 text-slate-600'
+}
+
 function applyFilters() {
     router.get(route(routeName('index')), {
         search_term: filters.search_term || undefined,
@@ -143,13 +165,17 @@ function confirmDelete() {
                                 <td class="px-5 py-4"><div class="font-medium text-slate-700">{{ inspection.driver?.name ?? 'N/A' }}</div><div class="text-xs text-slate-500">{{ inspection.driver?.email ?? 'No email' }}</div></td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ inspection.vehicle?.label ?? 'N/A' }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-700">{{ inspection.inspection_type ?? 'N/A' }}</td>
-                                <td class="px-5 py-4 text-sm text-slate-600">{{ inspection.status ?? 'N/A' }}</td>
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap" :class="statusClass(inspection.status)">
+                                        {{ inspection.status ?? 'N/A' }}
+                                    </span>
+                                </td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ inspection.inspection_date_display ?? 'N/A' }}</td>
                                 <td class="px-5 py-4"><div class="flex items-center justify-center gap-2">
                                     <Link v-if="inspection.driver" :href="route(routeName('driverDocuments'), inspection.driver.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Driver documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
-                                    <Link :href="route(routeName('edit'), inspection.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
-                                    <Link v-if="inspection.driver" :href="route(routeName('driverHistory'), inspection.driver.id)" class="p-1.5 text-slate-400 hover:text-sky-500 transition" title="History"><Lucide icon="History" class="w-4 h-4" /></Link>
-                                    <button type="button" @click="openDeleteModal(inspection)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
+                                    <Link :href="route(routeName('edit'), inspection.id)" class="p-1.5 text-slate-400 hover:text-warning transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                    <Link v-if="inspection.driver" :href="route(routeName('driverHistory'), inspection.driver.id)" class="p-1.5 text-slate-400 hover:text-info transition" title="History"><Lucide icon="History" class="w-4 h-4" /></Link>
+                                    <button type="button" @click="openDeleteModal(inspection)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
                                 </div></td>
                             </tr>
                             <tr v-if="!inspections.data.length"><td colspan="8" class="px-5 py-12 text-center text-slate-400"><Lucide icon="FileCheck" class="w-12 h-12 mx-auto mb-3 text-slate-300" /><p>No inspection records found</p></td></tr>

@@ -83,9 +83,9 @@ function deleteTraining(training: TrainingRow) {
 }
 
 function contentTypeClass(type: string) {
-    if (type === 'file') return 'bg-primary/10 text-primary'
-    if (type === 'video') return 'bg-slate-100 text-slate-700'
-    if (type === 'url') return 'bg-slate-100 text-slate-700'
+    if (type === 'file') return 'bg-info/10 text-info'
+    if (type === 'video') return 'bg-primary/10 text-primary'
+    if (type === 'url') return 'bg-warning/10 text-warning'
     return 'bg-slate-100 text-slate-600'
 }
 </script>
@@ -136,21 +136,21 @@ function contentTypeClass(type: string) {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-primary/20 bg-primary/5 p-5">
                     <p class="text-sm text-slate-500">Total Trainings</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-success/20 bg-success/5 p-5">
                     <p class="text-sm text-slate-500">Active</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.active }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-success">{{ stats.active }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-danger/20 bg-danger/5 p-5">
                     <p class="text-sm text-slate-500">Inactive</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.inactive }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-danger">{{ stats.inactive }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-info/20 bg-info/5 p-5">
                     <p class="text-sm text-slate-500">Assignments</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.assignments }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-info">{{ stats.assignments }}</p>
                 </div>
             </div>
 
@@ -221,13 +221,13 @@ function contentTypeClass(type: string) {
                                     </span>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize" :class="training.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'">
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize" :class="training.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
                                         {{ training.status }}
                                     </span>
                                 </td>
                                 <td class="px-5 py-4 text-sm text-slate-500">{{ training.created_at }}</td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                    <span class="inline-flex rounded-full bg-info/10 px-2.5 py-1 text-xs font-medium text-info">
                                         {{ training.assignments_count }} assigned
                                     </span>
                                 </td>
@@ -242,7 +242,7 @@ function contentTypeClass(type: string) {
                                         <Link :href="route(props.routeNames?.edit ?? 'admin.trainings.edit', training.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
-                                        <button type="button" @click="deleteTraining(training)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
+                                        <button type="button" @click="deleteTraining(training)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete">
                                             <Lucide icon="Trash2" class="w-4 h-4" />
                                         </button>
                                     </div>

@@ -122,6 +122,108 @@ class DriverTestingController extends Controller
         ]);
     }
 
+    public function createGlobal(): Response
+    {
+        $drivers = UserDriverDetail::with([
+            'user:id,name,email',
+            'carrier:id,name',
+            'licenses:id,user_driver_detail_id,license_number,license_class,expiration_date',
+        ])
+        ->whereHas('user')
+        ->orderBy('id')
+        ->get()
+        ->map(fn ($d) => [
+            'id'        => $d->id,
+            'full_name' => trim(($d->user?->name ?? 'Unknown') . ' ' . ($d->middle_name ?? '') . ' ' . ($d->last_name ?? '')),
+            'email'     => $d->user?->email ?? '',
+            'phone'     => $d->phone ?? null,
+            'carrier'   => $d->carrier ? ['id' => $d->carrier->id, 'name' => $d->carrier->name] : null,
+            'license'   => $d->licenses->first() ? [
+                'number'  => $d->licenses->first()->license_number,
+                'class'   => $d->licenses->first()->license_class,
+                'expires' => $d->licenses->first()->expiration_date?->format('Y-m-d'),
+            ] : null,
+        ]);
+
+        return Inertia::render('admin/driver-testings/Create', [
+            'drivers'        => $drivers->values(),
+            'carriers'       => Carrier::orderBy('name')->get(['id', 'name']),
+            'testTypes'      => DriverTesting::getTestTypes(),
+            'locations'      => DriverTesting::getLocations(),
+            'statuses'       => DriverTesting::getStatuses(),
+            'testResults'    => DriverTesting::getTestResults(),
+            'billOptions'    => DriverTesting::getBillOptions(),
+            'administrators' => DriverTesting::getAdministrators(),
+        ]);
+    }
+
+    public function storeGlobal(Request $request)
+    {
+        $validated = $request->validate([
+            'user_driver_detail_id'        => 'required|exists:user_driver_details,id',
+            'test_type'                    => 'required|string',
+            'administered_by'              => 'required|string|max:255',
+            'test_date'                    => 'required|date',
+            'location'                     => 'required|string|max:255',
+            'requester_name'               => 'required|string|max:255',
+            'mro'                          => 'nullable|string|max:255',
+            'scheduled_time'               => 'nullable|date',
+            'test_result'                  => 'nullable|in:Positive,Negative,Refusal',
+            'status'                       => 'nullable|in:Schedule,In Progress,Pending Review,Completed,Cancelled',
+            'next_test_due'                => 'nullable|date',
+            'bill_to'                      => 'nullable|in:company,employee',
+            'notes'                        => 'nullable|string',
+            'is_random_test'               => 'boolean',
+            'is_post_accident_test'        => 'boolean',
+            'is_reasonable_suspicion_test' => 'boolean',
+            'is_pre_employment_test'       => 'boolean',
+            'is_follow_up_test'            => 'boolean',
+            'is_return_to_duty_test'       => 'boolean',
+            'is_other_reason_test'         => 'boolean',
+            'other_reason_description'     => 'nullable|string|max:500',
+            'attachments'                  => 'nullable|array',
+            'attachments.*'                => 'file|max:10240|mimes:pdf,jpg,jpeg,png,doc,docx',
+        ]);
+
+        $driver = UserDriverDetail::findOrFail($validated['user_driver_detail_id']);
+
+        $testing = DriverTesting::create([
+            'user_driver_detail_id'        => $driver->id,
+            'carrier_id'                   => $driver->carrier_id,
+            'test_type'                    => $validated['test_type'],
+            'administered_by'              => $validated['administered_by'],
+            'test_date'                    => $validated['test_date'],
+            'location'                     => $validated['location'],
+            'requester_name'               => $validated['requester_name'],
+            'mro'                          => $validated['mro'] ?? null,
+            'scheduled_time'               => $validated['scheduled_time'] ?? null,
+            'test_result'                  => $validated['test_result'] ?? null,
+            'status'                       => $validated['status'] ?? 'Schedule',
+            'next_test_due'                => $validated['next_test_due'] ?? null,
+            'bill_to'                      => $validated['bill_to'] ?? null,
+            'notes'                        => $validated['notes'] ?? null,
+            'is_random_test'               => $request->boolean('is_random_test'),
+            'is_post_accident_test'        => $request->boolean('is_post_accident_test'),
+            'is_reasonable_suspicion_test' => $request->boolean('is_reasonable_suspicion_test'),
+            'is_pre_employment_test'       => $request->boolean('is_pre_employment_test'),
+            'is_follow_up_test'            => $request->boolean('is_follow_up_test'),
+            'is_return_to_duty_test'       => $request->boolean('is_return_to_duty_test'),
+            'is_other_reason_test'         => $request->boolean('is_other_reason_test'),
+            'other_reason_description'     => $validated['other_reason_description'] ?? null,
+            'created_by'                   => Auth::id(),
+        ]);
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $testing->addMedia($file)->toMediaCollection('document_attachments');
+            }
+        }
+
+        return redirect()
+            ->route('admin.driver-testings.show', $testing)
+            ->with('success', 'Drug/Alcohol test record created successfully.');
+    }
+
     public function show(DriverTesting $testing): Response
     {
         $testing->load([

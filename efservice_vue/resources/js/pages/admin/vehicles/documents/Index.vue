@@ -49,6 +49,28 @@ function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
     return route(props.routeNames?.[name] ?? defaultRouteNames[name], params)
 }
 
+function documentStatusClass(document: any) {
+    const normalized = String(document?.status ?? '').trim().toLowerCase().replace(/[_-]+/g, ' ')
+
+    if (document?.is_expired || ['expired', 'rejected'].includes(normalized)) {
+        return 'bg-danger/10 text-danger'
+    }
+
+    if (document?.is_expiring_soon || ['pending', 'expiring', 'expiring soon'].includes(normalized)) {
+        return 'bg-warning/10 text-warning'
+    }
+
+    if (['active', 'valid', 'approved'].includes(normalized)) {
+        return 'bg-success/10 text-success'
+    }
+
+    if (['under review', 'review', 'draft'].includes(normalized)) {
+        return 'bg-info/10 text-info'
+    }
+
+    return 'bg-slate-100 text-slate-600'
+}
+
 function blankForm() {
     return {
         id: 0,
@@ -197,10 +219,10 @@ function deleteDocument(document: any) {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Total</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Active</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.active }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Expired</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.expired }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.pending }}</p></div>
+                <div class="box box--stacked rounded-xl border border-primary/20 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total</p><p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p></div>
+                <div class="box box--stacked rounded-xl border border-success/20 bg-success/5 p-5"><p class="text-sm text-slate-500">Active</p><p class="mt-1 text-2xl font-semibold text-success">{{ stats.active }}</p></div>
+                <div class="box box--stacked rounded-xl border border-danger/20 bg-danger/5 p-5"><p class="text-sm text-slate-500">Expired</p><p class="mt-1 text-2xl font-semibold text-danger">{{ stats.expired }}</p></div>
+                <div class="box box--stacked rounded-xl border border-warning/20 bg-warning/5 p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-warning">{{ stats.pending }}</p></div>
             </div>
 
             <div class="box box--stacked p-5 mb-6">
@@ -268,10 +290,10 @@ function deleteDocument(document: any) {
                                     <div class="text-xs text-slate-400">Expires: {{ document.expiration_date ?? 'N/A' }}</div>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="document.status === 'active' ? 'bg-primary/10 text-primary' : document.status === 'expired' || document.is_expired ? 'bg-danger/10 text-danger' : 'bg-slate-100 text-slate-600'">
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="documentStatusClass(document)">
                                         {{ document.status_label }}
                                     </span>
-                                    <div v-if="document.is_expiring_soon" class="text-xs text-danger mt-1">Expiring soon</div>
+                                    <div v-if="document.is_expiring_soon" class="text-xs text-warning mt-1">Expiring soon</div>
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">

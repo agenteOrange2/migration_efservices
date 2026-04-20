@@ -81,6 +81,38 @@ function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
 
 const showMaintenanceLinks = !props.isCarrierContext || !!props.routeNames?.maintenanceIndexByVehicle
 const showRepairLinks = !props.isCarrierContext || !!props.routeNames?.repairsIndexByVehicle
+
+function vehicleStatusClass(status: string) {
+    const normalized = String(status || '').toLowerCase()
+
+    if (['active', 'available', 'assigned'].includes(normalized)) return 'bg-success/10 text-success'
+    if (['pending', 'scheduled', 'in_progress', 'in progress'].includes(normalized)) return 'bg-warning/10 text-warning'
+    if (['out_of_service', 'out of service', 'suspended', 'expired'].includes(normalized)) return 'bg-danger/10 text-danger'
+    if (['maintenance', 'under_maintenance', 'inspection_due'].includes(normalized)) return 'bg-info/10 text-info'
+
+    return 'bg-slate-100 text-slate-600'
+}
+
+function documentStatusClass(status: string) {
+    const normalized = String(status || '').toLowerCase()
+
+    if (['active', 'valid', 'approved'].includes(normalized)) return 'bg-success/10 text-success'
+    if (['pending', 'expiring', 'expiring soon'].includes(normalized)) return 'bg-warning/10 text-warning'
+    if (['expired', 'rejected'].includes(normalized)) return 'bg-danger/10 text-danger'
+
+    return 'bg-slate-100 text-slate-600'
+}
+
+function recordStatusClass(status: string) {
+    const normalized = String(status || '').toLowerCase()
+
+    if (['completed', 'resolved', 'closed'].includes(normalized)) return 'bg-success/10 text-success'
+    if (['pending', 'scheduled', 'open'].includes(normalized)) return 'bg-warning/10 text-warning'
+    if (['cancelled', 'failed', 'overdue'].includes(normalized)) return 'bg-danger/10 text-danger'
+    if (['in_progress', 'in progress'].includes(normalized)) return 'bg-info/10 text-info'
+
+    return 'bg-slate-100 text-slate-600'
+}
 </script>
 
 <template>
@@ -156,7 +188,7 @@ const showRepairLinks = !props.isCarrierContext || !!props.routeNames?.repairsIn
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Carrier</p><p class="mt-1 text-sm font-medium text-slate-800">{{ vehicle.carrier?.name ?? 'N/A' }}</p></div>
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Driver Type</p><p class="mt-1 text-sm font-medium text-slate-800">{{ vehicle.driver_type_label }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Status</p><p class="mt-1 text-sm font-medium text-slate-800">{{ vehicle.status_label }}</p></div>
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Status</p><div class="mt-2"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="vehicleStatusClass(vehicle.status)">{{ vehicle.status_label }}</span></div></div>
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Unit Number</p><p class="mt-1 text-sm font-medium text-slate-800">{{ vehicle.company_unit_number ?? 'N/A' }}</p></div>
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Fuel Type</p><p class="mt-1 text-sm font-medium text-slate-800">{{ vehicle.fuel_type ?? 'N/A' }}</p></div>
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Location</p><p class="mt-1 text-sm font-medium text-slate-800">{{ vehicle.location ?? 'N/A' }}</p></div>
@@ -193,7 +225,7 @@ const showRepairLinks = !props.isCarrierContext || !!props.routeNames?.repairsIn
                 <div v-if="vehicle.current_assignment" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Type</p><p class="mt-1 text-sm font-medium text-slate-800">{{ vehicle.current_assignment.driver_type_label }}</p></div>
-                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Status</p><p class="mt-1 text-sm font-medium text-slate-800">{{ vehicle.current_assignment.status_label }}</p></div>
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Status</p><div class="mt-2"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="vehicleStatusClass(vehicle.current_assignment.status_label || vehicle.current_assignment.status)">{{ vehicle.current_assignment.status_label }}</span></div></div>
                         <div class="rounded-lg border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Start Date</p><p class="mt-1 text-sm font-medium text-slate-800">{{ vehicle.current_assignment.start_date ?? 'N/A' }}</p></div>
                     </div>
 
@@ -240,10 +272,10 @@ const showRepairLinks = !props.isCarrierContext || !!props.routeNames?.repairsIn
                     Documents
                 </h2>
                 <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center"><p class="text-xs text-slate-500">Total</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ vehicle.document_stats.total }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center"><p class="text-xs text-slate-500">Active</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ vehicle.document_stats.active }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center"><p class="text-xs text-slate-500">Expired</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ vehicle.document_stats.expired }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center"><p class="text-xs text-slate-500">Pending</p><p class="mt-1 text-xl font-semibold text-slate-800">{{ vehicle.document_stats.pending }}</p></div>
+                    <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 text-center"><p class="text-xs text-slate-500">Total</p><p class="mt-1 text-xl font-semibold text-primary">{{ vehicle.document_stats.total }}</p></div>
+                    <div class="rounded-lg border border-success/20 bg-success/5 p-4 text-center"><p class="text-xs text-slate-500">Active</p><p class="mt-1 text-xl font-semibold text-success">{{ vehicle.document_stats.active }}</p></div>
+                    <div class="rounded-lg border border-danger/20 bg-danger/5 p-4 text-center"><p class="text-xs text-slate-500">Expired</p><p class="mt-1 text-xl font-semibold text-danger">{{ vehicle.document_stats.expired }}</p></div>
+                    <div class="rounded-lg border border-warning/20 bg-warning/5 p-4 text-center"><p class="text-xs text-slate-500">Pending</p><p class="mt-1 text-xl font-semibold text-warning">{{ vehicle.document_stats.pending }}</p></div>
                 </div>
                 <div v-if="vehicle.documents.length" class="space-y-3">
                     <a v-for="document in vehicle.documents" :key="document.id" :href="document.preview_url || '#'" target="_blank" class="block rounded-lg border border-slate-200 px-4 py-3 hover:bg-slate-50">

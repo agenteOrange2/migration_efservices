@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use ZipArchive;
 
@@ -112,6 +113,7 @@ class DriverListController extends Controller
             'companyPolicy',
             'w9Form',
             'media',
+            'trips.vehicle:id,make,model,year,company_unit_number',
         ]);
 
         $driverData = $this->buildDriverShowData($driver);
@@ -647,6 +649,7 @@ class DriverListController extends Controller
 
         $documentsByCategory = $this->buildDocumentsByCategory($driver);
         $stats = $this->buildDriverStats($driver, $documentsByCategory);
+        $hosDocuments = $this->buildHosDocuments($driver);
 
         return [
             'driver' => array_merge($base, [
@@ -665,6 +668,17 @@ class DriverListController extends Controller
                 'fmcsr_data'          => $fmcsrData,
                 'criminal_history'    => $criminalHistory,
                 'hos_data'            => $hosData,
+                'trips'               => $driver->trips?->map(fn ($t) => [
+                    'id'                   => $t->id,
+                    'trip_number'          => $t->trip_number,
+                    'status'               => $t->status,
+                    'origin_address'       => $t->origin_address,
+                    'destination_address'  => $t->destination_address,
+                    'scheduled_start_date' => $t->scheduled_start_date?->format('Y-m-d'),
+                    'scheduled_end_date'   => $t->scheduled_end_date?->format('Y-m-d'),
+                    'estimated_duration_minutes' => $t->estimated_duration_minutes,
+                    'vehicle'              => $t->vehicle ? trim(($t->vehicle->company_unit_number ? '#'.$t->vehicle->company_unit_number.' ' : '') . $t->vehicle->make . ' ' . $t->vehicle->model . ($t->vehicle->year ? ' ('.$t->vehicle->year.')' : '')) : null,
+                ])->toArray() ?? [],
                 'wizard_steps'        => $wizardSteps,
                 'wizard_total_pct'    => (int) round($wizardSummary['total_percentage'] ?? 0),
                 'migration_history'   => $migrationHistory,
@@ -688,7 +702,46 @@ class DriverListController extends Controller
             ]),
             'documentsByCategory' => $documentsByCategory,
             'stats'               => $stats,
+            'hosDocuments'        => $hosDocuments,
         ];
+    }
+
+    protected function buildHosDocuments(UserDriverDetail $driver): array
+    {
+        return Media::query()
+            ->where('model_type', UserDriverDetail::class)
+            ->where('model_id', $driver->id)
+            ->whereIn('collection_name', ['trip_reports', 'inspection_reports', 'daily_logs', 'monthly_summaries'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function (Media $media) {
+                $isFmcsa = $media->getCustomProperty('document_type') === 'fmcsa_monthly';
+                $typeLabel = $isFmcsa ? 'FMCSA Monthly' : match ($media->collection_name) {
+                    'trip_reports'       => 'Trip Report',
+                    'inspection_reports' => 'Inspection Report',
+                    'daily_logs'         => 'Daily Log',
+                    'monthly_summaries'  => 'Monthly Summary',
+                    default              => str($media->collection_name)->replace('_', ' ')->title()->toString(),
+                };
+
+                $documentDate = $media->getCustomProperty('document_date')
+                    ? Carbon::parse($media->getCustomProperty('document_date'))
+                    : ($media->getCustomProperty('year_month')
+                        ? Carbon::createFromFormat('Y-m', $media->getCustomProperty('year_month'))->startOfMonth()
+                        : null);
+
+                return [
+                    'id'            => $media->id,
+                    'type_label'    => $typeLabel,
+                    'file_name'     => $media->file_name,
+                    'size_label'    => $this->formatFileSize((int) $media->size),
+                    'document_date' => $documentDate?->format('n/j/Y'),
+                    'created_at'    => $media->created_at?->format('n/j/Y g:i A'),
+                    'preview_url'   => route('admin.hos.documents.preview', $media),
+                    'download_url'  => route('admin.hos.documents.download', $media),
+                ];
+            })
+            ->all();
     }
 
     protected function buildDocumentsByCategory(UserDriverDetail $driver): array
@@ -711,12 +764,15 @@ class DriverListController extends Controller
             'inspections'                      => [],
             'testing'                          => [],
             'records'                          => [],
+            'vehicle_verifications'            => [],
+            'violation_reports'                => [],
             'application_forms'                => [],
             'employment_verification'          => [],
             'employment_verification_attempts' => [],
             'w9_documents'                     => [],
             'dot_policy_documents'             => [],
             'certification'                    => [],
+            'other'                            => [],
         ];
 
         // ── Licenses ──────────────────────────────────────────────────────────
@@ -825,6 +881,44 @@ class DriverListController extends Controller
             $row = $h($m); $row['related_info'] = 'Clearing House';
             $categories['records'][] = $row;
         }
+        foreach ($driver->getMedia('clearing_house_records') as $m) {
+            $row = $h($m); $row['related_info'] = 'Clearing House';
+            $categories['records'][] = $row;
+        }
+        foreach ($driver->getMedia('records') as $m) {
+            $row = $h($m); $row['related_info'] = 'Record';
+            $categories['records'][] = $row;
+        }
+        foreach ($driver->getMedia('general') as $m) {
+            $row = $h($m); $row['related_info'] = 'General';
+            $categories['records'][] = $row;
+        }
+        foreach ($driver->getMedia('documents') as $m) {
+            $row = $h($m); $row['related_info'] = 'Document';
+            $categories['records'][] = $row;
+        }
+
+        // ── Vehicle Verifications (filesystem) ────────────────────────────────
+        $verificationFiles = Storage::disk('public')->files("driver/{$driver->id}/vehicle_verifications");
+        foreach ($verificationFiles as $filePath) {
+            if (strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) !== 'pdf') {
+                continue;
+            }
+            $fullPath = Storage::disk('public')->path($filePath);
+            $categories['vehicle_verifications'][] = [
+                'name'         => basename($filePath),
+                'url'          => Storage::disk('public')->url($filePath),
+                'size'         => $this->formatFileSize((int) filesize($fullPath)),
+                'date'         => date('Y-m-d', filemtime($fullPath)),
+                'related_info' => 'Vehicle Verification',
+            ];
+        }
+
+        // ── Violation Reports ─────────────────────────────────────────────────
+        foreach ($driver->getMedia('violation_reports') as $m) {
+            $row = $h($m); $row['related_info'] = 'Violation Report';
+            $categories['violation_reports'][] = $row;
+        }
 
         // ── Application Forms ─────────────────────────────────────────────────
         if ($driver->application) {
@@ -902,6 +996,16 @@ class DriverListController extends Controller
             $row = $h($m); $row['related_info'] = 'DOT Drug & Alcohol Policy';
             $row['type'] = 'Dot policy';
             $categories['dot_policy_documents'][] = $row;
+        }
+
+        // ── Other / Miscellaneous ─────────────────────────────────────────────
+        foreach ($driver->getMedia('other') as $m) {
+            $row = $h($m); $row['related_info'] = 'Other';
+            $categories['other'][] = $row;
+        }
+        foreach ($driver->getMedia('miscellaneous') as $m) {
+            $row = $h($m); $row['related_info'] = 'Miscellaneous';
+            $categories['other'][] = $row;
         }
 
         // Remove empty categories so the frontend only shows what exists

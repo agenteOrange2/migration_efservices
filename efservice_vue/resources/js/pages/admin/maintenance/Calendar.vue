@@ -57,6 +57,17 @@ function goToMonth(month: string) {
 function applyFilters() {
     goToMonth(filters.month)
 }
+
+function statusBadge(status: string) {
+    const normalized = String(status ?? '').trim().toLowerCase()
+
+    if (normalized === 'completed') return 'bg-success/10 text-success'
+    if (normalized === 'pending') return 'bg-warning/10 text-warning'
+    if (normalized === 'overdue') return 'bg-danger/10 text-danger'
+    if (normalized === 'upcoming') return 'bg-info/10 text-info'
+
+    return 'bg-slate-100 text-slate-600'
+}
 </script>
 
 <template>
@@ -134,7 +145,7 @@ function applyFilters() {
                         </div>
 
                         <div class="space-y-1.5">
-                            <Link v-for="item in day.items.slice(0, 3)" :key="item.id" :href="item.show_url" class="block rounded-md px-2 py-1 text-[11px]" :class="item.status === 'completed' ? 'bg-primary/10 text-primary' : item.status === 'overdue' ? 'bg-danger/10 text-danger' : 'bg-slate-100 text-slate-600'">
+                            <Link v-for="item in day.items.slice(0, 3)" :key="item.id" :href="item.show_url" class="block rounded-md px-2 py-1 text-[11px]" :class="statusBadge(item.status)">
                                 <p class="font-medium truncate">{{ item.title }}</p>
                                 <p class="truncate opacity-75">{{ item.vehicle_label }}</p>
                             </Link>
@@ -156,7 +167,7 @@ function applyFilters() {
                     <Link v-for="item in upcomingItems" :key="item.id" :href="item.show_url" class="block rounded-lg border border-slate-200 px-4 py-3 hover:bg-slate-50">
                         <p class="text-sm font-medium text-slate-800">{{ item.title }}</p>
                         <p class="text-xs text-slate-500 mt-1">{{ item.vehicle_label }}</p>
-                        <p class="text-xs text-primary mt-1">Due {{ item.next_service_date || 'N/A' }}</p>
+                        <p class="text-xs text-info mt-1">Due {{ item.next_service_date || 'N/A' }}</p>
                     </Link>
                     <div v-if="!upcomingItems.length" class="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-500">No upcoming maintenance items.</div>
                 </div>

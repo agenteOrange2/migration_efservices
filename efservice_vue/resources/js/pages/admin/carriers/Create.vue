@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 import { FormInput, FormLabel, FormSelect } from '@/components/Base/Form'
 import Button from '@/components/Base/Button'
 import Lucide from '@/components/Base/Lucide'
@@ -12,6 +13,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const logoPreview = ref<string | null>(null)
 
 const form = useForm({
     name: '',
@@ -31,7 +33,14 @@ const form = useForm({
 function handleFileChange(e: Event) {
     const target = e.target as HTMLInputElement
     if (target.files?.[0]) {
-        form.logo_carrier = target.files[0]
+        const file = target.files[0]
+        form.logo_carrier = file
+
+        const reader = new FileReader()
+        reader.onload = (event) => {
+            logoPreview.value = (event.target?.result as string) || null
+        }
+        reader.readAsDataURL(file)
     }
 }
 
@@ -73,7 +82,25 @@ function submit() {
                                     </div>
                                 </div>
                                 <div class="mt-3 w-full flex-1 xl:mt-0">
-                                    <input type="file" @change="handleFileChange" accept="image/*" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                                    <div class="flex flex-col gap-4">
+                                        <div class="flex items-center gap-4">
+                                            <div class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm">
+                                                <img
+                                                    v-if="logoPreview"
+                                                    :src="logoPreview"
+                                                    alt="Carrier logo preview"
+                                                    class="h-full w-full object-cover"
+                                                />
+                                                <Lucide v-else icon="Truck" class="h-8 w-8 text-primary" />
+                                            </div>
+                                            <div class="text-xs text-slate-500">
+                                                <p class="font-medium text-slate-700">Logo preview</p>
+                                                <p v-if="logoPreview">Showing the selected image before saving.</p>
+                                                <p v-else>No logo selected yet.</p>
+                                            </div>
+                                        </div>
+                                        <input type="file" @change="handleFileChange" accept="image/*" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                                    </div>
                                     <p v-if="form.errors.logo_carrier" class="mt-1 text-xs text-red-500">{{ form.errors.logo_carrier }}</p>
                                 </div>
                             </div>

@@ -8,6 +8,7 @@ use App\Models\Admin\Vehicle\Vehicle;
 use App\Models\Carrier;
 use App\Models\UserDriverDetail;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,12 @@ class InspectionsController extends Controller
     public function index(Request $request): Response
     {
         $query = DriverInspection::query()
-            ->with(['userDriverDetail.user', 'userDriverDetail.carrier', 'vehicle']);
+            ->with([
+                'userDriverDetail.user',
+                'userDriverDetail.carrier',
+                'vehicle',
+                'media' => fn ($q) => $q->where('collection_name', 'inspection_documents'),
+            ]);
 
         if ($request->filled('search_term')) {
             $term = trim((string) $request->search_term);
@@ -175,10 +181,10 @@ class InspectionsController extends Controller
         $sortField = in_array($request->get('sort_field'), ['created_at', 'file_name'], true) ? $request->get('sort_field') : 'created_at';
         $sortDirection = $request->get('sort_direction') === 'asc' ? 'asc' : 'desc';
 
-        $documents = $query->orderBy($sortField, $sortDirection)->paginate(20)->withQueryString();
-        $documents->getCollection()->loadMorph('model', [
+        $query->with(['model' => fn (MorphTo $morphTo) => $morphTo->morphWith([
             DriverInspection::class => ['userDriverDetail.user', 'userDriverDetail.carrier', 'vehicle'],
-        ]);
+        ])]);
+        $documents = $query->orderBy($sortField, $sortDirection)->paginate(20)->withQueryString();
         $documents->getCollection()->transform(fn (Media $media) => $this->documentRow($media));
 
         return Inertia::render('admin/inspections/Documents', [
@@ -199,7 +205,12 @@ class InspectionsController extends Controller
 
     public function driverHistory(UserDriverDetail $driver, Request $request): Response
     {
-        $query = $driver->inspections()->with(['userDriverDetail.user', 'userDriverDetail.carrier', 'vehicle']);
+        $query = $driver->inspections()->with([
+            'userDriverDetail.user',
+            'userDriverDetail.carrier',
+            'vehicle',
+            'media' => fn ($q) => $q->where('collection_name', 'inspection_documents'),
+        ]);
 
         if ($request->filled('search_term')) {
             $term = trim((string) $request->search_term);
@@ -278,10 +289,10 @@ class InspectionsController extends Controller
         $sortField = in_array($request->get('sort_field'), ['created_at', 'file_name'], true) ? $request->get('sort_field') : 'created_at';
         $sortDirection = $request->get('sort_direction') === 'asc' ? 'asc' : 'desc';
 
-        $documents = $query->orderBy($sortField, $sortDirection)->paginate(20)->withQueryString();
-        $documents->getCollection()->loadMorph('model', [
+        $query->with(['model' => fn (MorphTo $morphTo) => $morphTo->morphWith([
             DriverInspection::class => ['userDriverDetail.user', 'userDriverDetail.carrier', 'vehicle'],
-        ]);
+        ])]);
+        $documents = $query->orderBy($sortField, $sortDirection)->paginate(20)->withQueryString();
         $documents->getCollection()->transform(fn (Media $media) => $this->documentRow($media));
 
         $driver->loadMissing(['user', 'carrier']);
@@ -406,7 +417,9 @@ class InspectionsController extends Controller
             'inspection_level' => $inspection->inspection_level,
             'inspector_name' => $inspection->inspector_name,
             'status' => $inspection->status,
-            'document_count' => $inspection->getMedia('inspection_documents')->count(),
+            'document_count' => $inspection->relationLoaded('media')
+                ? $inspection->media->where('collection_name', 'inspection_documents')->count()
+                : $inspection->getMedia('inspection_documents')->count(),
             'driver' => $inspection->userDriverDetail ? [
                 'id' => $inspection->userDriverDetail->id,
                 'name' => $this->driverFullName($inspection->userDriverDetail),

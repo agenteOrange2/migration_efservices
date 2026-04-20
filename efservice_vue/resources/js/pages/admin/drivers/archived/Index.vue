@@ -94,12 +94,19 @@ function resetFilters() {
 
 function reasonBadge(reason: string) {
     if (reason === 'migration') return 'bg-primary/10 text-primary'
-    if (reason === 'termination') return 'bg-red-100 text-red-600'
+    if (reason === 'termination') return 'bg-danger/10 text-danger'
+    if (reason === 'restored') return 'bg-warning/10 text-warning'
     return 'bg-slate-100 text-slate-600'
 }
 
 function statusBadge(status: string) {
-    return status === 'archived' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+    const normalized = String(status || '').toLowerCase()
+
+    if (['archived', 'active', 'completed', 'verified'].includes(normalized)) return 'bg-success/10 text-success'
+    if (['restored', 'pending', 'in_progress'].includes(normalized)) return 'bg-warning/10 text-warning'
+    if (['termination', 'failed', 'expired'].includes(normalized)) return 'bg-danger/10 text-danger'
+
+    return 'bg-slate-100 text-slate-600'
 }
 </script>
 
@@ -143,7 +150,7 @@ function statusBadge(status: string) {
                     <p class="text-sm text-slate-500">Termination</p>
                     <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.termination }}</p>
                 </div>
-                <div class="box box--stacked p-5 border border-amber-200 bg-amber-50/60">
+                <div class="box box--stacked p-5 border border-warning/20 bg-warning/10">
                     <p class="text-sm text-slate-500">Restored</p>
                     <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.restored }}</p>
                 </div>

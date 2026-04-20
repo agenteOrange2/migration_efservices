@@ -95,9 +95,9 @@ class MembershipController extends Controller
         ];
 
         $carriers = $membership->carriers()
+            ->select(['id', 'name', 'slug', 'mc_number', 'status', 'id_plan', 'created_at'])
             ->with(['users:users.id,email', 'media'])
             ->withCount(['userDrivers', 'vehicles'])
-            ->select(['id', 'name', 'slug', 'mc_number', 'status', 'id_plan', 'created_at'])
             ->paginate(10)
             ->through(fn ($carrier) => [
                 'id' => $carrier->id,

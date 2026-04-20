@@ -63,10 +63,11 @@ const form = useForm({
 function submit() {
     form.transform((data) => ({
         ...data,
+        _method: 'PUT',
         graduated: data.graduated ? 1 : 0,
         subject_to_safety_regulations: data.subject_to_safety_regulations ? 1 : 0,
         performed_safety_functions: data.performed_safety_functions ? 1 : 0,
-    })).put(route(props.routeNames?.update ?? 'admin.training-schools.update', props.school.id), {
+    })).post(route(props.routeNames?.update ?? 'admin.training-schools.update', props.school.id), {
         forceFormData: true,
     })
 }

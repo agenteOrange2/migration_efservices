@@ -53,6 +53,15 @@ const pickerOptions = {
     format: 'M/D/YYYY',
 }
 
+function statusTone(status: string) {
+    const value = String(status || '').toLowerCase()
+    if (['driving', 'on_duty_driving'].some((item) => value.includes(item))) return 'bg-info/10 text-info'
+    if (['on duty', 'on_duty_not_driving', 'yard move'].some((item) => value.includes(item))) return 'bg-warning/10 text-warning'
+    if (['sleep', 'off duty', 'off_duty', 'rest'].some((item) => value.includes(item))) return 'bg-success/10 text-success'
+    if (['violation', 'exceeded', 'suspended'].some((item) => value.includes(item))) return 'bg-danger/10 text-danger'
+    return 'bg-primary/10 text-primary'
+}
+
 function applyFilters() {
     router.get(route(props.routeNames?.driverLog ?? 'admin.hos.driver.log', props.driver.id), {
         start_date: filters.start_date || undefined,
@@ -136,11 +145,11 @@ function bulkDelete() {
         </div>
 
         <div class="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Current Status</div><div class="mt-2 text-lg font-semibold text-slate-800">{{ stats.current_status }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Entries</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.entries_count }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Daily Logs</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.daily_logs_count }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Violations</div><div class="mt-2 text-3xl font-semibold text-primary">{{ stats.violations_count }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Documents</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.documents_count }}</div></div>
+            <div class="box box--stacked border border-primary/10 bg-primary/[0.04] p-5"><div class="text-sm text-slate-500">Current Status</div><div class="mt-2"><span class="rounded-full px-2.5 py-1 text-sm font-semibold" :class="statusTone(stats.current_status)">{{ stats.current_status }}</span></div></div>
+            <div class="box box--stacked border border-primary/10 bg-primary/[0.04] p-5"><div class="text-sm text-slate-500">Entries</div><div class="mt-2 text-3xl font-semibold text-primary">{{ stats.entries_count }}</div></div>
+            <div class="box box--stacked border border-info/10 bg-info/[0.04] p-5"><div class="text-sm text-slate-500">Daily Logs</div><div class="mt-2 text-3xl font-semibold text-info">{{ stats.daily_logs_count }}</div></div>
+            <div class="box box--stacked border border-danger/10 bg-danger/[0.04] p-5"><div class="text-sm text-slate-500">Violations</div><div class="mt-2 text-3xl font-semibold text-danger">{{ stats.violations_count }}</div></div>
+            <div class="box box--stacked border border-success/10 bg-success/[0.04] p-5"><div class="text-sm text-slate-500">Documents</div><div class="mt-2 text-3xl font-semibold text-success">{{ stats.documents_count }}</div></div>
         </div>
 
         <div class="col-span-12">
@@ -160,7 +169,7 @@ function bulkDelete() {
             <div class="box box--stacked overflow-hidden">
                 <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                     <h2 class="text-lg font-semibold text-slate-800">HOS Entries</h2>
-                    <Button v-if="selectedEntryIds.length" variant="outline-secondary" class="gap-2" @click="bulkDelete">
+                    <Button v-if="selectedEntryIds.length" variant="danger" class="gap-2" @click="bulkDelete">
                         <Lucide icon="Trash2" class="h-4 w-4" />
                         Delete Selected
                     </Button>
@@ -182,8 +191,10 @@ function bulkDelete() {
                             <tr v-for="entry in entries" :key="entry.id">
                                 <td class="px-5 py-4"><input v-model="selectedEntryIds" :value="entry.id" type="checkbox" class="form-check-input" /></td>
                                 <td class="px-5 py-4">
-                                    <div class="font-medium text-slate-800">{{ entry.status_label }}</div>
-                                    <div class="text-xs" :class="entry.is_ghost_log ? 'text-primary' : 'text-slate-500'">
+                                    <div>
+                                        <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="statusTone(entry.status_label || entry.status)">{{ entry.status_label }}</span>
+                                    </div>
+                                    <div class="mt-2 text-xs" :class="entry.is_ghost_log ? 'text-warning' : (entry.is_manual_entry ? 'text-info' : 'text-slate-500')">
                                         {{ entry.is_ghost_log ? `Ghost log · ${entry.ghost_log_reason || 'Requires review'}` : (entry.is_manual_entry ? `Manual entry · ${entry.manual_entry_reason || 'Admin edit'}` : 'Recorded automatically') }}
                                     </div>
                                 </td>
@@ -202,7 +213,7 @@ function bulkDelete() {
                                             <Lucide icon="Pencil" class="h-4 w-4" />
                                             Edit
                                         </Button>
-                                        <Button variant="outline-secondary" class="gap-2" @click="destroyEntry(entry.id)">
+                                        <Button variant="danger" class="gap-2" @click="destroyEntry(entry.id)">
                                             <Lucide icon="Trash2" class="h-4 w-4" />
                                             Delete
                                         </Button>
@@ -227,7 +238,7 @@ function bulkDelete() {
                         <div class="mt-1 text-slate-600">Driving: {{ log.driving_time }}</div>
                         <div class="text-slate-600">On Duty: {{ log.on_duty_time }}</div>
                         <div class="text-slate-600">Off Duty: {{ log.off_duty_time }}</div>
-                        <div class="mt-1 text-xs" :class="log.has_violations ? 'text-primary' : 'text-slate-500'">
+                        <div class="mt-1 text-xs" :class="log.has_violations ? 'text-danger' : 'text-success'">
                             {{ log.has_violations ? 'Violations detected' : 'No violations' }}
                         </div>
                     </div>
@@ -242,7 +253,10 @@ function bulkDelete() {
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="font-medium text-slate-800">{{ violation.type }}</div>
-                                <div class="mt-1 text-slate-600">{{ violation.date }} · {{ violation.severity }}</div>
+                                <div class="mt-1 text-slate-600">
+                                    {{ violation.date }} ·
+                                    <span :class="String(violation.severity || '').toLowerCase().includes('high') || String(violation.severity || '').toLowerCase().includes('critical') ? 'text-danger' : 'text-warning'">{{ violation.severity }}</span>
+                                </div>
                                 <div class="text-xs text-slate-500">{{ violation.hours_exceeded }}h exceeded</div>
                             </div>
                             <Link :href="route(props.routeNames?.violationsShow ?? 'admin.hos.violations.show', violation.id)" class="text-primary hover:underline">Open</Link>

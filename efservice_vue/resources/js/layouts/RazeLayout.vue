@@ -828,10 +828,13 @@ onBeforeUnmount(() => {
 
             <!-- BEGIN: Breadcrumb -->
             <Breadcrumb class="flex-1 hidden xl:block">
-              <Breadcrumb.Link to="/">App</Breadcrumb.Link>
-              <Breadcrumb.Link to="/dashboard">Dashboards</Breadcrumb.Link>
-              <Breadcrumb.Link :to="page.url" :active="true">
-                {{ page.props.title || 'Dashboard' }}
+              <Breadcrumb.Link
+                v-for="(link, index) in breadcrumbLinks"
+                :key="index"
+                :to="link.href ?? '#'"
+                :active="link.active"
+              >
+                {{ link.title }}
               </Breadcrumb.Link>
             </Breadcrumb>
 
@@ -1096,47 +1099,111 @@ onBeforeUnmount(() => {
 
     <Dialog :open="showSearch" @close="closeSearch">
       <Dialog.Panel class="mt-[15vh] w-[90%] max-w-[700px] overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-darkmode-600">
+
+        <!-- Search input bar -->
         <div class="flex items-center border-b border-slate-200 px-5 py-4 dark:border-darkmode-400">
-          <Lucide icon="Search" class="mr-3 h-5 w-5 text-slate-400" />
+          <Lucide icon="Search" class="mr-3 h-5 w-5 text-slate-400 flex-shrink-0" />
           <input
             ref="searchInputRef"
             v-model="searchQuery"
             type="text"
             class="flex-1 border-0 bg-transparent p-0 text-base text-slate-700 outline-none placeholder:text-slate-400 focus:ring-0 dark:text-slate-200"
-            placeholder="Quick search..."
+            placeholder="Buscar..."
             @keydown.escape="closeSearch"
             @keydown.down.prevent="navigateSearch(1)"
             @keydown.up.prevent="navigateSearch(-1)"
             @keydown.enter.prevent="selectSearchResult"
           />
-          <div v-if="searchLoading" class="mr-1">
+          <div v-if="searchLoading" class="ml-2 flex-shrink-0">
             <Lucide icon="LoaderCircle" class="h-4 w-4 animate-spin text-slate-400" />
           </div>
-          <div v-else class="rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-400 dark:border-darkmode-400">
+          <div v-else class="ml-2 flex-shrink-0 rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-400 dark:border-darkmode-400">
             ESC
           </div>
-          <div class="p-3 max-h-[50vh] overflow-y-auto">
-            <div class="px-2 py-1.5 text-xs font-medium text-slate-400 uppercase">Páginas</div>
-            <Link :href="route('dashboard')"
-              class="flex items-center px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-darkmode-400 cursor-pointer"
-              @click="showSearch = false">
-              <Lucide icon="LayoutDashboard" class="w-4 h-4 text-slate-500 mr-3" />
-              <span class="dark:text-slate-300">Dashboard</span>
-            </Link>
-            <Link :href="route('profile.edit')"
-              class="flex items-center px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-darkmode-400 cursor-pointer"
-              @click="showSearch = false">
-              <Lucide icon="User" class="w-4 h-4 text-slate-500 mr-3" />
-              <span class="dark:text-slate-300">Perfil</span>
-            </Link>
-            <Link :href="route('profile.edit')"
-              class="flex items-center px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-darkmode-400 cursor-pointer"
-              @click="showSearch = false">
-              <Lucide icon="Settings" class="w-4 h-4 text-slate-500 mr-3" />
-              <span class="dark:text-slate-300">Configuración</span>
-            </Link>
-          </div>
         </div>
+
+        <!-- Results panel -->
+        <div class="max-h-[60vh] overflow-y-auto p-3">
+
+          <!-- No results -->
+          <div v-if="searchQuery && !searchLoading && !hasSearchResults" class="py-10 text-center text-sm text-slate-400">
+            Sin resultados para "{{ searchQuery }}"
+          </div>
+
+          <!-- API search results -->
+          <template v-if="hasSearchResults">
+
+            <!-- Navigation items grouped by section -->
+            <template v-for="([section, items]) in groupedSearchNavigation" :key="'nav-' + section">
+              <div class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">{{ section }}</div>
+              <a
+                v-for="item in items"
+                :key="item.id"
+                :href="item.url"
+                :class="[
+                  'flex items-center px-3 py-2.5 rounded-lg cursor-pointer transition-colors',
+                  flattenedSearchResults[selectedSearchIndex]?.id === item.id
+                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                    : 'hover:bg-slate-100 dark:hover:bg-darkmode-400'
+                ]"
+                @click.prevent="closeSearch(); router.visit(item.url)"
+              >
+                <Lucide :icon="(item.icon as any) || 'FileText'" class="w-4 h-4 mr-3 flex-shrink-0 text-slate-400" />
+                <span class="flex-1 text-sm dark:text-slate-300">{{ item.title }}</span>
+                <span v-if="item.fullPath" class="ml-3 text-xs text-slate-400 truncate max-w-[180px]">{{ item.fullPath }}</span>
+              </a>
+            </template>
+
+            <!-- Entity items grouped by category -->
+            <template v-for="([category, items]) in groupedSearchEntities" :key="'ent-' + category">
+              <div class="mt-2 px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">{{ category }}</div>
+              <a
+                v-for="item in items"
+                :key="item.id"
+                :href="item.url"
+                :class="[
+                  'flex items-center px-3 py-2.5 rounded-lg cursor-pointer transition-colors',
+                  flattenedSearchResults[selectedSearchIndex]?.id === item.id
+                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                    : 'hover:bg-slate-100 dark:hover:bg-darkmode-400'
+                ]"
+                @click.prevent="closeSearch(); router.visit(item.url)"
+              >
+                <Lucide :icon="(item.icon as any) || 'User'" class="w-4 h-4 mr-3 flex-shrink-0 text-slate-400" />
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm dark:text-slate-300">{{ item.title }}</div>
+                  <div v-if="item.subtitle" class="text-xs text-slate-400 truncate">{{ item.subtitle }}</div>
+                </div>
+              </a>
+            </template>
+
+          </template>
+
+          <!-- Shortcut links when no query typed -->
+          <template v-if="!searchQuery && shortcutLinks.length">
+            <div class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Accesos rápidos</div>
+            <Link
+              v-for="link in shortcutLinks"
+              :key="link.href"
+              :href="link.href"
+              class="flex items-center px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-darkmode-400 cursor-pointer transition-colors"
+              @click="showSearch = false"
+            >
+              <Lucide :icon="(link.icon as any)" class="w-4 h-4 mr-3 flex-shrink-0 text-slate-500" />
+              <span class="flex-1 text-sm dark:text-slate-300">{{ link.title }}</span>
+              <span class="ml-3 text-xs text-slate-400">{{ link.section }}</span>
+            </Link>
+          </template>
+
+        </div>
+
+        <!-- Footer keyboard hints -->
+        <div class="border-t border-slate-200 dark:border-darkmode-400 px-5 py-2 flex items-center gap-4 text-xs text-slate-400">
+          <span><kbd class="rounded border border-slate-200 dark:border-darkmode-400 px-1 py-0.5 font-mono">↑↓</kbd> navegar</span>
+          <span><kbd class="rounded border border-slate-200 dark:border-darkmode-400 px-1 py-0.5 font-mono">↵</kbd> abrir</span>
+          <span><kbd class="rounded border border-slate-200 dark:border-darkmode-400 px-1 py-0.5 font-mono">ESC</kbd> cerrar</span>
+        </div>
+
       </Dialog.Panel>
     </Dialog>
 

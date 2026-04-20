@@ -10,6 +10,7 @@ interface CarrierItem {
     id: number
     name: string
     slug: string
+    logo_url?: string | null
     address: string
     state: string
     zipcode: string
@@ -208,8 +209,14 @@ function confirmDelete(carrier: CarrierItem) {
                                 >
                                     <td>
                                         <div class="flex items-center">
-                                            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex-shrink-0">
-                                                <Lucide icon="Truck" class="w-4 h-4 text-primary" />
+                                            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex-shrink-0 overflow-hidden">
+                                                <img
+                                                    v-if="carrier.logo_url"
+                                                    :src="carrier.logo_url"
+                                                    :alt="carrier.name"
+                                                    class="h-full w-full object-cover"
+                                                />
+                                                <Lucide v-else icon="Truck" class="w-4 h-4 text-primary" />
                                             </div>
                                             <div class="ml-3">
                                                 <Link :href="route('admin.carriers.show', carrier.slug)" class="font-medium text-primary hover:underline">

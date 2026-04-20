@@ -130,7 +130,6 @@ class TrafficConvictionsController extends Controller
         DB::transaction(function () use ($request, $validated, $driver, $convictionDate) {
             $conviction = DriverTrafficConviction::create([
                 'user_driver_detail_id' => $driver->id,
-                'carrier_id' => $driver->carrier_id,
                 'conviction_date' => $convictionDate->format('Y-m-d'),
                 'location' => $validated['location'],
                 'charge' => $validated['charge'],
@@ -174,7 +173,6 @@ class TrafficConvictionsController extends Controller
         DB::transaction(function () use ($request, $validated, $driver, $convictionDate, $conviction) {
             $conviction->update([
                 'user_driver_detail_id' => $driver->id,
-                'carrier_id' => $driver->carrier_id,
                 'conviction_date' => $convictionDate->format('Y-m-d'),
                 'location' => $validated['location'],
                 'charge' => $validated['charge'],

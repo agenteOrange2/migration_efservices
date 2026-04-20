@@ -143,17 +143,17 @@ function deleteSchool(school: SchoolRow) {
                     <p class="text-sm text-slate-500">Total Records</p>
                     <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-success/20 bg-success/5 p-5">
                     <p class="text-sm text-slate-500">Graduated</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.graduated }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-success">{{ stats.graduated }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-warning/20 bg-warning/5 p-5">
                     <p class="text-sm text-slate-500">In Progress</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.in_progress }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-warning">{{ stats.in_progress }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-info/20 bg-info/5 p-5">
                     <p class="text-sm text-slate-500">Documents</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.documents }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-info">{{ stats.documents }}</p>
                 </div>
             </div>
 
@@ -228,12 +228,12 @@ function deleteSchool(school: SchoolRow) {
                                 </td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ school.date_end ?? 'N/A' }}</td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="school.graduated ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'">
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="school.graduated ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'">
                                         {{ school.graduated ? 'Graduated' : 'In Progress' }}
                                     </span>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                    <span class="inline-flex items-center whitespace-nowrap rounded-full bg-info/10 px-2.5 py-1 text-xs font-medium text-info">
                                         {{ school.document_count }} document<span v-if="school.document_count !== 1">s</span>
                                     </span>
                                 </td>
@@ -248,7 +248,7 @@ function deleteSchool(school: SchoolRow) {
                                         <Link :href="namedRoute('edit', school.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
-                                        <button type="button" @click="deleteSchool(school)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
+                                        <button type="button" @click="deleteSchool(school)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete">
                                             <Lucide icon="Trash2" class="w-4 h-4" />
                                         </button>
                                     </div>

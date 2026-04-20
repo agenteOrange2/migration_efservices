@@ -41,10 +41,10 @@ const props = defineProps<{
 const filters = reactive({ ...props.filters })
 
 const statCards = computed(() => [
-    { label: 'Total Accidents', value: props.stats.total, icon: 'AlertTriangle' },
-    { label: 'With Injuries', value: props.stats.with_injuries, icon: 'Ambulance' },
-    { label: 'With Fatalities', value: props.stats.with_fatalities, icon: 'ShieldAlert' },
-    { label: 'Last 30 Days', value: props.stats.last_30_days, icon: 'Clock3' },
+    { label: 'Total Accidents', value: props.stats.total, icon: 'AlertTriangle', tone: 'danger' },
+    { label: 'With Injuries', value: props.stats.with_injuries, icon: 'Ambulance', tone: 'warning' },
+    { label: 'With Fatalities', value: props.stats.with_fatalities, icon: 'ShieldAlert', tone: 'danger' },
+    { label: 'Last 30 Days', value: props.stats.last_30_days, icon: 'Clock3', tone: 'info' },
 ])
 
 function applyFilters() {

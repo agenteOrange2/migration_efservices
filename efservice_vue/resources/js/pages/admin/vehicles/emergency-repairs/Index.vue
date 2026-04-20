@@ -116,8 +116,10 @@ function createHref() {
 }
 
 function statusBadge(status: string) {
-    if (status === 'completed') return 'bg-primary/10 text-primary'
-    if (status === 'in_progress') return 'bg-slate-200 text-slate-700'
+    if (status === 'completed') return 'bg-success/10 text-success'
+    if (status === 'in_progress') return 'bg-info/10 text-info'
+    if (status === 'pending') return 'bg-warning/10 text-warning'
+    if (status === 'cancelled' || status === 'failed') return 'bg-danger/10 text-danger'
     return 'bg-slate-100 text-slate-600'
 }
 
@@ -177,11 +179,11 @@ function confirmDelete() {
 
         <div class="col-span-12">
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Total</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.pending }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">In Progress</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.in_progress }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.completed }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Total Cost</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ money(stats.total_cost) }}</p></div>
+                <div class="box box--stacked border border-primary/20 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total</p><p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p></div>
+                <div class="box box--stacked border border-warning/20 bg-warning/5 p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-warning">{{ stats.pending }}</p></div>
+                <div class="box box--stacked border border-info/20 bg-info/5 p-5"><p class="text-sm text-slate-500">In Progress</p><p class="mt-1 text-2xl font-semibold text-info">{{ stats.in_progress }}</p></div>
+                <div class="box box--stacked border border-success/20 bg-success/5 p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-2xl font-semibold text-success">{{ stats.completed }}</p></div>
+                <div class="box box--stacked border border-slate-300/80 bg-slate-50 p-5"><p class="text-sm text-slate-500">Total Cost</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ money(stats.total_cost) }}</p></div>
             </div>
         </div>
 

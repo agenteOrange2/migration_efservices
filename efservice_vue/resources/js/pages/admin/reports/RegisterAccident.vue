@@ -66,7 +66,7 @@ function submit() {
                             <option value="">Select carrier</option>
                             <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                         </TomSelect>
-                        <div v-if="form.errors.carrier_id" class="mt-1 text-xs text-red-500">{{ form.errors.carrier_id }}</div>
+                        <div v-if="form.errors.carrier_id" class="mt-1 text-xs text-danger">{{ form.errors.carrier_id }}</div>
                     </div>
                     <div>
                         <FormLabel>Driver</FormLabel>
@@ -74,17 +74,17 @@ function submit() {
                             <option value="">Select driver</option>
                             <option v-for="driver in availableDrivers" :key="driver.id" :value="String(driver.id)">{{ driver.name }}</option>
                         </TomSelect>
-                        <div v-if="form.errors.user_driver_detail_id" class="mt-1 text-xs text-red-500">{{ form.errors.user_driver_detail_id }}</div>
+                        <div v-if="form.errors.user_driver_detail_id" class="mt-1 text-xs text-danger">{{ form.errors.user_driver_detail_id }}</div>
                     </div>
                     <div>
                         <FormLabel>Accident Date</FormLabel>
                         <Litepicker v-model="form.accident_date" :options="pickerOptions" />
-                        <div v-if="form.errors.accident_date" class="mt-1 text-xs text-red-500">{{ form.errors.accident_date }}</div>
+                        <div v-if="form.errors.accident_date" class="mt-1 text-xs text-danger">{{ form.errors.accident_date }}</div>
                     </div>
                     <div>
                         <FormLabel>Nature of Accident</FormLabel>
                         <FormInput v-model="form.nature_of_accident" type="text" placeholder="Rear-end collision, lane departure, etc." />
-                        <div v-if="form.errors.nature_of_accident" class="mt-1 text-xs text-red-500">{{ form.errors.nature_of_accident }}</div>
+                        <div v-if="form.errors.nature_of_accident" class="mt-1 text-xs text-danger">{{ form.errors.nature_of_accident }}</div>
                     </div>
                     <div class="rounded-xl border border-slate-200 p-4">
                         <label class="flex items-center gap-3 text-sm font-medium text-slate-700">

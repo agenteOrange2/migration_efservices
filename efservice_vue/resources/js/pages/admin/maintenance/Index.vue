@@ -129,9 +129,10 @@ function confirmDelete() {
 }
 
 function statusBadge(status: string) {
-    if (status === 'completed') return 'bg-primary/10 text-primary'
+    if (status === 'completed') return 'bg-success/10 text-success'
+    if (status === 'pending') return 'bg-warning/10 text-warning'
     if (status === 'overdue') return 'bg-danger/10 text-danger'
-    if (status === 'upcoming') return 'bg-primary/15 text-primary'
+    if (status === 'upcoming') return 'bg-info/10 text-info'
     return 'bg-slate-100 text-slate-600'
 }
 </script>
@@ -180,12 +181,12 @@ function statusBadge(status: string) {
 
         <div class="col-span-12">
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Total</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.pending }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.completed }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Overdue</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.overdue }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Upcoming</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.upcoming }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Historical</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.historical }}</p></div>
+                <div class="box box--stacked border border-primary/20 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total</p><p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p></div>
+                <div class="box box--stacked border border-warning/20 bg-warning/5 p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-warning">{{ stats.pending }}</p></div>
+                <div class="box box--stacked border border-success/20 bg-success/5 p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-2xl font-semibold text-success">{{ stats.completed }}</p></div>
+                <div class="box box--stacked border border-danger/20 bg-danger/5 p-5"><p class="text-sm text-slate-500">Overdue</p><p class="mt-1 text-2xl font-semibold text-danger">{{ stats.overdue }}</p></div>
+                <div class="box box--stacked border border-info/20 bg-info/5 p-5"><p class="text-sm text-slate-500">Upcoming</p><p class="mt-1 text-2xl font-semibold text-info">{{ stats.upcoming }}</p></div>
+                <div class="box box--stacked border border-slate-300/80 bg-slate-50 p-5"><p class="text-sm text-slate-500">Historical</p><p class="mt-1 text-2xl font-semibold text-slate-700">{{ stats.historical }}</p></div>
             </div>
         </div>
 

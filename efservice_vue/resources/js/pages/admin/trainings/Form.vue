@@ -23,49 +23,49 @@ function onFilesChange(event: Event) {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Title <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Title <span class="text-danger">*</span></label>
                     <input v-model="form.title" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Training title" />
-                    <p v-if="form.errors.title" class="text-red-500 text-xs mt-1">{{ form.errors.title }}</p>
+                    <p v-if="form.errors.title" class="text-danger text-xs mt-1">{{ form.errors.title }}</p>
                 </div>
 
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Description <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Description <span class="text-danger">*</span></label>
                     <textarea v-model="form.description" rows="5" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none" placeholder="Training description"></textarea>
-                    <p v-if="form.errors.description" class="text-red-500 text-xs mt-1">{{ form.errors.description }}</p>
+                    <p v-if="form.errors.description" class="text-danger text-xs mt-1">{{ form.errors.description }}</p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Content Type <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Content Type <span class="text-danger">*</span></label>
                     <TomSelect v-model="form.content_type">
                         <option value="">Select type</option>
                         <option value="file">File</option>
                         <option value="video">Video</option>
                         <option value="url">URL</option>
                     </TomSelect>
-                    <p v-if="form.errors.content_type" class="text-red-500 text-xs mt-1">{{ form.errors.content_type }}</p>
+                    <p v-if="form.errors.content_type" class="text-danger text-xs mt-1">{{ form.errors.content_type }}</p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Status <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Status <span class="text-danger">*</span></label>
                     <TomSelect v-model="form.status">
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                     </TomSelect>
-                    <p v-if="form.errors.status" class="text-red-500 text-xs mt-1">{{ form.errors.status }}</p>
+                    <p v-if="form.errors.status" class="text-danger text-xs mt-1">{{ form.errors.status }}</p>
                 </div>
 
                 <div v-if="form.content_type === 'video'" class="md:col-span-2">
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Video URL <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Video URL <span class="text-danger">*</span></label>
                     <input v-model="form.video_url" type="url" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="https://www.youtube.com/watch?v=..." />
                     <p class="text-xs text-slate-400 mt-1">Use a YouTube, Vimeo, or direct video link.</p>
-                    <p v-if="form.errors.video_url" class="text-red-500 text-xs mt-1">{{ form.errors.video_url }}</p>
+                    <p v-if="form.errors.video_url" class="text-danger text-xs mt-1">{{ form.errors.video_url }}</p>
                 </div>
 
                 <div v-if="form.content_type === 'url'" class="md:col-span-2">
-                    <label class="block text-xs font-medium text-slate-600 mb-1.5">External URL <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">External URL <span class="text-danger">*</span></label>
                     <input v-model="form.url" type="url" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="https://..." />
                     <p class="text-xs text-slate-400 mt-1">Use this when the training content lives on an external site.</p>
-                    <p v-if="form.errors.url" class="text-red-500 text-xs mt-1">{{ form.errors.url }}</p>
+                    <p v-if="form.errors.url" class="text-danger text-xs mt-1">{{ form.errors.url }}</p>
                 </div>
             </div>
         </div>
@@ -91,7 +91,7 @@ function onFilesChange(event: Event) {
             <label class="block text-xs font-medium text-slate-600 mb-1.5">Upload Files</label>
             <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.ppt,.pptx,.mp4,.mov" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" @change="onFilesChange" />
             <p class="text-xs text-slate-400 mt-2">Accepted: PDF, JPG, PNG, DOC, DOCX, PPT, PPTX, MP4, MOV.</p>
-            <p v-if="form.errors.training_files" class="text-red-500 text-xs mt-1">{{ form.errors.training_files }}</p>
+            <p v-if="form.errors.training_files" class="text-danger text-xs mt-1">{{ form.errors.training_files }}</p>
         </div>
     </div>
 </template>

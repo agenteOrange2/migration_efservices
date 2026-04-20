@@ -12,6 +12,7 @@ interface Props {
     carrier: Record<string, any>
     userCarriers: any[]
     drivers: any[]
+    vehicles: any[]
     documents: any[]
     pendingDocuments: any[]
     approvedDocuments: any[]
@@ -75,6 +76,13 @@ function updateDocumentStatus(documentId: number, status: number) {
     })
 }
 
+function formatDate(value?: string | null): string {
+    if (!value) return '-'
+    const d = new Date(value)
+    if (isNaN(d.getTime())) return '-'
+    return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`
+}
+
 function generateMissingDocuments() {
     router.post(route('admin.carriers.generate-missing-documents', props.carrier.slug), {}, {
         preserveScroll: true,
@@ -103,13 +111,34 @@ function deleteDriver(driverId: number) {
     }
 }
 
+function deleteVehicle(vehicleId: number) {
+    if (confirm('Are you sure you want to delete this vehicle? This action cannot be undone.')) {
+        router.delete(route('admin.vehicles.destroy', vehicleId), {
+            preserveScroll: true,
+        })
+    }
+}
+
 const tabs = [
     { id: 'overview', label: 'Overview', icon: 'LayoutDashboard' },
     { id: 'documents', label: 'Documents', icon: 'FileText' },
     { id: 'banking', label: 'Banking', icon: 'CreditCard' },
     { id: 'users', label: 'Users', icon: 'Users' },
     { id: 'drivers', label: 'Drivers', icon: 'UserCheck' },
+    { id: 'vehicles', label: 'Vehicles', icon: 'Truck' },
 ]
+
+const vehicleStatusMap: Record<string, { label: string; color: string; bg: string }> = {
+    active:         { label: 'Active',          color: 'text-success', bg: 'bg-success/10' },
+    inactive:       { label: 'Inactive',         color: 'text-slate-500', bg: 'bg-slate-100' },
+    pending:        { label: 'Pending',          color: 'text-warning', bg: 'bg-warning/10' },
+    suspended:      { label: 'Suspended',        color: 'text-danger', bg: 'bg-danger/10' },
+    out_of_service: { label: 'Out of Service',   color: 'text-danger', bg: 'bg-danger/10' },
+}
+
+function getVehicleStatus(status: string) {
+    return vehicleStatusMap[status] ?? { label: status ?? 'Unknown', color: 'text-slate-500', bg: 'bg-slate-100' }
+}
 </script>
 
 <template>
@@ -161,8 +190,14 @@ const tabs = [
             <div class="col-span-12">
                 <div class="box box--stacked p-6">
                     <div class="flex flex-col lg:flex-row items-start lg:items-center gap-6">
-                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex-shrink-0">
-                            <Lucide icon="Truck" class="w-8 h-8 text-primary" />
+                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex-shrink-0 overflow-hidden">
+                            <img
+                                v-if="carrier.logo_url"
+                                :src="carrier.logo_url"
+                                :alt="carrier.name"
+                                class="h-full w-full object-cover"
+                            />
+                            <Lucide v-else icon="Truck" class="w-8 h-8 text-primary" />
                         </div>
                         <div class="flex-1">
                             <h2 class="text-2xl font-bold text-slate-800">{{ carrier.name }}</h2>
@@ -177,7 +212,7 @@ const tabs = [
                             <span :class="[getStatus(carrier.status).bg, getStatus(carrier.status).color, 'px-3 py-1.5 rounded-full text-sm font-medium']">
                                 {{ getStatus(carrier.status).label }}
                             </span>
-                            <span class="text-xs text-slate-400">Since {{ new Date(carrier.created_at).toLocaleDateString() }}</span>
+                            <span class="text-xs text-slate-400">Since {{ formatDate(carrier.created_at) }}</span>
                         </div>
                     </div>
                 </div>
@@ -294,11 +329,11 @@ const tabs = [
                                     </div>
                                     <div>
                                         <dt class="text-sm text-slate-500 w-32 flex-shrink-0">Created</dt>
-                                        <dd class="text-sm font-medium text-slate-800">{{ new Date(carrier.created_at).toLocaleString() }}</dd>
+                                        <dd class="text-sm font-medium text-slate-800">{{ formatDate(carrier.created_at) }}</dd>
                                     </div>
                                     <div>
                                         <dt class="text-sm text-slate-500 w-32 flex-shrink-0">Last Updated</dt>
-                                        <dd class="text-sm font-medium text-slate-800">{{ new Date(carrier.updated_at).toLocaleString() }}</dd>
+                                        <dd class="text-sm font-medium text-slate-800">{{ formatDate(carrier.updated_at) }}</dd>
                                     </div>
                                 </dl>
                             </div>
@@ -393,7 +428,7 @@ const tabs = [
                                                 <option value="3">In Process</option>
                                             </FormSelect>
                                         </td>
-                                        <td class="text-sm text-slate-500">{{ doc.date ? new Date(doc.date).toLocaleDateString() : '-' }}</td>
+                                        <td class="text-sm text-slate-500">{{ formatDate(doc.date) }}</td>
                                         <td class="text-center">
                                             <div class="flex items-center justify-center gap-2">
                                                 <button @click="updateDocumentStatus(doc.id, 1)" class="p-1 rounded hover:bg-success/10 text-success" title="Approve">
@@ -508,13 +543,101 @@ const tabs = [
                                             </span>
                                         </td>
                                         <td>
-                                            <button @click="deleteCarrierUser(uc.user_id)" class="p-1 rounded hover:bg-danger/10 text-danger" title="Delete user">
-                                                <Lucide icon="Trash2" class="w-4 h-4" />
-                                            </button>
+                                            <div class="flex items-center gap-1">
+                                                <Link :href="route('admin.carriers.user-carriers.show', { carrier: carrier.slug, userCarrierDetail: uc.id })" class="p-1 rounded hover:bg-primary/10 text-primary" title="View user">
+                                                    <Lucide icon="Eye" class="w-4 h-4" />
+                                                </Link>
+                                                <Link :href="route('admin.carriers.user-carriers.edit', { carrier: carrier.slug, userCarrierDetail: uc.id })" class="p-1 rounded hover:bg-warning/10 text-warning" title="Edit user">
+                                                    <Lucide icon="PenLine" class="w-4 h-4" />
+                                                </Link>
+                                                <button @click="deleteCarrierUser(uc.user_id)" class="p-1 rounded hover:bg-danger/10 text-danger" title="Delete user">
+                                                    <Lucide icon="Trash2" class="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr v-if="!userCarriers.length">
                                         <td colspan="6" class="px-4 py-8 text-center text-slate-400">No users associated</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Vehicles Tab -->
+                    <div v-show="activeTab === 'vehicles'" class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-medium text-slate-800">Vehicles ({{ vehicles.length }})</h3>
+                            <Link
+                                :href="route('admin.vehicles.create', { carrier_id: carrier.id })"
+                                class="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition"
+                            >
+                                <Lucide icon="Plus" class="w-4 h-4" />
+                                Register Vehicle
+                            </Link>
+                        </div>
+                        <div class="overflow-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="[&>th]:px-4 [&>th]:py-3 [&>th]:font-medium [&>th]:text-slate-500 [&>th]:text-sm [&>th]:border-b">
+                                        <th>Unit #</th>
+                                        <th>Year / Make / Model</th>
+                                        <th>Type</th>
+                                        <th>VIN</th>
+                                        <th>Assigned Driver</th>
+                                        <th>Status</th>
+                                        <th>Added</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="vehicle in vehicles" :key="vehicle.id" class="[&>td]:px-4 [&>td]:py-3 [&>td]:border-b [&>td]:border-slate-100">
+                                        <td class="text-sm font-medium">{{ vehicle.company_unit_number ?? '-' }}</td>
+                                        <td class="text-sm">{{ [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ') || '-' }}</td>
+                                        <td class="text-sm text-slate-500 capitalize">{{ vehicle.type ?? '-' }}</td>
+                                        <td class="text-sm text-slate-500 font-mono text-xs">{{ vehicle.vin ?? '-' }}</td>
+                                        <td class="text-sm text-slate-500">{{ vehicle.driver?.name ?? '—' }}</td>
+                                        <td>
+                                            <span :class="[
+                                                'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+                                                getVehicleStatus(vehicle.status).bg,
+                                                getVehicleStatus(vehicle.status).color,
+                                            ]">
+                                                {{ getVehicleStatus(vehicle.status).label }}
+                                            </span>
+                                        </td>
+                                        <td class="text-sm text-slate-500">{{ formatDate(vehicle.created_at) }}</td>
+                                        <td>
+                                            <div class="flex items-center gap-1">
+                                                <Link
+                                                    :href="route('admin.vehicles.show', vehicle.id)"
+                                                    class="p-1.5 rounded hover:bg-primary/10 text-primary"
+                                                    title="View"
+                                                >
+                                                    <Lucide icon="Eye" class="w-4 h-4" />
+                                                </Link>
+                                                <Link
+                                                    :href="route('admin.vehicles.edit', vehicle.id)"
+                                                    class="p-1.5 rounded hover:bg-warning/10 text-warning"
+                                                    title="Edit"
+                                                >
+                                                    <Lucide icon="Pencil" class="w-4 h-4" />
+                                                </Link>
+                                                <button
+                                                    @click="deleteVehicle(vehicle.id)"
+                                                    class="p-1.5 rounded hover:bg-danger/10 text-danger"
+                                                    title="Delete"
+                                                >
+                                                    <Lucide icon="Trash2" class="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="!vehicles.length">
+                                        <td colspan="8" class="px-4 py-10 text-center text-slate-400">
+                                            <Lucide icon="Truck" class="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                                            No vehicles registered for this carrier
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -556,7 +679,7 @@ const tabs = [
                                                 {{ driver.status == 1 ? 'Active' : 'Pending' }}
                                             </span>
                                         </td>
-                                        <td class="text-sm text-slate-500">{{ driver.created_at ? new Date(driver.created_at).toLocaleDateString() : '-' }}</td>
+                                        <td class="text-sm text-slate-500">{{ formatDate(driver.created_at) }}</td>
                                         <td>
                                             <div class="flex items-center gap-2">
                                                 <Link

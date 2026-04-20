@@ -40,10 +40,10 @@ const props = defineProps<{
 const filters = reactive({ ...props.filters })
 
 const statCards = computed(() => [
-    { label: 'Total Drivers', value: props.stats.total, icon: 'Users' },
-    { label: 'Active', value: props.stats.active, icon: 'UserCheck' },
-    { label: 'Inactive', value: props.stats.inactive, icon: 'UserMinus' },
-    { label: 'New 30 Days', value: props.stats.new, icon: 'UserPlus' },
+    { label: 'Total Drivers', value: props.stats.total, icon: 'Users', tone: 'primary' },
+    { label: 'Active', value: props.stats.active, icon: 'UserCheck', tone: 'success' },
+    { label: 'Inactive', value: props.stats.inactive, icon: 'UserMinus', tone: 'danger' },
+    { label: 'New 30 Days', value: props.stats.new, icon: 'UserPlus', tone: 'info' },
 ])
 
 function applyFilters() {

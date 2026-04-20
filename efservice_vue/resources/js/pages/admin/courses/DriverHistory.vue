@@ -83,10 +83,10 @@ function deleteCourse(course: any) {
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Total Courses</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Active</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.active }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Inactive</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.inactive }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Expiring Soon</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.expiring_soon }}</p></div>
+                <div class="box box--stacked p-5 border border-primary/20 bg-primary/5"><p class="text-sm text-slate-500">Total Courses</p><p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p></div>
+                <div class="box box--stacked p-5 border border-success/20 bg-success/5"><p class="text-sm text-slate-500">Active</p><p class="mt-1 text-2xl font-semibold text-success">{{ stats.active }}</p></div>
+                <div class="box box--stacked p-5 border border-danger/20 bg-danger/5"><p class="text-sm text-slate-500">Inactive</p><p class="mt-1 text-2xl font-semibold text-danger">{{ stats.inactive }}</p></div>
+                <div class="box box--stacked p-5 border border-warning/20 bg-warning/5"><p class="text-sm text-slate-500">Expiring Soon</p><p class="mt-1 text-2xl font-semibold text-warning">{{ stats.expiring_soon }}</p></div>
             </div>
 
             <div class="box box--stacked p-5 mb-6">
@@ -123,9 +123,9 @@ function deleteCourse(course: any) {
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ [course.city, course.state].filter(Boolean).join(', ') || 'N/A' }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ course.certification_date ?? 'N/A' }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ course.expiration_date ?? 'N/A' }}</td>
-                                <td class="px-5 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="course.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'">{{ course.status }}</span></td>
-                                <td class="px-5 py-4"><span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{{ course.document_count }} document<span v-if="course.document_count !== 1">s</span></span></td>
-                                <td class="px-5 py-4"><div class="flex items-center justify-center gap-2"><Link :href="route('admin.courses.documents', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Files" class="w-4 h-4" /></Link><Link :href="route('admin.courses.edit', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link><button type="button" @click="deleteCourse(course)" class="p-1.5 text-slate-400 hover:text-red-500 transition"><Lucide icon="Trash2" class="w-4 h-4" /></button></div></td>
+                                <td class="px-5 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="course.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">{{ course.status }}</span></td>
+                                <td class="px-5 py-4"><span class="inline-flex rounded-full bg-info/10 px-2.5 py-1 text-xs font-medium text-info">{{ course.document_count }} document<span v-if="course.document_count !== 1">s</span></span></td>
+                                <td class="px-5 py-4"><div class="flex items-center justify-center gap-2"><Link :href="route('admin.courses.documents', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Files" class="w-4 h-4" /></Link><Link :href="route('admin.courses.edit', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link><button type="button" @click="deleteCourse(course)" class="p-1.5 text-slate-400 hover:text-danger transition"><Lucide icon="Trash2" class="w-4 h-4" /></button></div></td>
                             </tr>
                             <tr v-if="!courses.data.length"><td colspan="7" class="px-5 py-12 text-center text-slate-400"><Lucide icon="ShieldCheck" class="w-12 h-12 mx-auto mb-3 text-slate-300" /><p>No course history found</p></td></tr>
                         </tbody>

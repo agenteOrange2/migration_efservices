@@ -118,7 +118,7 @@ function bulkDownload() {
                             <Lucide icon="Download" class="h-4 w-4" />
                             Download Selected
                         </Button>
-                        <Button v-if="selectedDocuments.length" variant="outline-secondary" class="gap-2" @click="bulkDelete">
+                        <Button v-if="selectedDocuments.length" variant="danger" class="gap-2" @click="bulkDelete">
                             <Lucide icon="Trash2" class="h-4 w-4" />
                             Delete Selected
                         </Button>
@@ -128,12 +128,12 @@ function bulkDownload() {
         </div>
 
         <div class="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Total</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.total }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Trip Reports</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.trip_reports }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Inspection Reports</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.inspection_reports }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Daily Logs</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.daily_logs }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">Monthly Summaries</div><div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.monthly_summaries }}</div></div>
-            <div class="box box--stacked p-5"><div class="text-sm text-slate-500">FMCSA Monthly</div><div class="mt-2 text-3xl font-semibold text-primary">{{ stats.fmcsa_monthly }}</div></div>
+            <div class="box box--stacked border border-primary/10 bg-primary/[0.04] p-5"><div class="text-sm text-slate-500">Total</div><div class="mt-2 text-3xl font-semibold text-primary">{{ stats.total }}</div></div>
+            <div class="box box--stacked border border-info/10 bg-info/[0.04] p-5"><div class="text-sm text-slate-500">Trip Reports</div><div class="mt-2 text-3xl font-semibold text-info">{{ stats.trip_reports }}</div></div>
+            <div class="box box--stacked border border-warning/10 bg-warning/[0.04] p-5"><div class="text-sm text-slate-500">Inspection Reports</div><div class="mt-2 text-3xl font-semibold text-warning">{{ stats.inspection_reports }}</div></div>
+            <div class="box box--stacked border border-primary/10 bg-primary/[0.04] p-5"><div class="text-sm text-slate-500">Daily Logs</div><div class="mt-2 text-3xl font-semibold text-primary">{{ stats.daily_logs }}</div></div>
+            <div class="box box--stacked border border-success/10 bg-success/[0.04] p-5"><div class="text-sm text-slate-500">Monthly Summaries</div><div class="mt-2 text-3xl font-semibold text-success">{{ stats.monthly_summaries }}</div></div>
+            <div class="box box--stacked border border-info/10 bg-info/[0.04] p-5"><div class="text-sm text-slate-500">FMCSA Monthly</div><div class="mt-2 text-3xl font-semibold text-info">{{ stats.fmcsa_monthly }}</div></div>
         </div>
 
         <div class="col-span-12">
@@ -189,7 +189,7 @@ function bulkDownload() {
                         <FormInput v-model="monthlyForm.month" type="number" min="1" max="12" placeholder="Month" />
                         <FormInput v-model="monthlyForm.year" type="number" min="2020" :max="String(new Date().getFullYear() + 1)" placeholder="Year" />
                     </div>
-                    <Button variant="primary" class="w-full" @click="generateMonthlySummary">Generate</Button>
+                    <Button variant="success" class="w-full" @click="generateMonthlySummary">Generate</Button>
                 </div>
             </div>
 
@@ -204,7 +204,7 @@ function bulkDownload() {
                         <FormInput v-model="fmcsaForm.month" type="number" min="1" max="12" placeholder="Month" />
                         <FormInput v-model="fmcsaForm.year" type="number" min="2020" :max="String(new Date().getFullYear() + 1)" placeholder="Year" />
                     </div>
-                    <Button variant="primary" class="w-full" @click="generateFmcsaMonthly">Generate</Button>
+                    <Button variant="info" class="w-full" @click="generateFmcsaMonthly">Generate</Button>
                 </div>
             </div>
         </div>
@@ -239,7 +239,7 @@ function bulkDownload() {
                                     <div class="flex justify-end gap-3">
                                         <a :href="document.preview_url" target="_blank" class="text-primary hover:underline">Preview</a>
                                         <a :href="document.download_url" class="text-primary hover:underline">Download</a>
-                                        <button class="text-primary hover:underline" @click="destroyDocument(document.id)">Delete</button>
+                                        <button class="text-danger hover:underline" @click="destroyDocument(document.id)">Delete</button>
                                     </div>
                                 </td>
                             </tr>

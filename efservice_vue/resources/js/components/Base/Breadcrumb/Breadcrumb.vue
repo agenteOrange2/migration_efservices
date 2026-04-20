@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type HTMLAttributes, useSlots, provide } from "vue";
+import { type HTMLAttributes, useSlots, provide, Fragment, type VNode } from "vue";
 
 export type ProvideBeradcrumb = {
   light?: boolean;
@@ -16,6 +16,15 @@ const { light } = defineProps<BreadcrumbProps>();
 provide<ProvideBeradcrumb>("breadcrumb", {
   light: light,
 });
+
+function flattenVNodes(vnodes: VNode[]): VNode[] {
+  return vnodes.flatMap((vnode) => {
+    if (vnode.type === Fragment) {
+      return flattenVNodes((vnode.children as VNode[]) || []);
+    }
+    return [vnode];
+  });
+}
 </script>
 
 <template>
@@ -27,7 +36,7 @@ provide<ProvideBeradcrumb>("breadcrumb", {
       ]"
     >
       <component
-        v-for="(item, key) in slots.default && slots.default()"
+        v-for="(item, key) in flattenVNodes(slots.default ? slots.default() : [])"
         :is="item"
         :index="key"
       />

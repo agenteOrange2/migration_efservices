@@ -49,6 +49,53 @@ class UserCarrierController extends Controller
         ]);
     }
 
+    public function show(Carrier $carrier, UserCarrierDetail $userCarrierDetail): Response
+    {
+        $userCarrierDetail->load(['user', 'carrier']);
+
+        return Inertia::render('admin/carriers/users/Show', [
+            'carrier' => $carrier->only('id', 'name', 'slug'),
+            'userCarrier' => [
+                'id'           => $userCarrierDetail->id,
+                'phone'        => $userCarrierDetail->phone,
+                'job_position' => $userCarrierDetail->job_position,
+                'status'       => $userCarrierDetail->status,
+                'status_name'  => $userCarrierDetail->status_name,
+                'created_at'   => $userCarrierDetail->created_at?->format('n/j/Y g:i A'),
+                'updated_at'   => $userCarrierDetail->updated_at?->format('n/j/Y g:i A'),
+                'user'         => $userCarrierDetail->user ? [
+                    'id'                => $userCarrierDetail->user->id,
+                    'name'              => $userCarrierDetail->user->name,
+                    'email'             => $userCarrierDetail->user->email,
+                    'status'            => $userCarrierDetail->user->status,
+                    'created_at'        => $userCarrierDetail->user->created_at?->format('n/j/Y g:i A'),
+                    'profile_photo_url' => $userCarrierDetail->user->getFirstMediaUrl('profile_photo_carrier') ?: null,
+                ] : null,
+            ],
+        ]);
+    }
+
+    public function edit(Carrier $carrier, UserCarrierDetail $userCarrierDetail): Response
+    {
+        $userCarrierDetail->load(['user']);
+
+        return Inertia::render('admin/carriers/users/Edit', [
+            'carrier' => $carrier->only('id', 'name', 'slug'),
+            'userCarrier' => [
+                'id'                => $userCarrierDetail->id,
+                'phone'             => $userCarrierDetail->phone,
+                'job_position'      => $userCarrierDetail->job_position,
+                'status'            => $userCarrierDetail->status,
+                'user'              => $userCarrierDetail->user ? [
+                    'id'                => $userCarrierDetail->user->id,
+                    'name'              => $userCarrierDetail->user->name,
+                    'email'             => $userCarrierDetail->user->email,
+                    'profile_photo_url' => $userCarrierDetail->user->getFirstMediaUrl('profile_photo_carrier') ?: null,
+                ] : null,
+            ],
+        ]);
+    }
+
     public function store(Request $request, Carrier $carrier): RedirectResponse
     {
         $maxCarriers = $carrier->membership->max_carrier ?? 1;
@@ -145,7 +192,9 @@ class UserCarrierController extends Controller
                     ->toMediaCollection('profile_photo_carrier');
             }
 
-            return back()->with('success', 'User Carrier updated successfully.');
+            return redirect()
+                ->route('admin.carriers.user-carriers.show', [$carrier->slug, $userCarrierDetail->id])
+                ->with('success', 'User Carrier updated successfully.');
         } catch (\Exception $e) {
             Log::error('Error updating UserCarrier: ' . $e->getMessage());
             return back()->withErrors('Error updating user.');

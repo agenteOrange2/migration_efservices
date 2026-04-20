@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Carrier;
+use App\Models\Admin\Vehicle\Vehicle;
 use App\Models\Membership;
 use App\Models\DocumentType;
 use App\Models\CarrierDocument;
@@ -69,6 +70,12 @@ class CarrierController extends Controller
             }
 
             $carriers = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            $carriers->through(function (Carrier $carrier) {
+                $carrierArray = $carrier->toArray();
+                $carrierArray['logo_url'] = $carrier->getFirstMediaUrl('logo_carrier') ?: null;
+
+                return $carrierArray;
+            });
 
             return Inertia::render('admin/carriers/Index', [
                 'carriers' => $carriers,
@@ -174,10 +181,11 @@ class CarrierController extends Controller
             ]);
 
             $drivers = $carrierData['drivers']->map(fn ($d) => [
-                'id' => $d->id,
-                'user_id' => $d->user_id,
-                'status' => $d->status,
-                'user' => $d->user ? $d->user->only(['id', 'name', 'email', 'status']) : null,
+                'id'         => $d->id,
+                'user_id'    => $d->user_id,
+                'status'     => $d->status,
+                'created_at' => $d->created_at,
+                'user'       => $d->user ? $d->user->only(['id', 'name', 'email', 'status']) : null,
             ]);
 
             $documents = $carrierData['documents']->map(fn ($doc) => [
@@ -199,10 +207,32 @@ class CarrierController extends Controller
                 ])
                 : null;
 
+            $vehicles = $carrierModel->vehicles()
+                ->with('currentDriverAssignment.driver.user')
+                ->orderByDesc('created_at')
+                ->get()
+                ->map(fn ($v) => [
+                    'id'                  => $v->id,
+                    'make'                => $v->make,
+                    'model'               => $v->model,
+                    'year'                => $v->year,
+                    'type'                => $v->type,
+                    'vin'                 => $v->vin,
+                    'company_unit_number' => $v->company_unit_number,
+                    'registration_number' => $v->registration_number,
+                    'status'              => $v->status,
+                    'created_at'          => $v->created_at,
+                    'driver'              => $v->currentDriverAssignment?->driver ? [
+                        'id'   => $v->currentDriverAssignment->driver->id,
+                        'name' => $v->currentDriverAssignment->driver->user?->name ?? 'N/A',
+                    ] : null,
+                ]);
+
             return Inertia::render('admin/carriers/Show', [
                 'carrier' => $carrierArray,
                 'userCarriers' => $userCarriers->values(),
                 'drivers' => $drivers->values(),
+                'vehicles' => $vehicles->values(),
                 'documents' => $documents->values(),
                 'pendingDocuments' => $carrierData['pendingDocuments']->map(fn ($d) => [
                     'id' => $d->id, 'document_type_id' => $d->document_type_id,
@@ -236,6 +266,7 @@ class CarrierController extends Controller
                 'carrier' => $carrier->only(['id', 'name', 'slug', 'status', 'created_at', 'updated_at']),
                 'userCarriers' => [],
                 'drivers' => [],
+                'vehicles' => [],
                 'documents' => [],
                 'pendingDocuments' => [],
                 'approvedDocuments' => [],

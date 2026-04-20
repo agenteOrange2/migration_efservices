@@ -14,14 +14,14 @@ const props = defineProps<{
 }>()
 
 const cards = [
-    { label: 'Total Carriers', value: props.stats.carriers?.total ?? 0, icon: 'Truck', hint: `${props.stats.carriers?.percentage_active ?? 0}% active` },
-    { label: 'Total Drivers', value: props.stats.drivers?.total ?? 0, icon: 'Users', hint: `${props.stats.drivers?.percentage_active ?? 0}% active` },
-    { label: 'Total Vehicles', value: props.stats.vehicles?.total ?? 0, icon: 'CarFront', hint: `${props.stats.vehicles?.percentage_active ?? 0}% active` },
-    { label: 'Carrier Documents', value: props.stats.documents?.total ?? 0, icon: 'FileText', hint: `${props.stats.documents?.percentage_approved ?? 0}% approved` },
-    { label: 'Maintenances', value: props.stats.maintenances?.total ?? 0, icon: 'Wrench', hint: `${props.stats.maintenances?.completion_rate ?? 0}% completion` },
-    { label: 'Emergency Repairs', value: props.stats.emergency_repairs?.total ?? 0, icon: 'AlertCircle', hint: 'Fleet repairs tracked' },
-    { label: 'Trainings', value: props.stats.trainings?.total ?? 0, icon: 'GraduationCap', hint: `${props.stats.trainings?.completion_rate ?? 0}% completion` },
-    { label: 'Accidents', value: props.stats.accidents?.total ?? 0, icon: 'AlertTriangle', hint: `${props.stats.accidents?.recent ?? 0} in last 30 days` },
+    { label: 'Total Carriers', value: props.stats.carriers?.total ?? 0, icon: 'Truck', hint: `${props.stats.carriers?.percentage_active ?? 0}% active`, tone: 'primary' },
+    { label: 'Total Drivers', value: props.stats.drivers?.total ?? 0, icon: 'Users', hint: `${props.stats.drivers?.percentage_active ?? 0}% active`, tone: 'primary' },
+    { label: 'Total Vehicles', value: props.stats.vehicles?.total ?? 0, icon: 'CarFront', hint: `${props.stats.vehicles?.percentage_active ?? 0}% active`, tone: 'info' },
+    { label: 'Carrier Documents', value: props.stats.documents?.total ?? 0, icon: 'FileText', hint: `${props.stats.documents?.percentage_approved ?? 0}% approved`, tone: 'info' },
+    { label: 'Maintenances', value: props.stats.maintenances?.total ?? 0, icon: 'Wrench', hint: `${props.stats.maintenances?.completion_rate ?? 0}% completion`, tone: 'warning' },
+    { label: 'Emergency Repairs', value: props.stats.emergency_repairs?.total ?? 0, icon: 'AlertCircle', hint: 'Fleet repairs tracked', tone: 'danger' },
+    { label: 'Trainings', value: props.stats.trainings?.total ?? 0, icon: 'GraduationCap', hint: `${props.stats.trainings?.completion_rate ?? 0}% completion`, tone: 'success' },
+    { label: 'Accidents', value: props.stats.accidents?.total ?? 0, icon: 'AlertTriangle', hint: `${props.stats.accidents?.recent ?? 0} in last 30 days`, tone: 'danger' },
 ]
 </script>
 

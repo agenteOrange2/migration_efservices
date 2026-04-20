@@ -18,10 +18,10 @@ interface Row { id: number; driver_name: string; carrier_name: string | null; tr
 const props = defineProps<{ filters: { search: string; carrier_id: string; status: string; date_from: string; date_to: string; per_page: number }; assignments: { data: Row[]; links: PaginationLink[]; total: number }; stats: { total: number; completed: number; assigned: number; in_progress: number; overdue: number; completion_rate: number }; carriers: { id: number; name: string }[]; statusOptions: { value: string; label: string }[]; canFilterCarriers: boolean }>()
 const filters = reactive({ ...props.filters })
 const statCards = computed(() => [
-    { label: 'Assignments', value: props.stats.total, icon: 'GraduationCap' },
-    { label: 'Completed', value: props.stats.completed, icon: 'BadgeCheck' },
-    { label: 'In Progress', value: props.stats.in_progress, icon: 'LoaderCircle' },
-    { label: 'Overdue', value: props.stats.overdue, icon: 'AlarmClock' },
+    { label: 'Assignments', value: props.stats.total, icon: 'GraduationCap', tone: 'primary' },
+    { label: 'Completed', value: props.stats.completed, icon: 'BadgeCheck', tone: 'success' },
+    { label: 'In Progress', value: props.stats.in_progress, icon: 'LoaderCircle', tone: 'warning' },
+    { label: 'Overdue', value: props.stats.overdue, icon: 'AlarmClock', tone: 'danger' },
 ])
 function applyFilters() { router.get(route('admin.reports.trainings'), { search: filters.search || undefined, carrier_id: filters.carrier_id || undefined, status: filters.status || undefined, date_from: filters.date_from || undefined, date_to: filters.date_to || undefined }, { preserveState: true, preserveScroll: true, replace: true }) }
 </script>

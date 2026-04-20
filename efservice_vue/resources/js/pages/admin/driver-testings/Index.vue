@@ -139,33 +139,23 @@ function confirmDelete() {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function resultBadge(result: string | null) {
     if (!result) return 'inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500'
-    if (result === 'Positive')  return 'inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700'
-    if (result === 'Negative')  return 'inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary'
-    if (result === 'Refusal')   return 'inline-flex items-center rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary'
+    if (result === 'Positive')  return 'inline-flex items-center rounded-full bg-danger/10 px-2.5 py-0.5 text-xs font-medium text-danger'
+    if (result === 'Negative')  return 'inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success'
+    if (result === 'Refusal')   return 'inline-flex items-center rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning'
     return 'inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500'
 }
 
 function statusBadge(status: string | null) {
     if (!status) return 'inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500'
     const map: Record<string, string> = {
-        'Schedule':       'inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary',
-        'In Progress':    'inline-flex items-center rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary',
-        'Pending Review': 'inline-flex items-center rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary',
-        'Completed':      'inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary',
-        'Cancelled':      'inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-600',
+        'Schedule':       'inline-flex items-center rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning',
+        'In Progress':    'inline-flex items-center rounded-full bg-info/10 px-2.5 py-0.5 text-xs font-medium text-info',
+        'Pending Review': 'inline-flex items-center rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning',
+        'Completed':      'inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success',
+        'Cancelled':      'inline-flex items-center rounded-full bg-danger/10 px-2.5 py-0.5 text-xs font-medium text-danger',
     }
     return map[status] ?? 'inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500'
 }
-
-const reasonLabels: { key: keyof TestingRow; label: string; color: string }[] = [
-    { key: 'is_random_test',               label: 'Random',       color: 'bg-primary/10 text-primary' },
-    { key: 'is_post_accident_test',        label: 'Post-Acc.',    color: 'bg-primary/15 text-primary' },
-    { key: 'is_reasonable_suspicion_test', label: 'R. Suspicion', color: 'bg-primary/20 text-primary' },
-    { key: 'is_pre_employment_test',       label: 'Pre-Employ.',  color: 'bg-primary/10 text-primary' },
-    { key: 'is_follow_up_test',            label: 'Follow-Up',    color: 'bg-primary/15 text-primary' },
-    { key: 'is_return_to_duty_test',       label: 'RTD',          color: 'bg-primary/20 text-primary' },
-    { key: 'is_other_reason_test',         label: 'Other',        color: 'bg-slate-100 text-slate-600' },
-]
 </script>
 
 <template>
@@ -186,6 +176,11 @@ const reasonLabels: { key: keyof TestingRow; label: string; color: string }[] = 
                             <p class="text-slate-500 text-sm">All test records across all drivers and carriers</p>
                         </div>
                     </div>
+                    <Link :href="route(routeNames?.create ?? 'admin.driver-testings.create')"
+                        class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition flex-shrink-0">
+                        <Lucide icon="Plus" class="w-4 h-4" />
+                        Schedule Test
+                    </Link>
                 </div>
             </div>
         </div>
@@ -203,30 +198,30 @@ const reasonLabels: { key: keyof TestingRow; label: string; color: string }[] = 
                     </div>
                 </div>
                 <div class="box box--stacked p-5 flex items-center gap-4">
-                    <div class="p-3 bg-primary/10 rounded-xl border border-primary/10">
-                        <Lucide icon="CheckCircle" class="w-6 h-6 text-primary" />
+                    <div class="p-3 bg-success/10 rounded-xl border border-success/20">
+                        <Lucide icon="CheckCircle" class="w-6 h-6 text-success" />
                     </div>
                     <div>
                         <p class="text-xs text-slate-500">Negative</p>
-                        <p class="text-2xl font-bold text-primary">{{ stats.negative }}</p>
+                        <p class="text-2xl font-bold text-success">{{ stats.negative }}</p>
                     </div>
                 </div>
                 <div class="box box--stacked p-5 flex items-center gap-4">
-                    <div class="p-3 bg-red-100 rounded-xl">
-                        <Lucide icon="AlertCircle" class="w-6 h-6 text-red-600" />
+                    <div class="p-3 bg-danger/10 rounded-xl border border-danger/20">
+                        <Lucide icon="AlertCircle" class="w-6 h-6 text-danger" />
                     </div>
                     <div>
                         <p class="text-xs text-slate-500">Positive</p>
-                        <p class="text-2xl font-bold text-red-700">{{ stats.positive }}</p>
+                        <p class="text-2xl font-bold text-danger">{{ stats.positive }}</p>
                     </div>
                 </div>
                 <div class="box box--stacked p-5 flex items-center gap-4">
-                    <div class="p-3 bg-primary/10 rounded-xl border border-primary/10">
-                        <Lucide icon="Clock" class="w-6 h-6 text-primary" />
+                    <div class="p-3 bg-warning/10 rounded-xl border border-warning/20">
+                        <Lucide icon="Clock" class="w-6 h-6 text-warning" />
                     </div>
                     <div>
                         <p class="text-xs text-slate-500">Pending / Scheduled</p>
-                        <p class="text-2xl font-bold text-primary">{{ stats.scheduled }}</p>
+                        <p class="text-2xl font-bold text-warning">{{ stats.scheduled }}</p>
                     </div>
                 </div>
             </div>
@@ -311,7 +306,6 @@ const reasonLabels: { key: keyof TestingRow; label: string; color: string }[] = 
                                 <th class="px-4 py-3 text-xs font-medium text-slate-500 uppercase whitespace-nowrap">Driver</th>
                                 <th class="px-4 py-3 text-xs font-medium text-slate-500 uppercase whitespace-nowrap">Carrier</th>
                                 <th class="px-4 py-3 text-xs font-medium text-slate-500 uppercase whitespace-nowrap">Test Type</th>
-                                <th class="px-4 py-3 text-xs font-medium text-slate-500 uppercase whitespace-nowrap">Reason</th>
                                 <th class="px-4 py-3 text-xs font-medium text-slate-500 uppercase whitespace-nowrap">Result</th>
                                 <th class="px-4 py-3 text-xs font-medium text-slate-500 uppercase whitespace-nowrap">Status</th>
                                 <th class="px-4 py-3 text-xs font-medium text-slate-500 uppercase whitespace-nowrap">Administered By</th>
@@ -333,17 +327,6 @@ const reasonLabels: { key: keyof TestingRow; label: string; color: string }[] = 
 
                                 <td class="px-4 py-3">
                                     <span class="text-xs text-slate-700">{{ t.test_type_label }}</span>
-                                </td>
-
-                                <td class="px-4 py-3">
-                                    <div class="flex flex-wrap gap-1 max-w-[160px]">
-                                        <template v-for="r in reasonLabels" :key="r.key">
-                                            <span v-if="t[r.key]"
-                                                :class="`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${r.color}`">
-                                                {{ r.label }}
-                                            </span>
-                                        </template>
-                                    </div>
                                 </td>
 
                                 <td class="px-4 py-3">
@@ -399,7 +382,7 @@ const reasonLabels: { key: keyof TestingRow; label: string; color: string }[] = 
                             </tr>
 
                             <tr v-if="!testings.data.length">
-                                <td colspan="10" class="px-5 py-14 text-center text-slate-400">
+                                <td colspan="9" class="px-5 py-14 text-center text-slate-400">
                                     <Lucide icon="BadgeInfo" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
                                     <p class="text-sm">No test records found</p>
                                     <p class="text-xs mt-1">Try adjusting your filters</p>

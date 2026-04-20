@@ -51,7 +51,7 @@ function forgive() {
                     </div>
 
                     <div class="flex flex-wrap gap-3">
-                        <Button v-if="violation.can_acknowledge" variant="outline-secondary" class="gap-2" @click="acknowledge">
+                        <Button v-if="violation.can_acknowledge" variant="success" class="gap-2" @click="acknowledge">
                             <Lucide icon="BadgeCheck" class="h-4 w-4" />
                             Acknowledge
                         </Button>
@@ -67,19 +67,19 @@ function forgive() {
         <div class="col-span-12 xl:col-span-8">
             <div class="box box--stacked p-6">
                 <h2 class="text-lg font-semibold text-slate-800">Violation Details</h2>
-                <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 text-sm">
+                <div class="mt-5 grid grid-cols-1 gap-4 text-sm md:grid-cols-2 xl:grid-cols-3">
                     <div><div class="text-slate-500">Driver</div><div class="font-medium text-slate-800">{{ violation.driver_name }}</div></div>
                     <div><div class="text-slate-500">Email</div><div class="font-medium text-slate-800">{{ violation.driver_email || 'N/A' }}</div></div>
                     <div><div class="text-slate-500">Carrier</div><div class="font-medium text-slate-800">{{ violation.carrier_name || 'N/A' }}</div></div>
                     <div><div class="text-slate-500">Vehicle</div><div class="font-medium text-slate-800">{{ violation.vehicle_label || 'N/A' }}</div></div>
                     <div><div class="text-slate-500">Trip</div><div class="font-medium text-slate-800">{{ violation.trip_number || 'N/A' }}</div></div>
                     <div><div class="text-slate-500">Violation Date</div><div class="font-medium text-slate-800">{{ violation.date || 'N/A' }}</div></div>
-                    <div><div class="text-slate-500">Severity</div><div class="font-medium text-slate-800">{{ violation.severity }}</div></div>
+                    <div><div class="text-slate-500">Severity</div><div class="font-medium"><span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="String(violation.severity || '').toLowerCase().includes('high') || String(violation.severity || '').toLowerCase().includes('critical') ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'">{{ violation.severity }}</span></div></div>
                     <div><div class="text-slate-500">Exceeded Time</div><div class="font-medium text-slate-800">{{ violation.formatted_hours_exceeded }}</div></div>
                     <div><div class="text-slate-500">FMCSA Rule</div><div class="font-medium text-slate-800">{{ violation.fmcsa_rule_reference || 'N/A' }}</div></div>
                     <div><div class="text-slate-500">Trip Start</div><div class="font-medium text-slate-800">{{ violation.trip_actual_start || 'N/A' }}</div></div>
                     <div><div class="text-slate-500">Trip End</div><div class="font-medium text-slate-800">{{ violation.trip_actual_end || 'N/A' }}</div></div>
-                    <div><div class="text-slate-500">Acknowledged</div><div class="font-medium text-slate-800">{{ violation.acknowledged ? `Yes${violation.acknowledged_at ? ` · ${violation.acknowledged_at}` : ''}` : 'No' }}</div></div>
+                    <div><div class="text-slate-500">Acknowledged</div><div class="font-medium"><span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="violation.acknowledged ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'">{{ violation.acknowledged ? `Yes · ${violation.acknowledged_at || 'Recorded'}` : 'No' }}</span></div></div>
                     <div><div class="text-slate-500">Penalty Type</div><div class="font-medium text-slate-800">{{ violation.penalty_type || 'N/A' }}</div></div>
                     <div><div class="text-slate-500">Penalty Start</div><div class="font-medium text-slate-800">{{ violation.penalty_start || 'N/A' }}</div></div>
                     <div><div class="text-slate-500">Penalty End</div><div class="font-medium text-slate-800">{{ violation.penalty_end || 'N/A' }}</div></div>
@@ -90,7 +90,7 @@ function forgive() {
                     {{ violation.penalty_notes }}
                 </div>
 
-                <div v-if="violation.is_forgiven" class="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm">
+                <div v-if="violation.is_forgiven" class="mt-6 rounded-2xl border border-info/20 bg-info/5 p-4 text-sm">
                     <div class="font-medium text-slate-800">Forgiveness Summary</div>
                     <div class="mt-2 text-slate-700">Reason: {{ violation.forgiveness_reason || 'N/A' }}</div>
                     <div class="mt-1 text-slate-700">Forgiven by: {{ violation.forgiven_by || 'N/A' }}{{ violation.forgiven_at ? ` on ${violation.forgiven_at}` : '' }}</div>
@@ -117,7 +117,7 @@ function forgive() {
                         <p class="mt-1 text-xs text-slate-500">Optional. Use when the trip should have ended earlier and that caused the violation.</p>
                     </div>
 
-                    <Button variant="primary" class="w-full gap-2" @click="forgive">
+                    <Button variant="warning" class="w-full gap-2" @click="forgive">
                         <Lucide icon="CheckCircle2" class="h-4 w-4" />
                         Forgive Violation
                     </Button>

@@ -323,7 +323,7 @@ class ReportsController extends Controller
         $vehicles = $query->orderBy('company_unit_number')->paginate($filters['per_page'])->withQueryString();
         $vehicles->through(fn (Vehicle $vehicle) => [
             'id' => $vehicle->id,
-            'unit_number' => $vehicle->company_unit_number ?: 'N/A',
+            'unit_number' => $vehicle->company_unit_number ?: (trim(($vehicle->year ?: '') . ' ' . ($vehicle->make ?: '') . ' ' . ($vehicle->model ?: '')) ?: 'Vehicle'),
             'vehicle_label' => trim(($vehicle->year ?: '') . ' ' . ($vehicle->make ?: '') . ' ' . ($vehicle->model ?: '')) ?: 'Vehicle',
             'carrier_name' => $vehicle->carrier?->name,
             'driver_name' => $vehicle->driver?->full_name ?: null,

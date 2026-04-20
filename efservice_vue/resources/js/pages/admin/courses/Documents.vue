@@ -94,10 +94,10 @@ function deleteDocument(document: any) {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Total Documents</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">PDF Files</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.pdf }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Images</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.images }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Word Docs</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.docs }}</p></div>
+                <div class="box box--stacked rounded-xl border border-dashed border-primary/20 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total Documents</p><p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p></div>
+                <div class="box box--stacked rounded-xl border border-dashed border-info/20 bg-info/5 p-5"><p class="text-sm text-slate-500">PDF Files</p><p class="mt-1 text-2xl font-semibold text-info">{{ stats.pdf }}</p></div>
+                <div class="box box--stacked rounded-xl border border-dashed border-success/20 bg-success/5 p-5"><p class="text-sm text-slate-500">Images</p><p class="mt-1 text-2xl font-semibold text-success">{{ stats.images }}</p></div>
+                <div class="box box--stacked rounded-xl border border-dashed border-warning/20 bg-warning/5 p-5"><p class="text-sm text-slate-500">Word Docs</p><p class="mt-1 text-2xl font-semibold text-warning">{{ stats.docs }}</p></div>
             </div>
 
             <div class="box box--stacked p-5 mb-6">
@@ -136,7 +136,7 @@ function deleteDocument(document: any) {
                                 <td v-if="!props.isCarrierContext" class="px-5 py-4 text-sm text-slate-600">{{ document.carrier_name ?? 'N/A' }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-700">{{ document.organization_name ?? 'N/A' }}</td>
                                 <td class="px-5 py-4"><a :href="document.preview_url" target="_blank" class="block font-medium text-primary hover:underline">{{ document.file_name }}</a><div class="text-xs text-slate-500 mt-1">{{ document.size_label }} - {{ document.file_type.toUpperCase() }}</div></td>
-                                <td class="px-5 py-4"><div class="flex items-center justify-center gap-2"><a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Eye" class="w-4 h-4" /></a><Link v-if="document.course_id" :href="namedRoute('edit', document.course_id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link><button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-red-500 transition"><Lucide icon="Trash2" class="w-4 h-4" /></button></div></td>
+                                <td class="px-5 py-4"><div class="flex items-center justify-center gap-2"><a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="Eye" class="w-4 h-4" /></a><Link v-if="document.course_id" :href="namedRoute('edit', document.course_id)" class="p-1.5 text-slate-400 hover:text-primary transition"><Lucide icon="PenLine" class="w-4 h-4" /></Link><button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-danger transition"><Lucide icon="Trash2" class="w-4 h-4" /></button></div></td>
                             </tr>
                             <tr v-if="!documents.data.length"><td :colspan="props.isCarrierContext ? 5 : 6" class="px-5 py-12 text-center text-slate-400"><Lucide icon="FileText" class="w-12 h-12 mx-auto mb-3 text-slate-300" /><p>No documents found</p></td></tr>
                         </tbody>

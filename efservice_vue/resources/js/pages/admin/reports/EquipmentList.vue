@@ -42,10 +42,10 @@ const props = defineProps<{
 const filters = reactive({ ...props.filters })
 
 const statCards = computed(() => [
-    { label: 'Fleet Units', value: props.stats.total, icon: 'Truck' },
-    { label: 'Active', value: props.stats.active, icon: 'CheckCircle2' },
-    { label: 'Out of Service', value: props.stats.out_of_service, icon: 'CircleOff' },
-    { label: 'Suspended', value: props.stats.suspended, icon: 'PauseCircle' },
+    { label: 'Fleet Units', value: props.stats.total, icon: 'Truck', tone: 'primary' },
+    { label: 'Active', value: props.stats.active, icon: 'CheckCircle2', tone: 'success' },
+    { label: 'Out of Service', value: props.stats.out_of_service, icon: 'CircleOff', tone: 'danger' },
+    { label: 'Suspended', value: props.stats.suspended, icon: 'PauseCircle', tone: 'danger' },
 ])
 
 function applyFilters() {
@@ -121,7 +121,7 @@ function applyFilters() {
                             <tr v-for="vehicle in vehicles.data" :key="vehicle.id">
                                 <td class="px-5 py-4">
                                     <div class="font-medium text-slate-800">{{ vehicle.unit_number }}</div>
-                                    <div class="text-xs text-slate-500">{{ vehicle.vehicle_label }}</div>
+                                    <div v-if="vehicle.vehicle_label !== vehicle.unit_number" class="text-xs text-slate-500">{{ vehicle.vehicle_label }}</div>
                                     <div class="text-xs text-slate-400">VIN: {{ vehicle.vin }}</div>
                                 </td>
                                 <td class="px-5 py-4 text-slate-600">

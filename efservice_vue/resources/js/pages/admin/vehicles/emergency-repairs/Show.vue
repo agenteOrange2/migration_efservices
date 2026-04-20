@@ -89,8 +89,10 @@ function uploadAttachments() {
 }
 
 function statusBadge(status: string) {
-    if (status === 'completed') return 'bg-primary/10 text-primary'
-    if (status === 'in_progress') return 'bg-slate-200 text-slate-700'
+    if (status === 'completed') return 'bg-success/10 text-success'
+    if (status === 'in_progress') return 'bg-info/10 text-info'
+    if (status === 'pending') return 'bg-warning/10 text-warning'
+    if (status === 'cancelled' || status === 'failed') return 'bg-danger/10 text-danger'
     return 'bg-slate-100 text-slate-600'
 }
 </script>

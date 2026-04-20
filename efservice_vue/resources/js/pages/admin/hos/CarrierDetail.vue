@@ -33,6 +33,15 @@ defineProps<{
         today_violations: number
     }[]
 }>()
+
+function statusTone(status: string) {
+    const value = String(status || '').toLowerCase()
+    if (['driving', 'on_duty_driving'].some((item) => value.includes(item))) return 'bg-info/10 text-info'
+    if (['on duty', 'on_duty_not_driving', 'yard move'].some((item) => value.includes(item))) return 'bg-warning/10 text-warning'
+    if (['sleep', 'off duty', 'off_duty', 'rest'].some((item) => value.includes(item))) return 'bg-success/10 text-success'
+    if (['violation', 'exceeded', 'suspended'].some((item) => value.includes(item))) return 'bg-danger/10 text-danger'
+    return 'bg-primary/10 text-primary'
+}
 </script>
 
 <template>
@@ -61,17 +70,17 @@ defineProps<{
         </div>
 
         <div class="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-success/10 bg-success/[0.04] p-5">
                 <div class="text-sm text-slate-500">Active Drivers</div>
-                <div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.active_drivers }}</div>
+                <div class="mt-2 text-3xl font-semibold text-success">{{ stats.active_drivers }}</div>
             </div>
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-info/10 bg-info/[0.04] p-5">
                 <div class="text-sm text-slate-500">Driving Right Now</div>
-                <div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.drivers_driving_now }}</div>
+                <div class="mt-2 text-3xl font-semibold text-info">{{ stats.drivers_driving_now }}</div>
             </div>
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-danger/10 bg-danger/[0.04] p-5">
                 <div class="text-sm text-slate-500">Drivers with Violations Today</div>
-                <div class="mt-2 text-3xl font-semibold text-primary">{{ stats.drivers_with_violations }}</div>
+                <div class="mt-2 text-3xl font-semibold text-danger">{{ stats.drivers_with_violations }}</div>
             </div>
         </div>
 
@@ -114,8 +123,10 @@ defineProps<{
                                     <div class="text-xs text-slate-500">{{ driver.email || 'No email' }}</div>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <div class="text-slate-700">{{ driver.current_status }}</div>
-                                    <div class="text-xs" :class="driver.today_violations > 0 ? 'text-primary' : 'text-slate-500'">
+                                    <div>
+                                        <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="statusTone(driver.current_status)">{{ driver.current_status }}</span>
+                                    </div>
+                                    <div class="mt-2 text-xs" :class="driver.today_violations > 0 ? 'text-danger' : 'text-success'">
                                         {{ driver.today_violations > 0 ? `${driver.today_violations} violation(s) today` : 'No violations today' }}
                                     </div>
                                 </td>

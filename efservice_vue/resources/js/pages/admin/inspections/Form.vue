@@ -180,24 +180,24 @@ function submit() {
                     <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2"><Lucide icon="Users" class="w-4 h-4 text-primary" /> Assignment</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div v-if="!props.isCarrierContext">
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-danger">*</span></label>
                             <TomSelect v-model="selectedCarrierId">
                                 <option value="">Select carrier</option>
                                 <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                             </TomSelect>
-                            <p v-if="form.errors.carrier_id" class="text-red-500 text-xs mt-1">{{ form.errors.carrier_id }}</p>
+                            <p v-if="form.errors.carrier_id" class="text-danger text-xs mt-1">{{ form.errors.carrier_id }}</p>
                         </div>
                         <div v-else class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <label class="block text-xs font-medium text-slate-500 mb-1.5">Carrier</label>
                             <div class="text-sm font-medium text-slate-700">{{ props.carrier?.name ?? 'Current Carrier' }}</div>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-danger">*</span></label>
                             <TomSelect v-model="form.user_driver_detail_id">
                                 <option value="">Select driver</option>
                                 <option v-for="driver in filteredDrivers" :key="driver.id" :value="String(driver.id)">{{ driver.name }}</option>
                             </TomSelect>
-                            <p v-if="form.errors.user_driver_detail_id" class="text-red-500 text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
+                            <p v-if="form.errors.user_driver_detail_id" class="text-danger text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Vehicle</label>
@@ -205,7 +205,7 @@ function submit() {
                                 <option value="">Select vehicle</option>
                                 <option v-for="vehicle in filteredVehicles" :key="vehicle.id" :value="String(vehicle.id)">{{ vehicle.label }}</option>
                             </TomSelect>
-                            <p v-if="form.errors.vehicle_id" class="text-red-500 text-xs mt-1">{{ form.errors.vehicle_id }}</p>
+                            <p v-if="form.errors.vehicle_id" class="text-danger text-xs mt-1">{{ form.errors.vehicle_id }}</p>
                         </div>
                     </div>
                 </div>
@@ -214,17 +214,17 @@ function submit() {
                     <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2"><Lucide icon="ClipboardCheck" class="w-4 h-4 text-primary" /> Inspection Details</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Inspection Date <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Inspection Date <span class="text-danger">*</span></label>
                             <Litepicker v-model="form.inspection_date" :options="lpOptions" />
-                            <p v-if="form.errors.inspection_date" class="text-red-500 text-xs mt-1">{{ form.errors.inspection_date }}</p>
+                            <p v-if="form.errors.inspection_date" class="text-danger text-xs mt-1">{{ form.errors.inspection_date }}</p>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Inspection Type <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Inspection Type <span class="text-danger">*</span></label>
                             <TomSelect v-model="form.inspection_type">
                                 <option value="">Select type</option>
                                 <option v-for="type in inspectionTypes" :key="type" :value="type">{{ type }}</option>
                             </TomSelect>
-                            <p v-if="form.errors.inspection_type" class="text-red-500 text-xs mt-1">{{ form.errors.inspection_type }}</p>
+                            <p v-if="form.errors.inspection_type" class="text-danger text-xs mt-1">{{ form.errors.inspection_type }}</p>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Inspection Level</label>
@@ -241,9 +241,9 @@ function submit() {
                             </TomSelect>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Inspector Name <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Inspector Name <span class="text-danger">*</span></label>
                             <FormInput v-model="form.inspector_name" type="text" />
-                            <p v-if="form.errors.inspector_name" class="text-red-500 text-xs mt-1">{{ form.errors.inspector_name }}</p>
+                            <p v-if="form.errors.inspector_name" class="text-danger text-xs mt-1">{{ form.errors.inspector_name }}</p>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Inspector Number / Badge</label>
@@ -301,8 +301,8 @@ function submit() {
                     <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2"><Lucide icon="Upload" class="w-4 h-4 text-primary" /> Documents</h2>
                     <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" @change="onFileChange" />
                     <p class="text-xs text-slate-500 mt-1">Upload inspection reports, photos or supporting files.</p>
-                    <p v-if="form.errors.attachments" class="text-red-500 text-xs mt-1">{{ form.errors.attachments }}</p>
-                    <p v-if="form.errors['attachments.0']" class="text-red-500 text-xs mt-1">{{ form.errors['attachments.0'] }}</p>
+                    <p v-if="form.errors.attachments" class="text-danger text-xs mt-1">{{ form.errors.attachments }}</p>
+                    <p v-if="form.errors['attachments.0']" class="text-danger text-xs mt-1">{{ form.errors['attachments.0'] }}</p>
                 </div>
 
                 <div class="flex justify-end gap-3">

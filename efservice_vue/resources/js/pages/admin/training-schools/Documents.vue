@@ -142,17 +142,17 @@ function deleteDocument(document: DocumentRow) {
                     <p class="text-sm text-slate-500">Total Documents</p>
                     <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-danger/20 bg-danger/5 p-5">
                     <p class="text-sm text-slate-500">PDF Files</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.pdf }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-danger">{{ stats.pdf }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-info/20 bg-info/5 p-5">
                     <p class="text-sm text-slate-500">Images</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.images }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-info">{{ stats.images }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-dashed border-warning/20 bg-warning/5 p-5">
                     <p class="text-sm text-slate-500">Word Docs</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.docs }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-warning">{{ stats.docs }}</p>
                 </div>
             </div>
 
@@ -239,7 +239,7 @@ function deleteDocument(document: DocumentRow) {
                                         <Link v-if="document.school_id" :href="namedRoute('edit', document.school_id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit school">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
-                                        <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
+                                        <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete">
                                             <Lucide icon="Trash2" class="w-4 h-4" />
                                         </button>
                                     </div>

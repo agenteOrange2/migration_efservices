@@ -75,6 +75,8 @@ Route::prefix('carriers/{carrier}')->name('carriers.')->group(function () {
 
     // User Carriers
     Route::post('user-carriers', [UserCarrierController::class, 'store'])->name('user-carriers.store');
+    Route::get('user-carriers/{userCarrierDetail}', [UserCarrierController::class, 'show'])->name('user-carriers.show');
+    Route::get('user-carriers/{userCarrierDetail}/edit', [UserCarrierController::class, 'edit'])->name('user-carriers.edit');
     Route::put('user-carriers/{userCarrierDetail}', [UserCarrierController::class, 'update'])->name('user-carriers.update');
     Route::delete('user-carriers/{userCarrier}', [UserCarrierController::class, 'destroy'])->name('user-carriers.destroy');
 
@@ -347,6 +349,8 @@ Route::prefix('accidents')->name('accidents.')->group(function () {
 */
 Route::prefix('driver-testings')->name('driver-testings.')->group(function () {
     Route::get('/', [DriverTestingController::class, 'index'])->name('index');
+    Route::get('create', [DriverTestingController::class, 'createGlobal'])->name('create');
+    Route::post('/', [DriverTestingController::class, 'storeGlobal'])->name('store');
     Route::get('{testing}', [DriverTestingController::class, 'show'])->name('show');
     Route::get('{testing}/download-pdf', [DriverTestingController::class, 'downloadPdf'])->name('download-pdf');
     Route::post('{testing}/regenerate-pdf', [DriverTestingController::class, 'regeneratePdf'])->name('regenerate-pdf');

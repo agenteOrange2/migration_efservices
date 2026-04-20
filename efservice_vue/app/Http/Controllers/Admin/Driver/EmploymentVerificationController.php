@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -125,13 +126,15 @@ class EmploymentVerificationController extends Controller
         $attemptCount = $company->verificationTokens->count();
 
         $tokens = $company->verificationTokens->sortBy('created_at')->values()->map(fn ($t) => [
-            'id'          => $t->id,
-            'email'       => $t->email,
-            'created_at'  => $t->created_at?->format('M d, Y H:i'),
-            'expires_at'  => $t->expires_at?->format('M d, Y H:i'),
-            'verified_at' => $t->verified_at?->format('M d, Y H:i'),
-            'is_verified' => $t->isVerified(),
-            'is_expired'  => $t->isExpired(),
+            'id'            => $t->id,
+            'email'         => $t->email,
+            'created_at'    => $t->created_at?->format('M d, Y H:i'),
+            'expires_at'    => $t->expires_at?->format('M d, Y H:i'),
+            'verified_at'   => $t->verified_at?->format('M d, Y H:i'),
+            'is_verified'   => $t->isVerified(),
+            'is_expired'    => $t->isExpired(),
+            'document_url'  => $t->document_path ? Storage::url($t->document_path) : null,
+            'signature_url' => $t->signature_path ? Storage::url($t->signature_path) : null,
         ]);
 
         $latestToken = $tokens->last();

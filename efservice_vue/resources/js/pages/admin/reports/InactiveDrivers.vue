@@ -37,9 +37,9 @@ const props = defineProps<{
 const filters = reactive({ ...props.filters })
 
 const statCards = computed(() => [
-    { label: 'Inactive Drivers', value: props.stats.inactive, icon: 'UserMinus' },
-    { label: 'With Termination Date', value: props.stats.with_termination_date, icon: 'CalendarClock' },
-    { label: 'Updated Last 30 Days', value: props.stats.last_30_days, icon: 'RefreshCw' },
+    { label: 'Inactive Drivers', value: props.stats.inactive, icon: 'UserMinus', tone: 'danger' },
+    { label: 'With Termination Date', value: props.stats.with_termination_date, icon: 'CalendarClock', tone: 'warning' },
+    { label: 'Updated Last 30 Days', value: props.stats.last_30_days, icon: 'RefreshCw', tone: 'info' },
 ])
 
 function applyFilters() {

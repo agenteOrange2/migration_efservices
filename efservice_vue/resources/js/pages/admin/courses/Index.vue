@@ -114,10 +114,10 @@ function deleteCourse(course: any) {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Total Records</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Active</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.active }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Inactive</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.inactive }}</p></div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5"><p class="text-sm text-slate-500">Documents</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.documents }}</p></div>
+                <div class="box box--stacked rounded-xl border border-dashed border-primary/20 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total Records</p><p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p></div>
+                <div class="box box--stacked rounded-xl border border-dashed border-success/20 bg-success/5 p-5"><p class="text-sm text-slate-500">Active</p><p class="mt-1 text-2xl font-semibold text-success">{{ stats.active }}</p></div>
+                <div class="box box--stacked rounded-xl border border-dashed border-danger/20 bg-danger/5 p-5"><p class="text-sm text-slate-500">Inactive</p><p class="mt-1 text-2xl font-semibold text-danger">{{ stats.inactive }}</p></div>
+                <div class="box box--stacked rounded-xl border border-dashed border-info/20 bg-info/5 p-5"><p class="text-sm text-slate-500">Documents</p><p class="mt-1 text-2xl font-semibold text-info">{{ stats.documents }}</p></div>
             </div>
 
             <div class="box box--stacked p-5 mb-6">
@@ -166,15 +166,15 @@ function deleteCourse(course: any) {
                                 <td v-if="!props.isCarrierContext" class="px-5 py-4 text-sm text-slate-600">{{ course.carrier?.name ?? 'N/A' }}</td>
                                 <td class="px-5 py-4"><div class="font-medium text-slate-800">{{ course.organization_name }}</div><div class="text-xs text-slate-400">{{ [course.city, course.state].filter(Boolean).join(', ') || 'N/A' }}</div></td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ course.certification_date ?? 'N/A' }}</td>
-                                <td class="px-5 py-4"><div class="text-sm" :class="course.days_until_expiration !== null && course.days_until_expiration < 0 ? 'text-red-600 font-medium' : course.days_until_expiration !== null && course.days_until_expiration <= 30 ? 'text-amber-600 font-medium' : 'text-slate-600'">{{ course.expiration_date ?? 'N/A' }}</div></td>
-                                <td class="px-5 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="course.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'">{{ course.status }}</span></td>
-                                <td class="px-5 py-4"><span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{{ course.document_count }} document<span v-if="course.document_count !== 1">s</span></span></td>
+                                <td class="px-5 py-4"><div class="text-sm" :class="course.days_until_expiration !== null && course.days_until_expiration < 0 ? 'text-danger font-medium' : course.days_until_expiration !== null && course.days_until_expiration <= 30 ? 'text-warning font-medium' : 'text-slate-600'">{{ course.expiration_date ?? 'N/A' }}</div></td>
+                                <td class="px-5 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="course.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">{{ course.status }}</span></td>
+                                <td class="px-5 py-4"><span class="inline-flex rounded-full bg-info/10 px-2.5 py-1 text-xs font-medium text-info">{{ course.document_count }} document<span v-if="course.document_count !== 1">s</span></span></td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
                                         <Link v-if="course.driver && !props.isCarrierContext" :href="route('admin.drivers.course-history', course.driver.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Driver history"><Lucide icon="History" class="w-4 h-4" /></Link>
                                         <Link :href="namedRoute('documentsShow', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
                                         <Link :href="namedRoute('edit', course.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
-                                        <button type="button" @click="deleteCourse(course)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
+                                        <button type="button" @click="deleteCourse(course)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
                                     </div>
                                 </td>
                             </tr>

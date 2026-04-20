@@ -218,12 +218,12 @@ function deleteAttachment(id: number) {
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Vehicle <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Vehicle <span class="text-danger">*</span></label>
                             <TomSelect v-model="form.vehicle_id" :disabled="!!lockedVehicle">
                                 <option value="">Select vehicle</option>
                                 <option v-for="vehicle in filteredVehicles" :key="vehicle.id" :value="String(vehicle.id)">{{ vehicle.label }}</option>
                             </TomSelect>
-                            <p v-if="form.errors.vehicle_id" class="text-red-500 text-xs mt-1">{{ form.errors.vehicle_id }}</p>
+                            <p v-if="form.errors.vehicle_id" class="text-danger text-xs mt-1">{{ form.errors.vehicle_id }}</p>
                         </div>
                     </div>
                 </div>
@@ -236,35 +236,35 @@ function deleteAttachment(id: number) {
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Repair Name <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Repair Name <span class="text-danger">*</span></label>
                             <FormInput v-model="form.repair_name" type="text" placeholder="Flat tire, brake repair, tow service..." />
-                            <p v-if="form.errors.repair_name" class="text-red-500 text-xs mt-1">{{ form.errors.repair_name }}</p>
+                            <p v-if="form.errors.repair_name" class="text-danger text-xs mt-1">{{ form.errors.repair_name }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Repair Date <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Repair Date <span class="text-danger">*</span></label>
                             <Litepicker v-model="form.repair_date" :options="pickerOptions" />
-                            <p v-if="form.errors.repair_date" class="text-red-500 text-xs mt-1">{{ form.errors.repair_date }}</p>
+                            <p v-if="form.errors.repair_date" class="text-danger text-xs mt-1">{{ form.errors.repair_date }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Cost <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Cost <span class="text-danger">*</span></label>
                             <FormInput v-model="form.cost" type="number" step="0.01" min="0" placeholder="0.00" />
-                            <p v-if="form.errors.cost" class="text-red-500 text-xs mt-1">{{ form.errors.cost }}</p>
+                            <p v-if="form.errors.cost" class="text-danger text-xs mt-1">{{ form.errors.cost }}</p>
                         </div>
 
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Odometer</label>
                             <FormInput v-model="form.odometer" type="number" min="0" placeholder="Mileage at the time of repair" />
-                            <p v-if="form.errors.odometer" class="text-red-500 text-xs mt-1">{{ form.errors.odometer }}</p>
+                            <p v-if="form.errors.odometer" class="text-danger text-xs mt-1">{{ form.errors.odometer }}</p>
                         </div>
 
                         <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Status <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Status <span class="text-danger">*</span></label>
                             <TomSelect v-model="form.status">
                                 <option v-for="(label, key) in statusOptions" :key="key" :value="key">{{ label }}</option>
                             </TomSelect>
-                            <p v-if="form.errors.status" class="text-red-500 text-xs mt-1">{{ form.errors.status }}</p>
+                            <p v-if="form.errors.status" class="text-danger text-xs mt-1">{{ form.errors.status }}</p>
                         </div>
                     </div>
                 </div>
@@ -279,13 +279,13 @@ function deleteAttachment(id: number) {
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Description</label>
                             <FormTextarea v-model="form.description" rows="4" placeholder="What happened, what was repaired, and what parts or services were involved..." />
-                            <p v-if="form.errors.description" class="text-red-500 text-xs mt-1">{{ form.errors.description }}</p>
+                            <p v-if="form.errors.description" class="text-danger text-xs mt-1">{{ form.errors.description }}</p>
                         </div>
 
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Internal Notes</label>
                             <FormTextarea v-model="form.notes" rows="4" placeholder="Optional admin notes, follow-up items or claim information..." />
-                            <p v-if="form.errors.notes" class="text-red-500 text-xs mt-1">{{ form.errors.notes }}</p>
+                            <p v-if="form.errors.notes" class="text-danger text-xs mt-1">{{ form.errors.notes }}</p>
                         </div>
                     </div>
                 </div>
@@ -298,8 +298,8 @@ function deleteAttachment(id: number) {
 
                     <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" @change="onFileChange" />
                     <p class="text-xs text-slate-500 mt-1">Accepted: PDF, images, DOC and DOCX up to 10 MB each.</p>
-                    <p v-if="form.errors.attachments" class="text-red-500 text-xs mt-1">{{ form.errors.attachments }}</p>
-                    <p v-if="form.errors['attachments.0']" class="text-red-500 text-xs mt-1">{{ form.errors['attachments.0'] }}</p>
+                    <p v-if="form.errors.attachments" class="text-danger text-xs mt-1">{{ form.errors.attachments }}</p>
+                    <p v-if="form.errors['attachments.0']" class="text-danger text-xs mt-1">{{ form.errors['attachments.0'] }}</p>
                 </div>
 
                 <div class="flex justify-end gap-3">

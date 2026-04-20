@@ -253,10 +253,12 @@ class HosDailyLog extends Model
      */
     public static function getOrCreateForDate(int $driverId, int $carrierId, ?int $vehicleId, $date): self
     {
+        $dateOnly = $date instanceof \Carbon\Carbon ? $date->toDateString() : substr((string) $date, 0, 10);
+
         return self::firstOrCreate(
             [
                 'user_driver_detail_id' => $driverId,
-                'date' => $date,
+                'date' => $dateOnly,
             ],
             [
                 'carrier_id' => $carrierId,

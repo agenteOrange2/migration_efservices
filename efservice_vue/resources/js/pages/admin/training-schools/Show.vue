@@ -100,7 +100,7 @@ function namedRoute(name: keyof TrainingSchoolRouteNames, params?: any) {
                     </div>
                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
                         <p class="text-xs text-slate-500">Graduation Status</p>
-                        <span class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="school.graduated ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'">
+                        <span class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="school.graduated ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'">
                             {{ school.graduated ? 'Graduated' : 'In Progress' }}
                         </span>
                     </div>
@@ -121,7 +121,7 @@ function namedRoute(name: keyof TrainingSchoolRouteNames, params?: any) {
                     Training Skills
                 </h2>
                 <div v-if="school.training_skills.length" class="flex flex-wrap gap-2">
-                    <span v-for="skill in school.training_skills" :key="skill" class="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    <span v-for="skill in school.training_skills" :key="skill" class="inline-flex rounded-full bg-info/10 px-3 py-1 text-xs font-medium text-info">
                         {{ skill.replaceAll('_', ' ') }}
                     </span>
                 </div>

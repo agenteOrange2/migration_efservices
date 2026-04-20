@@ -48,10 +48,11 @@ function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
 }
 
 function badgeClass(status: string) {
-    if (status === 'completed') return 'bg-primary/10 text-primary'
-    if (status === 'in_progress' || status === 'accepted' || status === 'paused') return 'bg-slate-200 text-slate-700'
-    if (status === 'pending') return 'bg-slate-100 text-slate-600'
-    return 'bg-slate-100 text-slate-500'
+    if (status === 'completed') return 'bg-success/10 text-success'
+    if (status === 'cancelled' || status === 'rejected' || status === 'failed') return 'bg-danger/10 text-danger'
+    if (status === 'in_progress' || status === 'accepted' || status === 'paused') return 'bg-warning/10 text-warning'
+    if (status === 'pending' || status === 'scheduled') return 'bg-info/10 text-info'
+    return 'bg-primary/10 text-primary'
 }
 
 function destroyTrip() {
@@ -82,8 +83,8 @@ function emergencyAction(routeName: string, label: string) {
                                 <span class="rounded-full px-3 py-1 text-xs font-medium" :class="badgeClass(trip.status)">
                                     {{ trip.status_label }}
                                 </span>
-                                <span v-if="trip.has_violations" class="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">Has Violations</span>
-                                <span v-if="trip.forgot_to_close" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">Ghost Log</span>
+                                <span v-if="trip.has_violations" class="rounded-full bg-danger/10 px-3 py-1 text-xs font-medium text-danger">Has Violations</span>
+                                <span v-if="trip.forgot_to_close" class="rounded-full bg-warning/10 px-3 py-1 text-xs font-medium text-warning">Ghost Log</span>
                             </div>
                             <p class="mt-1 text-sm text-slate-500">{{ trip.carrier_name || 'N/A' }} - {{ trip.driver_name }}</p>
                         </div>
@@ -91,11 +92,11 @@ function emergencyAction(routeName: string, label: string) {
 
                     <div class="flex flex-wrap items-center gap-3">
                         <Button v-if="trip.can_force_start" variant="primary" class="flex items-center gap-2" @click="emergencyAction('forceStart', 'Start')"><Lucide icon="Play" class="h-4 w-4" />Force Start</Button>
-                        <Button v-if="trip.can_force_pause" variant="outline-secondary" class="flex items-center gap-2" @click="emergencyAction('forcePause', 'Pause')"><Lucide icon="Pause" class="h-4 w-4" />Force Pause</Button>
-                        <Button v-if="trip.can_force_resume" variant="primary" class="flex items-center gap-2" @click="emergencyAction('forceResume', 'Resume')"><Lucide icon="Play" class="h-4 w-4" />Force Resume</Button>
-                        <Button v-if="trip.can_force_end" variant="outline-secondary" class="flex items-center gap-2" @click="emergencyAction('forceEnd', 'End')"><Lucide icon="Square" class="h-4 w-4" />Force End</Button>
+                        <Button v-if="trip.can_force_pause" variant="warning" class="flex items-center gap-2" @click="emergencyAction('forcePause', 'Pause')"><Lucide icon="Pause" class="h-4 w-4" />Force Pause</Button>
+                        <Button v-if="trip.can_force_resume" variant="success" class="flex items-center gap-2" @click="emergencyAction('forceResume', 'Resume')"><Lucide icon="Play" class="h-4 w-4" />Force Resume</Button>
+                        <Button v-if="trip.can_force_end" variant="danger" class="flex items-center gap-2" @click="emergencyAction('forceEnd', 'End')"><Lucide icon="Square" class="h-4 w-4" />Force End</Button>
                         <Link v-if="trip.can_edit" :href="namedRoute('edit', trip.id)"><Button variant="primary" class="flex items-center gap-2"><Lucide icon="PenLine" class="h-4 w-4" />Edit</Button></Link>
-                        <Button v-if="trip.can_delete" variant="outline-secondary" class="flex items-center gap-2" @click="destroyTrip"><Lucide icon="Trash2" class="h-4 w-4" />Delete</Button>
+                        <Button v-if="trip.can_delete" variant="danger" class="flex items-center gap-2" @click="destroyTrip"><Lucide icon="Trash2" class="h-4 w-4" />Delete</Button>
                         <Link :href="namedRoute('index')"><Button variant="outline-secondary" class="flex items-center gap-2"><Lucide icon="ArrowLeft" class="h-4 w-4" />Back</Button></Link>
                     </div>
                 </div>
@@ -164,7 +165,7 @@ function emergencyAction(routeName: string, label: string) {
                             <div class="min-w-0 flex-1">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <p class="text-sm font-semibold text-slate-800">{{ event.title }}</p>
-                                    <span v-if="event.is_active" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">Active</span>
+                            <span v-if="event.is_active" class="rounded-full bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info">Active</span>
                                 </div>
                                 <p class="mt-1 text-xs text-slate-500">{{ event.timestamp || 'N/A' }}</p>
                                 <p v-if="event.description" class="mt-2 text-sm text-slate-600">{{ event.description }}</p>
@@ -187,7 +188,7 @@ function emergencyAction(routeName: string, label: string) {
                         <div v-for="entry in hosEntries" :key="entry.id" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                             <div class="flex items-center justify-between gap-3">
                                 <p class="text-sm font-semibold text-slate-800">{{ entry.status }}</p>
-                                <span v-if="entry.is_active" class="rounded-full bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">Open</span>
+                                <span v-if="entry.is_active" class="rounded-full bg-info/10 px-2 py-1 text-[11px] font-medium text-info">Open</span>
                             </div>
                             <p class="mt-2 text-xs text-slate-500">{{ entry.start_time }}<span v-if="entry.end_time"> - {{ entry.end_time }}</span></p>
                             <p class="mt-2 text-sm text-slate-600">{{ entry.duration }}</p>
@@ -218,9 +219,9 @@ function emergencyAction(routeName: string, label: string) {
                     <div v-for="violation in violations" :key="violation.id" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                         <div class="flex flex-wrap items-center gap-2">
                             <p class="text-sm font-semibold text-slate-800">{{ violation.type }}</p>
-                            <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700">{{ violation.severity }}</span>
-                            <span v-if="violation.acknowledged" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">Acknowledged</span>
-                            <span v-if="violation.forgiven" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">Forgiven</span>
+                            <span class="rounded-full bg-danger/10 px-2 py-0.5 text-[11px] font-medium text-danger">{{ violation.severity }}</span>
+                            <span v-if="violation.acknowledged" class="rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">Acknowledged</span>
+                            <span v-if="violation.forgiven" class="rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">Forgiven</span>
                         </div>
                         <p class="mt-2 text-xs text-slate-500">{{ violation.date || 'N/A' }}</p>
                         <p class="mt-2 text-sm text-slate-600">Exceeded: {{ violation.hours_exceeded || 'N/A' }}</p>

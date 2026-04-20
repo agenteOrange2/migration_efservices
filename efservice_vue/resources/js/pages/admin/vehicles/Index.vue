@@ -81,6 +81,17 @@ function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
 
 const showUnassignedLink = !props.isCarrierContext || !!props.routeNames?.unassigned
 
+function vehicleStatusClass(status: string) {
+    const normalized = String(status || '').toLowerCase()
+
+    if (['active', 'available', 'assigned'].includes(normalized)) return 'bg-success/10 text-success'
+    if (['pending', 'scheduled', 'in_progress', 'in progress'].includes(normalized)) return 'bg-warning/10 text-warning'
+    if (['out_of_service', 'out of service', 'suspended', 'expired'].includes(normalized)) return 'bg-danger/10 text-danger'
+    if (['maintenance', 'under_maintenance', 'inspection_due'].includes(normalized)) return 'bg-info/10 text-info'
+
+    return 'bg-slate-100 text-slate-600'
+}
+
 function applyFilters() {
     router.get(namedRoute('index'), {
         search: filters.search || undefined,
@@ -177,29 +188,29 @@ function confirmDelete() {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-primary/20 bg-primary/5 p-5">
                     <p class="text-sm text-slate-500">Total</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-success/20 bg-success/5 p-5">
                     <p class="text-sm text-slate-500">Active</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.active }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-success">{{ stats.active }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-warning/20 bg-warning/5 p-5">
                     <p class="text-sm text-slate-500">Pending</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.pending }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-warning">{{ stats.pending }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-danger/20 bg-danger/5 p-5">
                     <p class="text-sm text-slate-500">Out of Service</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.out_of_service }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-danger">{{ stats.out_of_service }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-danger/20 bg-danger/5 p-5">
                     <p class="text-sm text-slate-500">Suspended</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.suspended }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-danger">{{ stats.suspended }}</p>
                 </div>
-                <div class="box box--stacked rounded-xl border border-dashed border-slate-300/80 p-5">
+                <div class="box box--stacked rounded-xl border border-info/20 bg-info/5 p-5">
                     <p class="text-sm text-slate-500">Unassigned</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.unassigned }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-info">{{ stats.unassigned }}</p>
                 </div>
             </div>
 
@@ -298,7 +309,7 @@ function confirmDelete() {
                                     <div v-if="vehicle.current_assignment?.secondary" class="text-xs text-slate-400">{{ vehicle.current_assignment.secondary }}</div>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="vehicle.status === 'active' ? 'bg-primary/10 text-primary' : vehicle.status === 'pending' ? 'bg-slate-100 text-slate-600' : vehicle.status === 'out_of_service' ? 'bg-danger/10 text-danger' : 'bg-slate-100 text-slate-600'">
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="vehicleStatusClass(vehicle.status)">
                                         {{ vehicle.status_label }}
                                     </span>
                                     <div class="text-xs text-slate-500 mt-2">

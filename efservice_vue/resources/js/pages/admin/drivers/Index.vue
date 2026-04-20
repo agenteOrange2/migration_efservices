@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
+import Button from '@/components/Base/Button'
 import { FormInput, FormSelect } from '@/components/Base/Form'
 import Lucide from '@/components/Base/Lucide'
 import RazeLayout from '@/layouts/RazeLayout.vue'
@@ -76,18 +77,18 @@ function namedRoute(name: keyof DriverRouteNames, params?: any) {
 const statCards = computed(() => {
     if (props.isCarrierContext) {
         return [
-            { key: 'total', tab: 'all', label: 'Total Drivers', icon: 'Users', value: props.stats.total, tone: 'text-slate-800', badgeClass: 'bg-slate-100 text-slate-600', badgeLabel: 'All' },
-            { key: 'active', tab: 'active', label: 'Active', icon: 'UserCheck', value: props.stats.active, tone: 'text-emerald-600', badgeClass: 'bg-emerald-100 text-emerald-700', badgeLabel: 'Active' },
-            { key: 'pending_review', tab: 'pending_review', label: 'Pending Review', icon: 'Clock3', value: props.stats.pending_review ?? 0, tone: 'text-amber-600', badgeClass: 'bg-amber-100 text-amber-700', badgeLabel: 'Pending' },
-            { key: 'inactive', tab: 'inactive', label: 'Inactive', icon: 'UserMinus', value: props.stats.inactive, tone: 'text-red-500', badgeClass: 'bg-red-100 text-red-700', badgeLabel: 'Inactive' },
+            { key: 'total', tab: 'all', label: 'Total Drivers', icon: 'Users', value: props.stats.total, tone: 'text-primary', badgeClass: 'bg-primary/10 text-primary', badgeLabel: 'All' },
+            { key: 'active', tab: 'active', label: 'Active', icon: 'UserCheck', value: props.stats.active, tone: 'text-success', badgeClass: 'bg-success/10 text-success', badgeLabel: 'Active' },
+            { key: 'pending_review', tab: 'pending_review', label: 'Pending Review', icon: 'Clock3', value: props.stats.pending_review ?? 0, tone: 'text-warning', badgeClass: 'bg-warning/10 text-warning', badgeLabel: 'Pending' },
+            { key: 'inactive', tab: 'inactive', label: 'Inactive', icon: 'UserMinus', value: props.stats.inactive, tone: 'text-danger', badgeClass: 'bg-danger/10 text-danger', badgeLabel: 'Inactive' },
         ]
     }
 
     return [
-        { key: 'total', tab: 'all', label: 'Total Approved', icon: 'Users', value: props.stats.total, tone: 'text-slate-800', badgeClass: 'bg-slate-100 text-slate-600', badgeLabel: 'All' },
-        { key: 'active', tab: 'active', label: 'Active', icon: 'UserCheck', value: props.stats.active, tone: 'text-emerald-600', badgeClass: 'bg-emerald-100 text-emerald-700', badgeLabel: 'Active' },
-        { key: 'inactive', tab: 'inactive', label: 'Inactive', icon: 'UserMinus', value: props.stats.inactive, tone: 'text-red-500', badgeClass: 'bg-red-100 text-red-700', badgeLabel: 'Inactive' },
-        { key: 'new', tab: 'new', label: 'New (30 days)', icon: 'UserPlus', value: props.stats.new ?? 0, tone: 'text-blue-600', badgeClass: 'bg-blue-100 text-blue-700', badgeLabel: 'New' },
+        { key: 'total', tab: 'all', label: 'Total Approved', icon: 'Users', value: props.stats.total, tone: 'text-primary', badgeClass: 'bg-primary/10 text-primary', badgeLabel: 'All' },
+        { key: 'active', tab: 'active', label: 'Active', icon: 'UserCheck', value: props.stats.active, tone: 'text-success', badgeClass: 'bg-success/10 text-success', badgeLabel: 'Active' },
+        { key: 'inactive', tab: 'inactive', label: 'Inactive', icon: 'UserMinus', value: props.stats.inactive, tone: 'text-danger', badgeClass: 'bg-danger/10 text-danger', badgeLabel: 'Inactive' },
+        { key: 'new', tab: 'new', label: 'New (30 days)', icon: 'UserPlus', value: props.stats.new ?? 0, tone: 'text-info', badgeClass: 'bg-info/10 text-info', badgeLabel: 'New' },
     ]
 })
 
@@ -132,12 +133,12 @@ function deleteDriver(driver: DriverItem) {
 
 const effectiveStatusBadge = (status: string) => {
     const map: Record<string, string> = {
-        active: 'bg-emerald-100 text-emerald-700',
-        inactive: 'bg-red-100 text-red-700',
+        active: 'bg-success/10 text-success',
+        inactive: 'bg-danger/10 text-danger',
         draft: 'bg-slate-100 text-slate-600',
-        pending_review: 'bg-amber-100 text-amber-700',
-        approved: 'bg-blue-100 text-blue-700',
-        rejected: 'bg-red-100 text-red-700',
+        pending_review: 'bg-warning/10 text-warning',
+        approved: 'bg-primary/10 text-primary',
+        rejected: 'bg-danger/10 text-danger',
     }
     return map[status] ?? 'bg-slate-100 text-slate-600'
 }
@@ -159,9 +160,11 @@ const effectiveStatusBadge = (status: string) => {
                         <p class="text-sm text-slate-500">{{ subtitle }}</p>
                     </div>
                 </div>
-                <Link :href="namedRoute('create')" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition">
-                    <Lucide icon="UserPlus" class="w-4 h-4" />
-                    {{ createLabel }}
+                <Link :href="namedRoute('create')">
+                    <Button variant="primary" class="flex items-center gap-2 shadow-sm">
+                        <Lucide icon="UserPlus" class="w-4 h-4" />
+                        {{ createLabel }}
+                    </Button>
                 </Link>
             </div>
         </div>
@@ -198,8 +201,8 @@ const effectiveStatusBadge = (status: string) => {
                     v-for="card in statCards"
                     :key="card.key"
                     :href="namedRoute('index', { tab: card.tab === 'all' ? undefined : card.tab, search: filters.search || undefined, carrier: !isCarrierContext ? (filters.carrier || undefined) : undefined })"
-                    class="box box--stacked p-5 rounded-xl border-2 transition-all"
-                    :class="(filters.tab || 'all') === card.tab ? 'border-primary/60 bg-primary/5' : 'border-slate-200 hover:border-primary/30'"
+                        class="box box--stacked p-5 rounded-xl border-2 transition-all"
+                    :class="(filters.tab || 'all') === card.tab ? 'border-primary/60 bg-primary/5 shadow-sm' : 'border-slate-200 hover:border-primary/30'"
                 >
                     <div class="text-sm text-slate-500">{{ card.label }}</div>
                     <div class="mt-1 text-2xl font-bold" :class="card.tone">{{ card.value }}</div>
@@ -230,9 +233,10 @@ const effectiveStatusBadge = (status: string) => {
                     <Link
                         v-if="search || (!isCarrierContext && carrierFilter) || (filters.tab && filters.tab !== 'all')"
                         :href="namedRoute('index')"
-                        class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50"
                     >
-                        <Lucide icon="X" class="w-4 h-4" /> Clear filters
+                        <Button variant="outline-secondary" class="flex items-center justify-center gap-2">
+                            <Lucide icon="X" class="w-4 h-4" /> Clear filters
+                        </Button>
                     </Link>
                 </div>
             </div>
@@ -296,13 +300,13 @@ const effectiveStatusBadge = (status: string) => {
                                         <Link :href="namedRoute('show', d.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </Link>
-                                        <Link v-if="routeNames.edit" :href="namedRoute('edit', d.id)" class="p-1.5 text-slate-400 hover:text-blue-500 transition" title="Edit">
+                                        <Link v-if="routeNames.edit" :href="namedRoute('edit', d.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit">
                                             <Lucide icon="Pencil" class="w-4 h-4" />
                                         </Link>
                                         <button
                                             v-if="routeNames.activate && d.effective_status === 'inactive'"
                                             @click="activateDriver(d)"
-                                            class="p-1.5 text-slate-400 hover:text-emerald-500 transition"
+                                            class="p-1.5 text-slate-400 hover:text-success transition"
                                             title="Activate"
                                         >
                                             <Lucide icon="UserCheck" class="w-4 h-4" />
@@ -310,7 +314,7 @@ const effectiveStatusBadge = (status: string) => {
                                         <button
                                             v-else-if="routeNames.deactivate && d.effective_status === 'active'"
                                             @click="deactivateDriver(d)"
-                                            class="p-1.5 text-slate-400 hover:text-red-500 transition"
+                                            class="p-1.5 text-slate-400 hover:text-danger transition"
                                             title="Deactivate"
                                         >
                                             <Lucide icon="UserMinus" class="w-4 h-4" />
@@ -318,7 +322,7 @@ const effectiveStatusBadge = (status: string) => {
                                         <button
                                             v-if="routeNames.destroy"
                                             @click="deleteDriver(d)"
-                                            class="p-1.5 text-slate-400 hover:text-red-600 transition"
+                                            class="p-1.5 text-slate-400 hover:text-danger transition"
                                             title="Delete"
                                         >
                                             <Lucide icon="Trash2" class="w-4 h-4" />

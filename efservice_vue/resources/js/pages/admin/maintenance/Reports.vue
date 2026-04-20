@@ -61,6 +61,17 @@ function applyFilters() {
         end_date: filters.end_date || undefined,
     }, { preserveState: true, replace: true })
 }
+
+function statusBadge(statusLabel: string) {
+    const normalized = String(statusLabel ?? '').trim().toLowerCase()
+
+    if (normalized === 'completed') return 'bg-success/10 text-success'
+    if (normalized === 'pending') return 'bg-warning/10 text-warning'
+    if (normalized === 'overdue') return 'bg-danger/10 text-danger'
+    if (normalized === 'upcoming') return 'bg-info/10 text-info'
+
+    return 'bg-slate-100 text-slate-600'
+}
 </script>
 
 <template>
@@ -121,12 +132,12 @@ function applyFilters() {
 
         <div class="col-span-12">
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Total</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.completed }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.pending }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Overdue</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.overdue }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Vehicles Serviced</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.vehicles_serviced }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Total Cost</p><p class="mt-1 text-2xl font-semibold text-slate-800">${{ stats.total_cost.toFixed(2) }}</p><p class="text-xs text-slate-500 mt-1">Avg ${{ stats.avg_cost.toFixed(2) }}</p></div>
+                <div class="box box--stacked border border-primary/20 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total</p><p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p></div>
+                <div class="box box--stacked border border-success/20 bg-success/5 p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-2xl font-semibold text-success">{{ stats.completed }}</p></div>
+                <div class="box box--stacked border border-warning/20 bg-warning/5 p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-warning">{{ stats.pending }}</p></div>
+                <div class="box box--stacked border border-danger/20 bg-danger/5 p-5"><p class="text-sm text-slate-500">Overdue</p><p class="mt-1 text-2xl font-semibold text-danger">{{ stats.overdue }}</p></div>
+                <div class="box box--stacked border border-info/20 bg-info/5 p-5"><p class="text-sm text-slate-500">Vehicles Serviced</p><p class="mt-1 text-2xl font-semibold text-info">{{ stats.vehicles_serviced }}</p></div>
+                <div class="box box--stacked border border-slate-300/80 bg-slate-50 p-5"><p class="text-sm text-slate-500">Total Cost</p><p class="mt-1 text-2xl font-semibold text-slate-800">${{ stats.total_cost.toFixed(2) }}</p><p class="text-xs text-slate-500 mt-1">Avg ${{ stats.avg_cost.toFixed(2) }}</p></div>
             </div>
         </div>
 
@@ -203,7 +214,9 @@ function applyFilters() {
                                     <p>{{ record.service_date || 'N/A' }}</p>
                                     <p class="text-xs text-slate-500">{{ record.next_service_date || 'N/A' }}</p>
                                 </td>
-                                <td class="px-5 py-4 text-sm text-slate-600">{{ record.status_label }}</td>
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="statusBadge(record.status_label)">{{ record.status_label }}</span>
+                                </td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ record.cost || 'N/A' }}</td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">

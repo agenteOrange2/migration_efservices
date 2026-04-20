@@ -103,10 +103,11 @@ function runAction(routeName: string, trip: any, label: string) {
 }
 
 function badgeClass(status: string) {
-    if (status === 'completed') return 'bg-primary/10 text-primary'
-    if (status === 'in_progress' || status === 'accepted' || status === 'paused') return 'bg-slate-200 text-slate-700'
-    if (status === 'pending') return 'bg-slate-100 text-slate-600'
-    return 'bg-slate-100 text-slate-500'
+    if (status === 'completed') return 'bg-success/10 text-success'
+    if (status === 'cancelled' || status === 'rejected' || status === 'failed') return 'bg-danger/10 text-danger'
+    if (status === 'in_progress' || status === 'accepted' || status === 'paused') return 'bg-warning/10 text-warning'
+    if (status === 'pending' || status === 'scheduled') return 'bg-info/10 text-info'
+    return 'bg-primary/10 text-primary'
 }
 </script>
 
@@ -147,12 +148,12 @@ function badgeClass(status: string) {
 
         <div class="col-span-12">
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
-                <div class="box box--stacked border border-primary/10 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total Trips</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.total }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.pending }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Accepted</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.accepted }}</p></div>
-                <div class="box box--stacked border border-primary/10 bg-primary/5 p-5"><p class="text-sm text-slate-500">In Progress / Paused</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.in_progress }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.completed }}</p></div>
-                <div class="box box--stacked p-5"><p class="text-sm text-slate-500">With Violations</p><p class="mt-1 text-2xl font-semibold text-slate-800">{{ stats.violations }}</p></div>
+                <div class="box box--stacked border border-primary/10 bg-primary/5 p-5"><p class="text-sm text-slate-500">Total Trips</p><p class="mt-1 text-2xl font-semibold text-primary">{{ stats.total }}</p></div>
+                <div class="box box--stacked border border-info/10 bg-info/5 p-5"><p class="text-sm text-slate-500">Pending</p><p class="mt-1 text-2xl font-semibold text-info">{{ stats.pending }}</p></div>
+                <div class="box box--stacked border border-warning/10 bg-warning/5 p-5"><p class="text-sm text-slate-500">Accepted</p><p class="mt-1 text-2xl font-semibold text-warning">{{ stats.accepted }}</p></div>
+                <div class="box box--stacked border border-warning/10 bg-warning/5 p-5"><p class="text-sm text-slate-500">In Progress / Paused</p><p class="mt-1 text-2xl font-semibold text-warning">{{ stats.in_progress }}</p></div>
+                <div class="box box--stacked border border-success/10 bg-success/5 p-5"><p class="text-sm text-slate-500">Completed</p><p class="mt-1 text-2xl font-semibold text-success">{{ stats.completed }}</p></div>
+                <div class="box box--stacked border border-danger/10 bg-danger/5 p-5"><p class="text-sm text-slate-500">With Violations</p><p class="mt-1 text-2xl font-semibold text-danger">{{ stats.violations }}</p></div>
             </div>
         </div>
 
@@ -223,8 +224,8 @@ function badgeClass(status: string) {
                                     </Link>
                                     <div class="mt-1 text-xs text-slate-500">{{ trip.vehicle_label }}</div>
                                     <div v-if="trip.has_violations || trip.forgot_to_close" class="mt-2 flex flex-wrap gap-2">
-                                        <span v-if="trip.has_violations" class="rounded-full bg-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700">Violations</span>
-                                        <span v-if="trip.forgot_to_close" class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">Ghost Log</span>
+                                        <span v-if="trip.has_violations" class="rounded-full bg-danger/10 px-2 py-1 text-[11px] font-medium text-danger">Violations</span>
+                                        <span v-if="trip.forgot_to_close" class="rounded-full bg-warning/10 px-2 py-1 text-[11px] font-medium text-warning">Ghost Log</span>
                                     </div>
                                 </td>
                                 <td class="px-5 py-4 text-slate-600">
@@ -245,9 +246,9 @@ function badgeClass(status: string) {
                                 <td class="px-5 py-4">
                                     <div class="flex flex-wrap gap-2">
                                         <Button v-if="trip.quick_actions.can_force_start" variant="primary" class="px-3 py-1 text-xs" @click="runAction('forceStart', trip, 'Start')">Start</Button>
-                                        <Button v-if="trip.quick_actions.can_force_pause" variant="outline-secondary" class="px-3 py-1 text-xs" @click="runAction('forcePause', trip, 'Pause')">Pause</Button>
-                                        <Button v-if="trip.quick_actions.can_force_resume" variant="primary" class="px-3 py-1 text-xs" @click="runAction('forceResume', trip, 'Resume')">Resume</Button>
-                                        <Button v-if="trip.quick_actions.can_force_end" variant="outline-secondary" class="px-3 py-1 text-xs" @click="runAction('forceEnd', trip, 'End')">End</Button>
+                                        <Button v-if="trip.quick_actions.can_force_pause" variant="warning" class="px-3 py-1 text-xs" @click="runAction('forcePause', trip, 'Pause')">Pause</Button>
+                                        <Button v-if="trip.quick_actions.can_force_resume" variant="success" class="px-3 py-1 text-xs" @click="runAction('forceResume', trip, 'Resume')">Resume</Button>
+                                        <Button v-if="trip.quick_actions.can_force_end" variant="danger" class="px-3 py-1 text-xs" @click="runAction('forceEnd', trip, 'End')">End</Button>
                                         <span v-if="!trip.quick_actions.can_force_start && !trip.quick_actions.can_force_pause && !trip.quick_actions.can_force_resume && !trip.quick_actions.can_force_end" class="text-xs text-slate-400">No quick action</span>
                                     </div>
                                 </td>

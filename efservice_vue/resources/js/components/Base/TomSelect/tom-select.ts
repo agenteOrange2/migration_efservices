@@ -58,6 +58,10 @@ const init = (
 
   clonedEl.TomSelect = new TomSelect(clonedEl, computedOptions);
 
+  if (originalEl.disabled) {
+    clonedEl.TomSelect.disable();
+  }
+
   // On change
   clonedEl.TomSelect.on("change", function (selectedItems: string[] | string) {
     emit(
@@ -148,6 +152,13 @@ const updateValue = (
 
   // Refresh options
   clonedEl.TomSelect.refreshOptions(false);
+
+  // Sync disabled state
+  if (originalEl.disabled) {
+    clonedEl.TomSelect.disable();
+  } else {
+    clonedEl.TomSelect.enable();
+  }
 
   // Update value
   if (

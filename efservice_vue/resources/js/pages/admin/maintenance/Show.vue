@@ -111,9 +111,10 @@ function submitReschedule() {
 }
 
 function statusBadge(statusLabel: string) {
-    if (statusLabel === 'Completed') return 'bg-primary/10 text-primary'
+    if (statusLabel === 'Completed') return 'bg-success/10 text-success'
+    if (statusLabel === 'Pending') return 'bg-warning/10 text-warning'
     if (statusLabel === 'Overdue') return 'bg-danger/10 text-danger'
-    if (statusLabel === 'Upcoming') return 'bg-primary/15 text-primary'
+    if (statusLabel === 'Upcoming') return 'bg-info/10 text-info'
     return 'bg-slate-100 text-slate-600'
 }
 </script>
@@ -135,7 +136,7 @@ function statusBadge(statusLabel: string) {
                             <Lucide icon="CalendarClock" class="w-4 h-4" />
                             Reschedule
                         </button>
-                        <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50" @click="toggleStatus">
+                        <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-warning/30 rounded-lg text-warning hover:bg-warning/5" @click="toggleStatus">
                             <Lucide :icon="maintenance.status ? 'RotateCcw' : 'CheckCircle'" class="w-4 h-4" />
                             {{ maintenance.status ? 'Mark Pending' : 'Mark Completed' }}
                         </button>
@@ -278,12 +279,12 @@ function statusBadge(statusLabel: string) {
                     <div>
                         <label class="block text-xs font-medium text-slate-600 mb-1.5">New Service Date</label>
                         <Litepicker v-model="rescheduleForm.next_service_date" :options="pickerOptions" />
-                        <p v-if="rescheduleForm.errors.next_service_date" class="text-red-500 text-xs mt-1">{{ rescheduleForm.errors.next_service_date }}</p>
+                        <p v-if="rescheduleForm.errors.next_service_date" class="text-danger text-xs mt-1">{{ rescheduleForm.errors.next_service_date }}</p>
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-600 mb-1.5">Reason</label>
                         <FormTextarea v-model="rescheduleForm.reason" rows="4" placeholder="Why is this maintenance changing?" />
-                        <p v-if="rescheduleForm.errors.reason" class="text-red-500 text-xs mt-1">{{ rescheduleForm.errors.reason }}</p>
+                        <p v-if="rescheduleForm.errors.reason" class="text-danger text-xs mt-1">{{ rescheduleForm.errors.reason }}</p>
                     </div>
                 </div>
 

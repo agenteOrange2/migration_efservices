@@ -21,6 +21,10 @@ defineProps<{
         warning_threshold_minutes: number
     }[]
 }>()
+
+function violationBadgeClass(count: number) {
+    return count > 0 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
+}
 </script>
 
 <template>
@@ -55,21 +59,21 @@ defineProps<{
         </div>
 
         <div class="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-primary/10 bg-primary/[0.04] p-5">
                 <div class="text-sm text-slate-500">Carriers</div>
-                <div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.carrier_count }}</div>
+                <div class="mt-2 text-3xl font-semibold text-primary">{{ stats.carrier_count }}</div>
             </div>
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-success/10 bg-success/[0.04] p-5">
                 <div class="text-sm text-slate-500">Active Drivers</div>
-                <div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.active_drivers }}</div>
+                <div class="mt-2 text-3xl font-semibold text-success">{{ stats.active_drivers }}</div>
             </div>
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-danger/10 bg-danger/[0.04] p-5">
                 <div class="text-sm text-slate-500">Today's Violations</div>
-                <div class="mt-2 text-3xl font-semibold text-primary">{{ stats.today_violations }}</div>
+                <div class="mt-2 text-3xl font-semibold text-danger">{{ stats.today_violations }}</div>
             </div>
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-warning/10 bg-warning/[0.04] p-5">
                 <div class="text-sm text-slate-500">Month Violations</div>
-                <div class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.month_violations }}</div>
+                <div class="mt-2 text-3xl font-semibold text-warning">{{ stats.month_violations }}</div>
             </div>
         </div>
 
@@ -99,11 +103,15 @@ defineProps<{
                                 </td>
                                 <td class="px-5 py-4 text-slate-600">{{ carrier.active_drivers }}</td>
                                 <td class="px-5 py-4">
-                                    <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="carrier.today_violations > 0 ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-600'">
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="violationBadgeClass(carrier.today_violations)">
                                         {{ carrier.today_violations }}
                                     </span>
                                 </td>
-                                <td class="px-5 py-4 text-slate-600">{{ carrier.month_violations }}</td>
+                                <td class="px-5 py-4">
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="carrier.month_violations > 0 ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'">
+                                        {{ carrier.month_violations }}
+                                    </span>
+                                </td>
                                 <td class="px-5 py-4 text-slate-600">{{ carrier.max_driving_hours }}h driving / {{ carrier.max_duty_hours }}h duty</td>
                                 <td class="px-5 py-4 text-right">
                                     <Link :href="route('admin.hos.carrier.detail', carrier.id)" class="inline-flex items-center gap-2 text-primary hover:underline">

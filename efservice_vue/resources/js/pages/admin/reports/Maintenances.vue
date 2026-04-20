@@ -19,10 +19,10 @@ interface Row { id: number; vehicle_label: string; carrier_name: string | null; 
 const props = defineProps<{ filters: { search: string; carrier_id: string; status: string; date_from: string; date_to: string; per_page: number }; maintenances: { data: Row[]; links: PaginationLink[]; total: number }; stats: { total: number; completed: number; pending: number; overdue: number; total_cost: number }; carriers: { id: number; name: string }[]; statusOptions: { value: string; label: string }[]; canFilterCarriers: boolean }>()
 const filters = reactive({ ...props.filters })
 const statCards = computed(() => [
-    { label: 'Total Items', value: props.stats.total, icon: 'Wrench' },
-    { label: 'Completed', value: props.stats.completed, icon: 'CheckCircle2' },
-    { label: 'Pending', value: props.stats.pending, icon: 'Clock3' },
-    { label: 'Overdue', value: props.stats.overdue, icon: 'AlarmClock' },
+    { label: 'Total Items', value: props.stats.total, icon: 'Wrench', tone: 'primary' },
+    { label: 'Completed', value: props.stats.completed, icon: 'CheckCircle2', tone: 'success' },
+    { label: 'Pending', value: props.stats.pending, icon: 'Clock3', tone: 'warning' },
+    { label: 'Overdue', value: props.stats.overdue, icon: 'AlarmClock', tone: 'danger' },
 ])
 function applyFilters() { router.get(route('admin.reports.maintenances'), { search: filters.search || undefined, carrier_id: filters.carrier_id || undefined, status: filters.status || undefined, date_from: filters.date_from || undefined, date_to: filters.date_to || undefined }, { preserveState: true, preserveScroll: true, replace: true }) }
 </script>

@@ -38,10 +38,10 @@ const props = defineProps<{
 const filters = reactive({ ...props.filters })
 
 const statCards = computed(() => [
-    { label: 'Total Documents', value: props.stats.total_documents, icon: 'Files' },
-    { label: 'Approved', value: props.stats.approved, icon: 'BadgeCheck' },
-    { label: 'Pending', value: props.stats.pending, icon: 'Clock3' },
-    { label: 'In Process', value: props.stats.in_process, icon: 'LoaderCircle' },
+    { label: 'Total Documents', value: props.stats.total_documents, icon: 'Files', tone: 'primary' },
+    { label: 'Approved', value: props.stats.approved, icon: 'BadgeCheck', tone: 'success' },
+    { label: 'Pending', value: props.stats.pending, icon: 'Clock3', tone: 'warning' },
+    { label: 'In Process', value: props.stats.in_process, icon: 'LoaderCircle', tone: 'info' },
 ])
 
 function applyFilters() {
