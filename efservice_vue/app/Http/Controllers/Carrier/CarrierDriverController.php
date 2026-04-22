@@ -120,15 +120,20 @@ class CarrierDriverController extends DriverListController
             'companyPolicy',
             'w9Form',
             'media',
+            'trips.vehicle:id,make,model,year,company_unit_number',
         ]);
 
-        $driverData = $this->buildDriverShowData($driver);
+        $driverData = $this->buildDriverShowData($driver, true);
         $driverData['routeNames'] = [
-            'index'           => 'carrier.drivers.index',
-            'edit'            => 'carrier.drivers.edit',
-            'documentsDownload' => 'carrier.drivers.documents.download',
-            'activate'        => 'carrier.drivers.activate',
-            'deactivate'      => 'carrier.drivers.deactivate',
+            'index'                    => 'carrier.drivers.index',
+            'edit'                     => 'carrier.drivers.edit',
+            'documentsDownload'        => 'carrier.drivers.documents.download',
+            'activate'                 => 'carrier.drivers.activate',
+            'deactivate'               => 'carrier.drivers.deactivate',
+            'hosGenerateDailyLog'      => 'carrier.hos.documents.generate-daily-log',
+            'hosGenerateMonthlySummary'=> 'carrier.hos.documents.generate-monthly-summary',
+            'hosGenerateFmcsaMonthly'  => 'carrier.hos.documents.generate-fmcsa-monthly',
+            'hosDestroy'               => 'carrier.hos.documents.destroy',
         ];
         $driverData['isCarrierContext'] = true;
 

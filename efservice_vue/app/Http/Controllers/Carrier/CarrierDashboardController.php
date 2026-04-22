@@ -259,6 +259,9 @@ class CarrierDashboardController extends Controller
                 'mc_number'           => $carrier->mc_number,
                 'status'              => $carrier->status,
                 'documents_completed' => $carrier->documents_completed,
+                'documents_status'    => $docTotal === 0
+                    ? 'none'
+                    : ($carrier->documents_completed ? 'complete' : ($docRejected > 0 ? 'rejected' : 'pending')),
                 'safety_url'          => $carrier->getSafetyDataSystemUrlAttribute(),
             ],
             'stats' => [

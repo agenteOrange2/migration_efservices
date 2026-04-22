@@ -272,6 +272,16 @@ class DriverAdminWizardController extends Controller
         // Invalidate completion calculator cache so Step 15 shows fresh data
         app(StepCompletionCalculator::class)->invalidateCache($driver->id);
 
+        // On final step, redirect to the drivers list with a completion flash
+        if ($step >= 15) {
+            $names    = $this->wizardRouteNames($request);
+            $indexRoute = $names['index'];
+            $driverName = trim(($driver->user?->name ?? '') . ' ' . ($driver->last_name ?? ''));
+            return redirect()
+                ->route($indexRoute)
+                ->with('wizard_completed', $driverName ?: 'Driver');
+        }
+
         $nextStep = min($step + 1, 15);
 
         return redirect()

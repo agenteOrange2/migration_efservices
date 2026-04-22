@@ -20,6 +20,11 @@ const props = defineProps<{
     documentTypes: Record<string, string>
     documentStatuses: Record<string, string>
     stats: { total: number; active: number; expired: number; pending: number }
+    maintenanceReports: any[]
+    repairReports: any[]
+    hasMaintenanceRecords: boolean
+    hasRepairRecords: boolean
+    hasDocumentsWithFiles: boolean
     isCarrierContext?: boolean
     routeNames?: Partial<{
         show: string
@@ -27,6 +32,9 @@ const props = defineProps<{
         documentsStore: string
         documentsUpdate: string
         documentsDestroy: string
+        documentsDownloadAll: string
+        documentsGenerateMaintenanceReport: string
+        documentsGenerateRepairReport: string
     }>
 }>()
 
@@ -43,6 +51,9 @@ const defaultRouteNames = {
     documentsStore: 'admin.vehicles.documents.store',
     documentsUpdate: 'admin.vehicles.documents.update',
     documentsDestroy: 'admin.vehicles.documents.destroy',
+    documentsDownloadAll: 'admin.vehicles.documents.download-all',
+    documentsGenerateMaintenanceReport: 'admin.vehicles.documents.generate-maintenance-report',
+    documentsGenerateRepairReport: 'admin.vehicles.documents.generate-repair-report',
 } as const
 
 function namedRoute(name: keyof typeof defaultRouteNames, params?: any) {
@@ -86,6 +97,25 @@ function blankForm() {
 }
 
 const form = reactive(blankForm())
+
+const generatingMaintenance = ref(false)
+const generatingRepair = ref(false)
+
+function generateMaintenanceReport() {
+    generatingMaintenance.value = true
+    router.post(namedRoute('documentsGenerateMaintenanceReport', props.vehicle.id), {}, {
+        preserveScroll: true,
+        onFinish: () => { generatingMaintenance.value = false },
+    })
+}
+
+function generateRepairReport() {
+    generatingRepair.value = true
+    router.post(namedRoute('documentsGenerateRepairReport', props.vehicle.id), {}, {
+        preserveScroll: true,
+        onFinish: () => { generatingRepair.value = false },
+    })
+}
 
 function applyFilters() {
     router.get(namedRoute('documentsIndex', props.vehicle.id), {
@@ -203,11 +233,15 @@ function deleteDocument(document: any) {
                         <h1 class="text-2xl font-bold text-slate-800">Vehicle Documents</h1>
                         <p class="text-slate-500">{{ vehicle.title }}{{ vehicle.company_unit_number ? ` · Unit ${vehicle.company_unit_number}` : '' }} · {{ vehicle.vin }}</p>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 flex-wrap">
                         <Button variant="primary" class="flex items-center gap-2" @click="openCreate">
                             <Lucide icon="Plus" class="w-4 h-4" />
                             Add Document
                         </Button>
+                        <a :href="namedRoute('documentsDownloadAll', vehicle.id)" :class="['inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition', hasDocumentsWithFiles ? 'bg-success text-white hover:bg-success/90' : 'bg-slate-100 text-slate-400 cursor-not-allowed pointer-events-none']" :aria-disabled="!hasDocumentsWithFiles">
+                            <Lucide icon="Download" class="w-4 h-4" />
+                            Download All
+                        </a>
                         <Link :href="namedRoute('show', vehicle.id)">
                             <Button variant="outline-secondary" class="flex items-center gap-2">
                                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
@@ -251,6 +285,39 @@ function deleteDocument(document: any) {
                         Clear
                     </button>
                 </div>
+            </div>
+
+            <div v-if="hasMaintenanceRecords || hasRepairRecords" class="box box--stacked p-5 mb-6">
+                <h2 class="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                    <Lucide icon="FileText" class="w-4 h-4 text-primary" />
+                    Generate Reports
+                </h2>
+                <div class="flex flex-wrap gap-3">
+                    <button
+                        v-if="hasMaintenanceRecords"
+                        type="button"
+                        :disabled="generatingMaintenance"
+                        @click="generateMaintenanceReport"
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Lucide v-if="generatingMaintenance" icon="Loader" class="w-4 h-4 animate-spin" />
+                        <Lucide v-else icon="FileOutput" class="w-4 h-4" />
+                        {{ generatingMaintenance ? 'Generating…' : 'Maintenance Report' }}
+                    </button>
+
+                    <button
+                        v-if="hasRepairRecords"
+                        type="button"
+                        :disabled="generatingRepair"
+                        @click="generateRepairReport"
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-warning text-white hover:bg-warning/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Lucide v-if="generatingRepair" icon="Loader" class="w-4 h-4 animate-spin" />
+                        <Lucide v-else icon="FileOutput" class="w-4 h-4" />
+                        {{ generatingRepair ? 'Generating…' : 'Repair Report' }}
+                    </button>
+                </div>
+                <p class="text-xs text-slate-400 mt-3">Generates a PDF with all records for this vehicle and saves it to the documents list above.</p>
             </div>
 
             <div class="box box--stacked p-0 overflow-hidden">
@@ -324,6 +391,105 @@ function deleteDocument(document: any) {
                     </div>
                 </div>
             </div>
+
+            <!-- Maintenance Reports Table -->
+            <div v-if="maintenanceReports.length" class="box box--stacked p-0 overflow-hidden mt-6">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200/60 bg-primary/5">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-primary/10 rounded-lg">
+                            <Lucide icon="ClipboardList" class="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                            <h2 class="text-base font-semibold text-slate-800">Maintenance Reports</h2>
+                            <p class="text-sm text-slate-500">{{ maintenanceReports.length }} generated report{{ maintenanceReports.length !== 1 ? 's' : '' }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50/80">
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Report</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">File</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Generated</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="doc in maintenanceReports" :key="doc.id" class="border-b border-slate-100 hover:bg-slate-50/50 transition">
+                                <td class="px-5 py-4">
+                                    <div class="font-medium text-slate-800">{{ doc.document_number ?? 'Maintenance Report' }}</div>
+                                    <div class="text-xs text-slate-500 mt-0.5 max-w-xs truncate">{{ doc.notes }}</div>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <a v-if="doc.preview_url" :href="doc.preview_url" target="_blank" class="font-medium text-primary hover:text-primary/80">
+                                        {{ doc.file_name ?? 'Open PDF' }}
+                                    </a>
+                                    <span v-else class="text-slate-400 text-sm">No file</span>
+                                    <div v-if="doc.size_label" class="text-xs text-slate-400 mt-0.5">{{ doc.size_label }} · PDF</div>
+                                </td>
+                                <td class="px-5 py-4 text-sm text-slate-600">{{ doc.created_at }}</td>
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <a v-if="doc.preview_url" :href="doc.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview"><Lucide icon="Eye" class="w-4 h-4" /></a>
+                                        <button type="button" @click="deleteDocument(doc)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Repair Reports Table -->
+            <div v-if="repairReports.length" class="box box--stacked p-0 overflow-hidden mt-6">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200/60 bg-warning/5">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-warning/10 rounded-lg">
+                            <Lucide icon="Wrench" class="w-4 h-4 text-warning" />
+                        </div>
+                        <div>
+                            <h2 class="text-base font-semibold text-slate-800">Repair Reports</h2>
+                            <p class="text-sm text-slate-500">{{ repairReports.length }} generated report{{ repairReports.length !== 1 ? 's' : '' }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50/80">
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Report</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">File</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Generated</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="doc in repairReports" :key="doc.id" class="border-b border-slate-100 hover:bg-slate-50/50 transition">
+                                <td class="px-5 py-4">
+                                    <div class="font-medium text-slate-800">{{ doc.document_number ?? 'Repair Report' }}</div>
+                                    <div class="text-xs text-slate-500 mt-0.5 max-w-xs truncate">{{ doc.notes }}</div>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <a v-if="doc.preview_url" :href="doc.preview_url" target="_blank" class="font-medium text-primary hover:text-primary/80">
+                                        {{ doc.file_name ?? 'Open PDF' }}
+                                    </a>
+                                    <span v-else class="text-slate-400 text-sm">No file</span>
+                                    <div v-if="doc.size_label" class="text-xs text-slate-400 mt-0.5">{{ doc.size_label }} · PDF</div>
+                                </td>
+                                <td class="px-5 py-4 text-sm text-slate-600">{{ doc.created_at }}</td>
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <a v-if="doc.preview_url" :href="doc.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview"><Lucide icon="Eye" class="w-4 h-4" /></a>
+                                        <button type="button" @click="deleteDocument(doc)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </div>
 

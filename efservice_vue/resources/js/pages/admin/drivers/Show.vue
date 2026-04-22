@@ -67,6 +67,10 @@ interface DriverShowRouteNames {
     activate?: string
     deactivate?: string
     migrationWizard?: string
+    hosGenerateDailyLog?: string
+    hosGenerateMonthlySummary?: string
+    hosGenerateFmcsaMonthly?: string
+    hosDestroy?: string
 }
 
 const props = withDefaults(defineProps<{
@@ -83,6 +87,10 @@ const props = withDefaults(defineProps<{
         activate: 'admin.drivers.activate',
         deactivate: 'admin.drivers.deactivate',
         migrationWizard: 'admin.drivers.migration.wizard',
+        hosGenerateDailyLog: 'admin.hos.documents.generate-daily-log',
+        hosGenerateMonthlySummary: 'admin.hos.documents.generate-monthly-summary',
+        hosGenerateFmcsaMonthly: 'admin.hos.documents.generate-fmcsa-monthly',
+        hosDestroy: 'admin.hos.documents.destroy',
     }),
     isCarrierContext: false,
 })
@@ -186,28 +194,28 @@ const pickerOptionsSingle = { autoApply: true, singleMode: true, numberOfColumns
 
 function generateDailyLog() {
     generatingHos.value = 'daily'
-    router.post(route('admin.hos.documents.generate-daily-log'), { driver_id: props.driver.id, date: dailyLogForm.date }, {
+    router.post(route(props.routeNames?.hosGenerateDailyLog ?? 'admin.hos.documents.generate-daily-log'), { driver_id: props.driver.id, date: dailyLogForm.date }, {
         preserveScroll: true, onFinish: () => { generatingHos.value = null },
     })
 }
 
 function generateMonthlySummary() {
     generatingHos.value = 'monthly'
-    router.post(route('admin.hos.documents.generate-monthly-summary'), { driver_id: props.driver.id, year: monthlyForm.year, month: monthlyForm.month }, {
+    router.post(route(props.routeNames?.hosGenerateMonthlySummary ?? 'admin.hos.documents.generate-monthly-summary'), { driver_id: props.driver.id, year: monthlyForm.year, month: monthlyForm.month }, {
         preserveScroll: true, onFinish: () => { generatingHos.value = null },
     })
 }
 
 function generateFmcsaMonthly() {
     generatingHos.value = 'fmcsa'
-    router.post(route('admin.hos.documents.generate-fmcsa-monthly'), { driver_id: props.driver.id, year: fmcsaForm.year, month: fmcsaForm.month }, {
+    router.post(route(props.routeNames?.hosGenerateFmcsaMonthly ?? 'admin.hos.documents.generate-fmcsa-monthly'), { driver_id: props.driver.id, year: fmcsaForm.year, month: fmcsaForm.month }, {
         preserveScroll: true, onFinish: () => { generatingHos.value = null },
     })
 }
 
 function deleteHosDocument(id: number) {
     if (!confirm('Delete this HOS document?')) return
-    router.delete(route('admin.hos.documents.destroy', id), { preserveScroll: true })
+    router.delete(route(props.routeNames?.hosDestroy ?? 'admin.hos.documents.destroy', id), { preserveScroll: true })
 }
 
 const tripStatusBadge = (status: string) => {

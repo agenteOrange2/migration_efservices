@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Http\Controllers\Carrier;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Carrier\Concerns\ResolvesCarrierContext;
 use App\Mail\DriverContactMail;
 use App\Models\Admin\Vehicle\Vehicle;
 use App\Models\Admin\Vehicle\VehicleDriverAssignment;
@@ -23,29 +22,30 @@ use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
-class CarrierDriverVehicleManagementController extends Controller
+class DriverTypeController extends Controller
 {
-    use ResolvesCarrierContext;
-
     public function index(Request $request): InertiaResponse
     {
-        $carrier = $this->resolveCarrier();
-
         $filters = [
             'search' => trim((string) $request->input('search', '')),
+            'carrier_id' => (string) $request->input('carrier_id', ''),
             'driver_type' => (string) $request->input('driver_type', ''),
             'assignment_status' => (string) $request->input('assignment_status', ''),
         ];
 
         $baseQuery = UserDriverDetail::query()
-            ->where('carrier_id', $carrier->id)
             ->with([
                 'user:id,name,email',
+                'carrier:id,name',
                 'activeVehicleAssignment.vehicle:id,carrier_id,company_unit_number,make,model,year,vin,status',
                 'activeVehicleAssignment.companyDriverDetail',
                 'activeVehicleAssignment.ownerOperatorDetail',
                 'activeVehicleAssignment.thirdPartyDetail',
             ]);
+
+        if ($filters['carrier_id'] !== '') {
+            $baseQuery->where('carrier_id', (int) $filters['carrier_id']);
+        }
 
         if ($filters['search'] !== '') {
             $search = '%' . $filters['search'] . '%';
@@ -78,9 +78,12 @@ class CarrierDriverVehicleManagementController extends Controller
 
         $drivers->through(fn (UserDriverDetail $driver) => $this->driverRow($driver));
 
-        $statsBase = UserDriverDetail::query()->where('carrier_id', $carrier->id);
+        $statsBase = UserDriverDetail::query();
+        if ($filters['carrier_id'] !== '') {
+            $statsBase->where('carrier_id', (int) $filters['carrier_id']);
+        }
 
-        return Inertia::render('carrier/driver-vehicle-management/Index', [
+        return Inertia::render('admin/driver-types/Index', [
             'drivers' => $drivers,
             'filters' => $filters,
             'stats' => [
@@ -89,7 +92,7 @@ class CarrierDriverVehicleManagementController extends Controller
                 'unassigned' => (clone $statsBase)->whereDoesntHave('activeVehicleAssignment', fn (Builder $assignmentQuery) => $assignmentQuery->where('status', 'active'))->count(),
                 'vehicles_in_use' => VehicleDriverAssignment::query()
                     ->where('status', 'active')
-                    ->whereHas('vehicle', fn (Builder $vehicleQuery) => $vehicleQuery->where('carrier_id', $carrier->id))
+                    ->when($filters['carrier_id'] !== '', fn (Builder $query) => $query->whereHas('vehicle', fn (Builder $vehicleQuery) => $vehicleQuery->where('carrier_id', (int) $filters['carrier_id'])))
                     ->distinct('vehicle_id')
                     ->count('vehicle_id'),
             ],
@@ -98,17 +101,18 @@ class CarrierDriverVehicleManagementController extends Controller
                 'assigned' => 'Assigned',
                 'unassigned' => 'Unassigned',
             ],
-            'carrier' => [
-                'id' => $carrier->id,
-                'name' => $carrier->name,
-            ],
+            'carriers' => \App\Models\Carrier::query()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn ($carrier) => [
+                    'id' => $carrier->id,
+                    'name' => $carrier->name,
+                ]),
         ]);
     }
 
     public function show(UserDriverDetail $driver): InertiaResponse
     {
-        $this->authorizeDriver($driver);
-
         $driver->load([
             'user:id,name,email',
             'carrier:id,name',
@@ -132,7 +136,7 @@ class CarrierDriverVehicleManagementController extends Controller
             ->get()
             ->map(fn (VehicleDriverAssignment $assignment) => $this->assignmentPayload($assignment));
 
-        return Inertia::render('carrier/driver-vehicle-management/Show', [
+        return Inertia::render('admin/driver-types/Show', [
             'driver' => $this->driverDetailPayload($driver),
             'activeAssignment' => $driver->activeVehicleAssignment
                 ? $this->assignmentPayload($driver->activeVehicleAssignment)
@@ -144,15 +148,13 @@ class CarrierDriverVehicleManagementController extends Controller
 
     public function assignVehicle(UserDriverDetail $driver): InertiaResponse|RedirectResponse
     {
-        $this->authorizeDriver($driver);
-
         if ($driver->activeVehicleAssignment()->where('status', 'active')->exists()) {
             return redirect()
-                ->route('carrier.driver-vehicle-management.show', $driver)
+                ->route('admin.driver-types.show', $driver)
                 ->with('warning', 'This driver already has an active assignment.');
         }
 
-        return Inertia::render('carrier/driver-vehicle-management/AssignVehicle', [
+        return Inertia::render('admin/driver-types/AssignVehicle', [
             'driver' => $this->driverDetailPayload($driver->load('user:id,name,email', 'carrier:id,name')),
             'availableVehicles' => $this->availableVehiclesQuery($driver->carrier_id)
                 ->orderBy('company_unit_number')
@@ -163,8 +165,6 @@ class CarrierDriverVehicleManagementController extends Controller
 
     public function storeVehicleAssignment(Request $request, UserDriverDetail $driver): RedirectResponse
     {
-        $this->authorizeDriver($driver);
-
         $request->merge([
             'assignment_date' => $this->normalizeDateInput($request->input('assignment_date')),
         ]);
@@ -176,8 +176,6 @@ class CarrierDriverVehicleManagementController extends Controller
         ]);
 
         $vehicle = Vehicle::query()->findOrFail((int) $validated['vehicle_id']);
-        $this->authorizeVehicle($vehicle);
-
         if ($driver->activeVehicleAssignment()->where('status', 'active')->exists()) {
             return back()->withInput()->with('error', 'The driver already has an active vehicle assignment.');
         }
@@ -212,14 +210,12 @@ class CarrierDriverVehicleManagementController extends Controller
         });
 
         return redirect()
-            ->route('carrier.driver-vehicle-management.show', $driver)
+            ->route('admin.driver-types.show', $driver)
             ->with('success', 'Vehicle assigned successfully.');
     }
 
     public function editAssignment(UserDriverDetail $driver): InertiaResponse|RedirectResponse
     {
-        $this->authorizeDriver($driver);
-
         $driver->load([
             'user:id,name,email',
             'carrier:id,name',
@@ -233,11 +229,11 @@ class CarrierDriverVehicleManagementController extends Controller
 
         if (! $currentAssignment) {
             return redirect()
-                ->route('carrier.driver-vehicle-management.show', $driver)
+                ->route('admin.driver-types.show', $driver)
                 ->with('warning', 'No active assignment was found for this driver.');
         }
 
-        return Inertia::render('carrier/driver-vehicle-management/EditAssignment', [
+        return Inertia::render('admin/driver-types/EditAssignment', [
             'driver' => $this->driverDetailPayload($driver),
             'currentAssignment' => $this->assignmentPayload($currentAssignment),
             'availableVehicles' => $this->availableVehiclesQuery($driver->carrier_id, (int) $currentAssignment->vehicle_id)
@@ -250,8 +246,6 @@ class CarrierDriverVehicleManagementController extends Controller
 
     public function updateAssignment(Request $request, UserDriverDetail $driver): RedirectResponse
     {
-        $this->authorizeDriver($driver);
-
         $request->merge([
             'start_date' => $this->normalizeDateInput($request->input('start_date')),
         ]);
@@ -274,13 +268,11 @@ class CarrierDriverVehicleManagementController extends Controller
 
         if (! $currentAssignment) {
             return redirect()
-                ->route('carrier.driver-vehicle-management.show', $driver)
+                ->route('admin.driver-types.show', $driver)
                 ->with('warning', 'No active assignment was found for this driver.');
         }
 
         $vehicle = Vehicle::query()->findOrFail((int) $validated['vehicle_id']);
-        $this->authorizeVehicle($vehicle);
-
         if ((int) $vehicle->id !== (int) $currentAssignment->vehicle_id && $this->vehicleHasActiveAssignment($vehicle)) {
             return back()->withInput()->with('error', 'That vehicle is already assigned to another driver.');
         }
@@ -352,14 +344,12 @@ class CarrierDriverVehicleManagementController extends Controller
         });
 
         return redirect()
-            ->route('carrier.driver-vehicle-management.show', $driver)
+            ->route('admin.driver-types.show', $driver)
             ->with('success', 'Vehicle assignment updated successfully.');
     }
 
     public function cancelAssignment(Request $request, UserDriverDetail $driver): RedirectResponse
     {
-        $this->authorizeDriver($driver);
-
         $request->merge([
             'termination_date' => $this->normalizeDateInput($request->input('termination_date')),
         ]);
@@ -373,7 +363,7 @@ class CarrierDriverVehicleManagementController extends Controller
 
         if (! $currentAssignment) {
             return redirect()
-                ->route('carrier.driver-vehicle-management.show', $driver)
+                ->route('admin.driver-types.show', $driver)
                 ->with('warning', 'No active assignment was found for this driver.');
         }
 
@@ -397,14 +387,12 @@ class CarrierDriverVehicleManagementController extends Controller
         });
 
         return redirect()
-            ->route('carrier.driver-vehicle-management.show', $driver)
+            ->route('admin.driver-types.show', $driver)
             ->with('success', 'Vehicle assignment cancelled successfully.');
     }
 
     public function assignmentHistory(UserDriverDetail $driver): InertiaResponse
     {
-        $this->authorizeDriver($driver);
-
         $driver->load(['user:id,name,email', 'carrier:id,name']);
 
         $assignments = $driver->vehicleAssignments()
@@ -420,7 +408,7 @@ class CarrierDriverVehicleManagementController extends Controller
             ->get()
             ->map(fn (VehicleDriverAssignment $assignment) => $this->assignmentPayload($assignment));
 
-        return Inertia::render('carrier/driver-vehicle-management/AssignmentHistory', [
+        return Inertia::render('admin/driver-types/AssignmentHistory', [
             'driver' => $this->driverDetailPayload($driver),
             'assignments' => $assignments,
             'hasActiveAssignment' => $driver->activeVehicleAssignment()->where('status', 'active')->exists(),
@@ -429,11 +417,9 @@ class CarrierDriverVehicleManagementController extends Controller
 
     public function contact(UserDriverDetail $driver): InertiaResponse
     {
-        $this->authorizeDriver($driver);
-
         $driver->load(['user:id,name,email', 'carrier:id,name']);
 
-        return Inertia::render('carrier/driver-vehicle-management/Contact', [
+        return Inertia::render('admin/driver-types/Contact', [
             'driver' => $this->driverDetailPayload($driver),
             'priorityOptions' => [
                 ['value' => 'low', 'label' => 'Low'],
@@ -445,9 +431,6 @@ class CarrierDriverVehicleManagementController extends Controller
 
     public function sendContact(Request $request, UserDriverDetail $driver): RedirectResponse
     {
-        $this->authorizeDriver($driver);
-        $carrier = $this->resolveCarrier();
-
         $validated = $request->validate([
             'subject' => ['required', 'string', 'max:255'],
             'message' => ['required', 'string', 'max:5000'],
@@ -458,10 +441,10 @@ class CarrierDriverVehicleManagementController extends Controller
             return back()->withInput()->with('error', 'This driver does not have a valid email address.');
         }
 
-        DB::transaction(function () use ($validated, $driver, $carrier) {
+        DB::transaction(function () use ($validated, $driver) {
             $message = AdminMessage::query()->create([
-                'sender_type' => 'App\\Models\\Carrier',
-                'sender_id' => $carrier->id,
+                'sender_type' => 'App\\Models\\User',
+                'sender_id' => Auth::id(),
                 'subject' => $validated['subject'],
                 'message' => $validated['message'],
                 'priority' => $validated['priority'],
@@ -483,7 +466,7 @@ class CarrierDriverVehicleManagementController extends Controller
             try {
                 Mail::to($driver->user->email)->send(new DriverContactMail(
                     $validated,
-                    (string) (Auth::user()?->name ?? $carrier->name),
+                    (string) (Auth::user()?->name ?? 'Admin'),
                     (string) (Auth::user()?->email ?? '')
                 ));
 
@@ -505,18 +488,8 @@ class CarrierDriverVehicleManagementController extends Controller
         });
 
         return redirect()
-            ->route('carrier.driver-vehicle-management.show', $driver)
+            ->route('admin.driver-types.show', $driver)
             ->with('success', 'Message sent successfully to the driver.');
-    }
-
-    protected function authorizeDriver(UserDriverDetail $driver): void
-    {
-        abort_unless((int) $driver->carrier_id === (int) $this->resolveCarrierId(), 403);
-    }
-
-    protected function authorizeVehicle(Vehicle $vehicle): void
-    {
-        abort_unless((int) $vehicle->carrier_id === (int) $this->resolveCarrierId(), 403);
     }
 
     protected function availableVehiclesQuery(int $carrierId, ?int $includeVehicleId = null)

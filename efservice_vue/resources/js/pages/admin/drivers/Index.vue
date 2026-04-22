@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import Button from '@/components/Base/Button'
 import { FormInput, FormSelect } from '@/components/Base/Form'
 import Lucide from '@/components/Base/Lucide'
+import { Dialog } from '@/components/Base/Headless'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 import { useDebounceFn } from '@vueuse/core'
 
 declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
+
+const page = usePage()
+const flash = computed(() => (page.props as any).flash ?? {})
+const completedDriverName = computed(() => flash.value.wizard_completed ?? null)
+const showCompletionModal = ref(!!completedDriverName.value)
 
 interface DriverItem {
     id: number
@@ -359,4 +365,34 @@ const effectiveStatusBadge = (status: string) => {
             </div>
         </div>
     </div>
+
+    <!-- Driver Registration Completed Modal -->
+    <Dialog :open="showCompletionModal" @close="showCompletionModal = false">
+        <Dialog.Panel class="w-full max-w-[480px] overflow-hidden">
+            <div class="px-8 pt-8 pb-2 text-center">
+                <button
+                    type="button"
+                    class="absolute top-4 right-4 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+                    @click="showCompletionModal = false"
+                >
+                    <Lucide icon="X" class="h-5 w-5" />
+                </button>
+                <div class="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-success/10 border-2 border-success">
+                    <Lucide icon="CheckCircle" class="h-10 w-10 text-success" />
+                </div>
+                <h3 class="text-2xl font-semibold text-slate-700">Registration Complete!</h3>
+                <p class="mt-3 text-slate-500">
+                    The driver application for
+                    <span class="font-semibold text-slate-700">{{ completedDriverName }}</span>
+                    has been successfully registered.
+                </p>
+                <p class="mt-1 text-sm text-slate-400">The application is now pending review.</p>
+            </div>
+            <div class="flex justify-center gap-3 px-8 pb-8 pt-6">
+                <Button variant="success" class="min-w-[140px]" @click="showCompletionModal = false">
+                    <Lucide icon="CheckCircle" class="w-4 h-4 mr-2" /> Done
+                </Button>
+            </div>
+        </Dialog.Panel>
+    </Dialog>
 </template>

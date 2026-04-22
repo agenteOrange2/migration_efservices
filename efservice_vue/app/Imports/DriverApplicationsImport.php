@@ -52,7 +52,7 @@ class DriverApplicationsImport extends BaseImport
                 // Create DriverApplicationDetail
                 DriverApplicationDetail::create([
                     'driver_application_id' => $application->id,
-                    'applying_position' => $this->normalizePosition($rowData['applying_position'] ?? 'company_driver'),
+                    'applying_position' => $this->normalizePosition($rowData['applying_position'] ?? 'driver'),
                     'applying_position_other' => trim($rowData['applying_position_other'] ?? '') ?: null,
                     'applying_location' => trim($rowData['applying_location'] ?? 'Not specified'),
                     'eligible_to_work' => $this->normalizeBoolean($rowData['eligible_to_work'] ?? 'yes'),
@@ -168,15 +168,15 @@ class DriverApplicationsImport extends BaseImport
     protected function normalizePosition(?string $value): string
     {
         if (empty($value)) {
-            return 'company_driver';
+            return 'driver';
         }
 
         $value = strtolower(trim($value));
 
         $mapping = [
-            'company_driver' => 'company_driver',
-            'company' => 'company_driver',
-            'driver' => 'company_driver',
+            'company_driver' => 'driver',
+            'company' => 'driver',
+            'driver' => 'driver',
             'owner_operator' => 'owner_operator',
             'owner' => 'owner_operator',
             'oo' => 'owner_operator',
@@ -186,7 +186,7 @@ class DriverApplicationsImport extends BaseImport
             'other' => 'other',
         ];
 
-        return $mapping[$value] ?? 'company_driver';
+        return $mapping[$value] ?? 'driver';
     }
 
     /**

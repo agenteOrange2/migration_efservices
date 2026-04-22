@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
-import CarrierLayout from '@/layouts/CarrierLayout.vue';
+import RazeLayout from '@/layouts/RazeLayout.vue';
 import Lucide from '@/components/Base/Lucide';
 import Button from '@/components/Base/Button';
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue';
@@ -9,7 +9,7 @@ import { FormInput } from '@/components/Base/Form';
 
 declare function route(name: string, params?: any): string;
 
-defineOptions({ layout: CarrierLayout });
+defineOptions({ layout: RazeLayout });
 
 interface PaginationLink {
     url: string | null;
@@ -42,7 +42,12 @@ interface DriverRow {
 
 const props = defineProps<{
     drivers: { data: DriverRow[]; links: PaginationLink[]; total: number };
-    filters: { search: string; driver_type: string; assignment_status: string };
+    filters: {
+        search: string;
+        carrier_id: string;
+        driver_type: string;
+        assignment_status: string;
+    };
     stats: {
         total: number;
         assigned: number;
@@ -51,16 +56,17 @@ const props = defineProps<{
     };
     driverTypeOptions: Record<string, string>;
     assignmentStatusOptions: Record<string, string>;
-    carrier: { id: number; name: string };
+    carriers: { id: number; name: string }[];
 }>();
 
 const filters = reactive({ ...props.filters });
 
 function applyFilters() {
     router.get(
-        route('carrier.driver-vehicle-management.index'),
+        route('admin.driver-types.index'),
         {
             search: filters.search || undefined,
+            carrier_id: filters.carrier_id || undefined,
             driver_type: filters.driver_type || undefined,
             assignment_status: filters.assignment_status || undefined,
         },
@@ -70,6 +76,7 @@ function applyFilters() {
 
 function resetFilters() {
     filters.search = '';
+    filters.carrier_id = '';
     filters.driver_type = '';
     filters.assignment_status = '';
     applyFilters();
@@ -77,7 +84,7 @@ function resetFilters() {
 </script>
 
 <template>
-    <Head title="Driver & Vehicle Management" />
+    <Head title="Driver Types" />
 
     <div class="grid grid-cols-12 gap-x-6 gap-y-8">
         <div class="col-span-12">
@@ -93,11 +100,12 @@ function resetFilters() {
                         </div>
                         <div>
                             <h1 class="text-2xl font-semibold text-slate-800">
-                                Driver & Vehicle Management
+                                Driver Types
                             </h1>
                             <p class="mt-1 text-sm text-slate-500">
-                                Track who is assigned, switch vehicles cleanly,
-                                and keep communication close to operations.
+                                Manage admin-side vehicle assignments, driver
+                                types, and assignment follow-up across all
+                                carriers.
                             </p>
                         </div>
                     </div>
@@ -108,12 +116,12 @@ function resetFilters() {
                         <div
                             class="text-xs font-semibold tracking-wide text-slate-500 uppercase"
                         >
-                            Carrier Scope
+                            Admin Scope
                         </div>
                         <div
                             class="mt-1 text-base font-semibold text-slate-800"
                         >
-                            {{ carrier.name }}
+                            All Carriers
                         </div>
                     </div>
                 </div>
@@ -151,7 +159,7 @@ function resetFilters() {
 
         <div class="col-span-12">
             <div class="box box--stacked p-5">
-                <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-5">
                     <div class="relative lg:col-span-2">
                         <Lucide
                             icon="Search"
@@ -164,6 +172,17 @@ function resetFilters() {
                             placeholder="Search driver, email or phone..."
                         />
                     </div>
+
+                    <TomSelect v-model="filters.carrier_id">
+                        <option value="">All carriers</option>
+                        <option
+                            v-for="carrier in carriers"
+                            :key="carrier.id"
+                            :value="String(carrier.id)"
+                        >
+                            {{ carrier.name }}
+                        </option>
+                    </TomSelect>
 
                     <TomSelect v-model="filters.driver_type">
                         <option value="">All driver types</option>
@@ -368,7 +387,7 @@ function resetFilters() {
                                         <Link
                                             :href="
                                                 route(
-                                                    'carrier.driver-vehicle-management.show',
+                                                    'admin.driver-types.show',
                                                     driver.id,
                                                 )
                                             "
@@ -383,8 +402,8 @@ function resetFilters() {
                                             :href="
                                                 route(
                                                     driver.assignment
-                                                        ? 'carrier.driver-vehicle-management.edit-assignment'
-                                                        : 'carrier.driver-vehicle-management.assign-vehicle',
+                                                        ? 'admin.driver-types.edit-assignment'
+                                                        : 'admin.driver-types.assign-vehicle',
                                                     driver.id,
                                                 )
                                             "
@@ -403,7 +422,7 @@ function resetFilters() {
                                         <Link
                                             :href="
                                                 route(
-                                                    'carrier.driver-vehicle-management.assignment-history',
+                                                    'admin.driver-types.assignment-history',
                                                     driver.id,
                                                 )
                                             "
@@ -417,7 +436,7 @@ function resetFilters() {
                                         <Link
                                             :href="
                                                 route(
-                                                    'carrier.driver-vehicle-management.contact',
+                                                    'admin.driver-types.contact',
                                                     driver.id,
                                                 )
                                             "

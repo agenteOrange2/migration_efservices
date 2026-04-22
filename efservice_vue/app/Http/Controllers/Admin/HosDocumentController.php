@@ -224,7 +224,11 @@ class HosDocumentController extends Controller
             $this->ensureAllowedCarrier((int) $filters['carrier_id'], $scope);
         }
 
-        $driversQuery = UserDriverDetail::query()->with(['user:id,name,email', 'carrier:id,name']);
+        $driversQuery = UserDriverDetail::query()->with([
+            'user:id,name,email',
+            'carrier:id,name',
+            'media' => fn ($q) => $q->where('collection_name', 'profile_photo_driver'),
+        ]);
         $this->applyDriverScope($driversQuery, $scope, $filters['carrier_id']);
 
         if ($filters['driver_id'] !== '') {
@@ -287,6 +291,7 @@ class HosDocumentController extends Controller
                 'id' => $media->id,
                 'driver_id' => $driver?->id,
                 'driver_name' => $driver?->full_name ?: ($driver?->user?->name ?: 'Unknown Driver'),
+                'driver_avatar' => $driver?->media->first()?->getUrl() ?? null,
                 'carrier_name' => $driver?->carrier?->name,
                 'type_key' => $typeKey,
                 'type_label' => $this->documentTypeLabel($media),

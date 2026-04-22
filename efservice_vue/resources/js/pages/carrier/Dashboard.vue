@@ -29,6 +29,7 @@ interface Props {
         mc_number: string | null
         status: number
         documents_completed: boolean
+        documents_status: 'none' | 'pending' | 'rejected' | 'complete'
         safety_url: string | null
     }
     stats: {
@@ -125,8 +126,9 @@ const maxTrend = computed(() => {
 
     <RazeLayout>
 
-        <!-- ===== INCOMPLETE DOCUMENTS BANNER ===== -->
-        <div v-if="!carrier.documents_completed"
+        <!-- ===== DOCUMENTS BANNER ===== -->
+        <!-- none: no documents uploaded yet -->
+        <div v-if="carrier.documents_status === 'none'"
             class="mb-6 flex items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 px-5 py-4">
             <Lucide icon="AlertTriangle" class="w-5 h-5 text-warning flex-shrink-0" />
             <div class="flex-1">
@@ -135,8 +137,38 @@ const maxTrend = computed(() => {
                     Please complete your carrier documentation to unlock all features.
                 </span>
             </div>
-            <Link href="#" class="text-xs font-semibold text-warning underline underline-offset-2">
+            <Link :href="safeRoute('carrier.documents.index')" class="text-xs font-semibold text-warning underline underline-offset-2">
                 Complete Now
+            </Link>
+        </div>
+
+        <!-- pending: documents uploaded, waiting for admin approval -->
+        <div v-else-if="carrier.documents_status === 'pending'"
+            class="mb-6 flex items-center gap-3 rounded-xl border border-info/30 bg-info/10 px-5 py-4">
+            <Lucide icon="Clock" class="w-5 h-5 text-info flex-shrink-0" />
+            <div class="flex-1">
+                <span class="text-sm font-medium text-info">Under Review:</span>
+                <span class="text-sm text-info/80 ml-1">
+                    Your documents have been submitted and are pending admin approval.
+                </span>
+            </div>
+            <Link :href="safeRoute('carrier.documents.index')" class="text-xs font-semibold text-info underline underline-offset-2">
+                View Documents
+            </Link>
+        </div>
+
+        <!-- rejected: some documents were rejected -->
+        <div v-else-if="carrier.documents_status === 'rejected'"
+            class="mb-6 flex items-center gap-3 rounded-xl border border-danger/30 bg-danger/10 px-5 py-4">
+            <Lucide icon="XCircle" class="w-5 h-5 text-danger flex-shrink-0" />
+            <div class="flex-1">
+                <span class="text-sm font-medium text-danger">Action Required:</span>
+                <span class="text-sm text-danger/80 ml-1">
+                    Some documents were rejected. Please review and resubmit.
+                </span>
+            </div>
+            <Link :href="safeRoute('carrier.documents.index')" class="text-xs font-semibold text-danger underline underline-offset-2">
+                Review Now
             </Link>
         </div>
 

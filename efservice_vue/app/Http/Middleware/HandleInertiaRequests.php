@@ -40,10 +40,11 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state')
                 || $request->cookie('sidebar_state') === 'true',
             'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-                'warning' => fn () => $request->session()->get('warning'),
-                'info'    => fn () => $request->session()->get('info'),
+                'success'          => fn () => $request->session()->get('success'),
+                'error'            => fn () => $request->session()->get('error'),
+                'warning'          => fn () => $request->session()->get('warning'),
+                'info'             => fn () => $request->session()->get('info'),
+                'wizard_completed' => fn () => $request->session()->get('wizard_completed'),
             ],
             'notifications' => fn () => $user
                 ? $notificationCenter->getDropdownNotificationsForUser($user, 10)

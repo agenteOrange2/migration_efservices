@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\Vehicles\Concerns\UsesVehicleAdminHelpers;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\Vehicle\Vehicle;
 use App\Models\Admin\Vehicle\VehicleDocument;
+use App\Models\Admin\Vehicle\VehicleMaintenance;
+use App\Models\EmergencyRepair;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +18,8 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class VehicleDocumentController extends Controller
 {
@@ -163,7 +167,10 @@ class VehicleDocumentController extends Controller
             'sort_direction' => (string) $request->input('sort_direction', 'asc'),
         ];
 
-        $query = $vehicle->documents()->with('media');
+        $reportTypes = [VehicleDocument::DOC_TYPE_MAINTENANCE_RECORD, VehicleDocument::DOC_TYPE_REPAIR_RECORD];
+
+        $query = $vehicle->documents()->with('media')
+            ->whereNotIn('document_type', $reportTypes);
 
         if ($filters['search'] !== '') {
             $term = '%' . $filters['search'] . '%';
@@ -191,23 +198,50 @@ class VehicleDocumentController extends Controller
         $documents = $query->orderBy($sortField, $sortDirection)->paginate(15)->withQueryString();
         $documents->through(fn (VehicleDocument $document) => $this->documentRow($document));
 
+        $maintenanceReports = $vehicle->documents()->with('media')
+            ->where('document_type', VehicleDocument::DOC_TYPE_MAINTENANCE_RECORD)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn (VehicleDocument $document) => $this->documentRow($document))
+            ->values();
+
+        $repairReports = $vehicle->documents()->with('media')
+            ->where('document_type', VehicleDocument::DOC_TYPE_REPAIR_RECORD)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn (VehicleDocument $document) => $this->documentRow($document))
+            ->values();
+
         $statsQuery = $vehicle->documents();
+
+        $hasMaintenanceRecords = VehicleMaintenance::where('vehicle_id', $vehicle->id)->exists();
+        $hasRepairRecords = EmergencyRepair::where('vehicle_id', $vehicle->id)->exists();
+        $hasDocumentsWithFiles = $vehicle->documents()->whereHas('media')->exists();
+
+        $documentTypeOptionsFiltered = collect($this->documentTypeOptions())
+            ->reject(fn ($label, $key) => in_array($key, $reportTypes, true))
+            ->all();
 
         return Inertia::render('admin/vehicles/documents/Index', [
             'vehicle' => [
-                'id' => $vehicle->id,
-                'title' => trim(implode(' ', array_filter([$vehicle->year, $vehicle->make, $vehicle->model]))) ?: 'Vehicle',
+                'id'                  => $vehicle->id,
+                'title'               => trim(implode(' ', array_filter([$vehicle->year, $vehicle->make, $vehicle->model]))) ?: 'Vehicle',
                 'company_unit_number' => $vehicle->company_unit_number,
-                'vin' => $vehicle->vin,
-                'carrier_name' => $vehicle->carrier?->name,
+                'vin'                 => $vehicle->vin,
+                'carrier_name'        => $vehicle->carrier?->name,
             ],
-            'documents' => $documents,
-            'filters' => $filters,
-            'documentTypes' => $this->documentTypeOptions(),
-            'documentStatuses' => $this->documentStatusOptions(),
+            'documents'          => $documents,
+            'maintenanceReports' => $maintenanceReports,
+            'repairReports'      => $repairReports,
+            'filters'            => $filters,
+            'documentTypes'      => $documentTypeOptionsFiltered,
+            'documentStatuses'   => $this->documentStatusOptions(),
+            'hasMaintenanceRecords'  => $hasMaintenanceRecords,
+            'hasRepairRecords'       => $hasRepairRecords,
+            'hasDocumentsWithFiles'  => $hasDocumentsWithFiles,
             'stats' => [
-                'total' => (clone $statsQuery)->count(),
-                'active' => (clone $statsQuery)->where('status', VehicleDocument::STATUS_ACTIVE)->count(),
+                'total'   => (clone $statsQuery)->count(),
+                'active'  => (clone $statsQuery)->where('status', VehicleDocument::STATUS_ACTIVE)->count(),
                 'expired' => (clone $statsQuery)->where(function (Builder $builder) {
                     $builder
                         ->where('status', VehicleDocument::STATUS_EXPIRED)
@@ -220,6 +254,194 @@ class VehicleDocumentController extends Controller
                 'pending' => (clone $statsQuery)->where('status', VehicleDocument::STATUS_PENDING)->count(),
             ],
         ]);
+    }
+
+    public function downloadAll(Vehicle $vehicle): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $this->authorizeVehicle($vehicle);
+
+        // Load all documents with their media filtered to document_files collection only
+        $documents = $vehicle->documents()
+            ->with(['media' => fn ($q) => $q->where('collection_name', 'document_files')])
+            ->get()
+            ->filter(fn (VehicleDocument $doc) => $doc->media->isNotEmpty());
+
+        abort_if($documents->isEmpty(), 404, 'No document files to download.');
+
+        $vehicleLabel = Str::slug(
+            trim(implode('-', array_filter([$vehicle->year, $vehicle->make, $vehicle->model]))) ?: 'vehicle'
+        );
+
+        $tempDir = storage_path('app/temp');
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $zipPath = $tempDir . '/vehicle-' . $vehicle->id . '-documents-' . time() . '.zip';
+        $zip = new \ZipArchive();
+
+        $opened = $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        abort_if($opened !== true, 500, 'Could not create ZIP archive.');
+
+        $nameCounts = [];
+        $addedCount = 0;
+        $tempFiles = [];
+
+        foreach ($documents as $doc) {
+            /** @var \Spatie\MediaLibrary\MediaCollections\Models\Media $media */
+            $media = $doc->media->first();
+            if (! $media) {
+                continue;
+            }
+
+            $localPath = $media->getPath();
+
+            if (! file_exists($localPath)) {
+                // Fallback: legacy files were stored under "vehicle/" (singular) instead of "vehicles/"
+                $legacyPath = str_replace(
+                    '/vehicles/' . $vehicle->id . '/documents/',
+                    '/vehicle/' . $vehicle->id . '/documents/',
+                    $localPath
+                );
+
+                if (file_exists($legacyPath)) {
+                    $localPath = $legacyPath;
+                } else {
+                    // Last resort: scan the disk for a file matching this filename
+                    $disk = \Illuminate\Support\Facades\Storage::disk($media->disk ?: 'public');
+                    $found = collect($disk->allFiles('vehicle/' . $vehicle->id . '/documents'))
+                        ->first(fn ($f) => basename($f) === $media->file_name);
+
+                    if ($found) {
+                        $localPath = storage_path('app/public/' . $found);
+                    } else {
+                        continue;
+                    }
+                }
+            }
+
+            $folder = Str::slug($doc->document_type_name ?: $doc->document_type, '-');
+            $filename = $media->file_name;
+
+            $key = $folder . '/' . $filename;
+            $nameCounts[$key] = ($nameCounts[$key] ?? 0) + 1;
+            if ($nameCounts[$key] > 1) {
+                $ext = pathinfo($filename, PATHINFO_EXTENSION);
+                $base = pathinfo($filename, PATHINFO_FILENAME);
+                $filename = $base . '-' . $nameCounts[$key] . ($ext ? '.' . $ext : '');
+            }
+
+            $zip->addFile($localPath, $folder . '/' . $filename);
+            $addedCount++;
+        }
+
+        $zip->close();
+
+        foreach ($tempFiles as $tmpFile) {
+            @unlink($tmpFile);
+        }
+
+        abort_if(! file_exists($zipPath) || $addedCount === 0, 404, 'No downloadable files found.');
+
+        return response()
+            ->download($zipPath, $vehicleLabel . '-documents.zip')
+            ->deleteFileAfterSend(true);
+    }
+
+    public function generateMaintenanceReport(Vehicle $vehicle): RedirectResponse
+    {
+        $this->authorizeVehicle($vehicle);
+        $vehicle->load('carrier');
+
+        $maintenances = VehicleMaintenance::where('vehicle_id', $vehicle->id)
+            ->orderBy('service_date', 'asc')
+            ->get();
+
+        abort_if($maintenances->isEmpty(), 404, 'No maintenance records found for this vehicle.');
+
+        $fileName = 'maintenance-report-' . $vehicle->id . '-' . now()->format('YmdHis') . '.pdf';
+        $tempDir = storage_path('app/temp');
+        $tempPath = $tempDir . DIRECTORY_SEPARATOR . $fileName;
+
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        Pdf::loadView('admin.vehicles.maintenance.full-report-pdf', [
+            'vehicle' => $vehicle,
+            'maintenances' => $maintenances,
+        ])->setPaper('letter', 'portrait')->save($tempPath);
+
+        try {
+            $document = VehicleDocument::create([
+                'vehicle_id' => $vehicle->id,
+                'document_type' => VehicleDocument::DOC_TYPE_MAINTENANCE_RECORD,
+                'document_number' => 'MR-' . $vehicle->id . '-' . now()->format('Ymd'),
+                'issued_date' => now()->toDateString(),
+                'status' => VehicleDocument::STATUS_ACTIVE,
+                'notes' => 'Auto-generated Vehicle Service Due Status Report (49 C.F.R. 396.3). Generated on ' . now()->format('m/d/Y h:i A') . '. Contains ' . $maintenances->count() . ' maintenance record(s).',
+            ]);
+
+            $document->addMedia($tempPath)
+                ->usingFileName($fileName)
+                ->toMediaCollection('document_files');
+        } finally {
+            if (file_exists($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+
+        return redirect()
+            ->route('admin.vehicles.documents.index', $vehicle)
+            ->with('success', 'Maintenance report generated and saved to vehicle documents.');
+    }
+
+    public function generateRepairReport(Vehicle $vehicle): RedirectResponse
+    {
+        $this->authorizeVehicle($vehicle);
+        $vehicle->load('carrier');
+
+        $repairs = EmergencyRepair::where('vehicle_id', $vehicle->id)
+            ->orderBy('repair_date', 'asc')
+            ->get();
+
+        abort_if($repairs->isEmpty(), 404, 'No repair records found for this vehicle.');
+
+        $fileName = 'repair-report-' . $vehicle->id . '-' . now()->format('YmdHis') . '.pdf';
+        $tempDir = storage_path('app/temp');
+        $tempPath = $tempDir . DIRECTORY_SEPARATOR . $fileName;
+
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        Pdf::loadView('admin.vehicles.emergency-repairs.full-report-pdf', [
+            'vehicle' => $vehicle,
+            'repairs' => $repairs,
+        ])->setPaper('letter', 'portrait')->save($tempPath);
+
+        try {
+            $document = VehicleDocument::create([
+                'vehicle_id' => $vehicle->id,
+                'document_type' => VehicleDocument::DOC_TYPE_REPAIR_RECORD,
+                'document_number' => 'RR-' . $vehicle->id . '-' . now()->format('Ymd'),
+                'issued_date' => now()->toDateString(),
+                'status' => VehicleDocument::STATUS_ACTIVE,
+                'notes' => 'Auto-generated Inspection, Repair & Maintenance Record (49 C.F.R. 396.3). Generated on ' . now()->format('m/d/Y h:i A') . '. Contains ' . $repairs->count() . ' repair record(s).',
+            ]);
+
+            $document->addMedia($tempPath)
+                ->usingFileName($fileName)
+                ->toMediaCollection('document_files');
+        } finally {
+            if (file_exists($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+
+        return redirect()
+            ->route('admin.vehicles.documents.index', $vehicle)
+            ->with('success', 'Repair report generated and saved to vehicle documents.');
     }
 
     public function store(Request $request, Vehicle $vehicle): RedirectResponse

@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CarrierDocumentController;
 use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\ContactSubmissionController;
 use App\Http\Controllers\Admin\DocumentTypeController;
+use App\Http\Controllers\Admin\DriverTypeController;
 use App\Http\Controllers\Admin\MessagesController;
 use App\Http\Controllers\Admin\MembershipController;
 use App\Http\Controllers\Admin\PlanRequestController;
@@ -183,6 +184,9 @@ Route::prefix('vehicles')->name('vehicles.')->group(function () {
     Route::get('{vehicle}/repairs', [EmergencyRepairController::class, 'vehicleIndex'])->name('repairs.index');
     Route::get('{vehicle}/repairs/create', [EmergencyRepairController::class, 'createForVehicle'])->name('repairs.create');
     Route::get('{vehicle}/driver-assignment-history', [VehicleController::class, 'driverAssignmentHistory'])->name('driver-assignment-history');
+    Route::get('{vehicle}/documents/download-all', [VehicleDocumentController::class, 'downloadAll'])->name('documents.download-all');
+    Route::post('{vehicle}/documents/generate-maintenance-report', [VehicleDocumentController::class, 'generateMaintenanceReport'])->name('documents.generate-maintenance-report');
+    Route::post('{vehicle}/documents/generate-repair-report', [VehicleDocumentController::class, 'generateRepairReport'])->name('documents.generate-repair-report');
     Route::get('{vehicle}/documents', [VehicleDocumentController::class, 'index'])->name('documents.index');
     Route::post('{vehicle}/documents', [VehicleDocumentController::class, 'store'])->name('documents.store');
     Route::put('{vehicle}/documents/{document}', [VehicleDocumentController::class, 'update'])->name('documents.update');
@@ -195,6 +199,18 @@ Route::prefix('vehicles')->name('vehicles.')->group(function () {
 Route::get('vehicles-documents', [VehicleDocumentController::class, 'overview'])->name('vehicles-documents.index');
 Route::resource('vehicle-makes', VehicleMakeController::class)->only(['index', 'store', 'update', 'destroy'])->names('vehicle-makes');
 Route::resource('vehicle-types', VehicleTypeController::class)->only(['index', 'store', 'update', 'destroy'])->names('vehicle-types');
+Route::prefix('driver-types')->name('driver-types.')->group(function () {
+    Route::get('/', [DriverTypeController::class, 'index'])->name('index');
+    Route::get('{driver}', [DriverTypeController::class, 'show'])->name('show');
+    Route::get('{driver}/assign-vehicle', [DriverTypeController::class, 'assignVehicle'])->name('assign-vehicle');
+    Route::post('{driver}/assign-vehicle', [DriverTypeController::class, 'storeVehicleAssignment'])->name('store-vehicle-assignment');
+    Route::get('{driver}/edit-assignment', [DriverTypeController::class, 'editAssignment'])->name('edit-assignment');
+    Route::put('{driver}/update-assignment', [DriverTypeController::class, 'updateAssignment'])->name('update-assignment');
+    Route::post('{driver}/cancel-assignment', [DriverTypeController::class, 'cancelAssignment'])->name('cancel-assignment');
+    Route::get('{driver}/assignment-history', [DriverTypeController::class, 'assignmentHistory'])->name('assignment-history');
+    Route::get('{driver}/contact', [DriverTypeController::class, 'contact'])->name('contact');
+    Route::post('{driver}/contact', [DriverTypeController::class, 'sendContact'])->name('send-contact');
+});
 Route::get('training-dashboard', [TrainingDashboardController::class, 'index'])->name('training-dashboard.index');
 Route::get('training-dashboard/export', [TrainingDashboardController::class, 'export'])->name('training-dashboard.export');
 Route::prefix('trips')->name('trips.')->group(function () {

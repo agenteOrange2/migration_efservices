@@ -406,6 +406,9 @@ Route::middleware(['auth', 'check.carrier.status'])->group(function () {
         Route::get('/{vehicle}/repairs', [CarrierEmergencyRepairController::class, 'vehicleIndex'])->name('repairs.index');
         Route::get('/{vehicle}/repairs/create', [CarrierEmergencyRepairController::class, 'createForVehicle'])->name('repairs.create');
 
+        Route::get('/{vehicle}/documents/download-all', [CarrierVehicleDocumentController::class, 'downloadAll'])->name('documents.download-all');
+        Route::post('/{vehicle}/documents/generate-maintenance-report', [CarrierVehicleDocumentController::class, 'generateMaintenanceReport'])->name('documents.generate-maintenance-report');
+        Route::post('/{vehicle}/documents/generate-repair-report', [CarrierVehicleDocumentController::class, 'generateRepairReport'])->name('documents.generate-repair-report');
         Route::get('/{vehicle}/documents', [CarrierVehicleDocumentController::class, 'index'])->name('documents.index');
         Route::post('/{vehicle}/documents', [CarrierVehicleDocumentController::class, 'store'])->name('documents.store');
         Route::put('/{vehicle}/documents/{document}', [CarrierVehicleDocumentController::class, 'update'])->name('documents.update');

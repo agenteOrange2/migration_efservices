@@ -84,7 +84,7 @@ class StepCompletionCalculator extends BaseService
         $driver = UserDriverDetail::with([
             'user',
             'application.addresses',
-            'application.details',
+            'application.details.vehicleDriverAssignment',
             'licenses',
             'medicalQualification',
             'trainingSchools',
@@ -293,8 +293,11 @@ class StepCompletionCalculator extends BaseService
         }
 
         if ($field === 'application_detail') {
-            return $driver->application?->details?->applying_position !== null
-                && $driver->application->details->applying_position !== '';
+            $details = $driver->application?->details;
+            if (!$details) return false;
+            // Step 3 is complete if applying_position is set OR if vehicle assignment was saved
+            return ($details->applying_position !== null && $details->applying_position !== '')
+                || $details->vehicle_driver_assignment_id !== null;
         }
 
         if ($field === 'has_completed_employment_history') {

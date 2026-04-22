@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>Inspection, Repair &amp; Maintenance Record</title>
+    <title>Vehicle Service Due Status Report</title>
     <style>
         @page {
             size: letter portrait;
@@ -16,6 +16,7 @@
             margin: 0;
             padding: 0;
             color: #000;
+            background: white;
         }
 
         .header-bar {
@@ -93,34 +94,37 @@
 
         .ops-table thead th {
             border: 2px solid #000;
-            padding: 3px 6px;
-            font-size: 11px;
+            padding: 3px 4px;
+            font-size: 10px;
             font-weight: bold;
-            text-align: left;
+            text-align: center;
+            vertical-align: bottom;
             background: #fff;
+            line-height: 1.3;
+            width: 16.66%;
         }
 
-        .ops-table thead th.col-date {
-            width: 80px;
-            text-align: center;
-        }
-
-        .ops-table thead th.col-mileage {
-            width: 70px;
-            text-align: center;
+        .ops-table thead th:last-child {
+            width: 16.70%;
         }
 
         .ops-table tbody td {
-            padding: 2px 5px;
-            font-size: 11px;
+            padding: 2px 4px;
+            font-size: 10px;
             height: 20px;
             border-left: 2px solid #000;
             border-bottom: 1px solid #ccc;
             vertical-align: middle;
+            text-align: center;
+            width: 16.66%;
         }
 
         .ops-table tbody td:first-child {
             border-left: none;
+        }
+
+        .ops-table tbody td:last-child {
+            width: 16.70%;
         }
 
         .ops-table tbody tr:last-child td {
@@ -147,28 +151,22 @@
         }
 
         .footer-left {
-            font-style: italic;
+            font-weight: bold;
+            font-size: 10px;
             text-align: left;
         }
 
         .footer-right {
-            font-weight: bold;
-            font-size: 10px;
+            font-style: italic;
             text-align: right;
         }
     </style>
 </head>
 <body>
-    @php
-        $formatDate = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('m/d/Y') : '';
-        $isOilChange = $repair->repair_name && stripos($repair->repair_name, 'oil change') !== false;
-        $nextOilMileage = ($isOilChange && $repair->odometer) ? number_format($repair->odometer + 5000) : '';
-    @endphp
-
-    <div class="header-bar">Inspection, Repair &amp; Maintenance Record</div>
+    <div class="header-bar">Vehicle Service Due Status Report</div>
 
     <div class="main-title">
-        Inspection, Repair &amp; Maintenance Record<br>
+        Vehicle Service Due Status Report<br>
         Under 49 C.F.R. 396.3
     </div>
 
@@ -207,19 +205,37 @@
     <table class="ops-table">
         <thead>
             <tr>
-                <th class="col-date">Date</th>
-                <th class="col-mileage">Mileage</th>
-                <th>Operation Performed: Inspection, Maintenance, Repair</th>
+                <th>Date of<br>Inspection</th>
+                <th>Type of<br>Inspection</th>
+                <th>Mileage at Time<br>of Inspection</th>
+                <th>Date Next<br>Inspection Due</th>
+                <th>Mileage Type of<br>Inspection Due</th>
+                <th>Inspection Due</th>
             </tr>
         </thead>
         <tbody>
+            @foreach($maintenances as $m)
+            @php
+                $isOilChange = $m->service_tasks && stripos($m->service_tasks, 'Oil Change') !== false;
+                $nextOilMileage = ($isOilChange && $m->odometer) ? number_format($m->odometer + 5000) : '';
+            @endphp
             <tr>
-                <td>{{ $formatDate($repair->repair_date) }}</td>
-                <td>{{ $repair->odometer ? number_format($repair->odometer) : '' }}</td>
-                <td>{{ $repair->repair_name ?? '' }}{{ $repair->description ? ' - ' . $repair->description : '' }}{{ $nextOilMileage ? ' (Next oil change: ' . $nextOilMileage . ' mi)' : '' }}</td>
+                <td>{{ $m->service_date ? $m->service_date->format('m/d/Y') : '' }}</td>
+                <td>{{ $m->service_tasks ?? '' }}</td>
+                <td>{{ $m->odometer ? number_format($m->odometer) : '' }}</td>
+                <td>{{ $m->next_service_date ? $m->next_service_date->format('m/d/Y') : '' }}</td>
+                <td>{{ $nextOilMileage }}</td>
+                <td>{{ $m->next_service_date ? $m->next_service_date->format('m/d/Y') : '' }}</td>
             </tr>
-            @for($i = 0; $i < 19; $i++)
+            @endforeach
+            @php
+                $totalRows = count($maintenances);
+                $emptyRows = max(0, 20 - $totalRows);
+                if ($totalRows > 20) { $emptyRows = 2; }
+            @endphp
+            @for($i = 0; $i < $emptyRows; $i++)
             <tr>
+                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
                 <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
             </tr>
             @endfor
@@ -227,14 +243,14 @@
     </table>
 
     <div class="note">
-        Note: This form is provided as a suggested format for documenting a vehicle's inspection, maintenance and
-        repairs. A motor carrier may use any format for tracking a vehicle's inspections which complies with 396.3.
+        Note: This form is provided as a suggested format for performing and documenting a vehicle's inspection
+        schedule. A motor carrier may use any format for tracking a vehicle's inspections which complies with 396.3.
     </div>
 
     <table class="footer-table">
         <tr>
-            <td class="footer-left">A Texas Motor Carrier's Guide to Highway Safety</td>
-            <td class="footer-right">396-9</td>
+            <td class="footer-left">396-8</td>
+            <td class="footer-right">A Texas Motor Carrier's Guide to Highway Safety</td>
         </tr>
     </table>
 </body>

@@ -323,7 +323,7 @@ class DriverListController extends Controller
         }
     }
 
-    protected function buildDriverShowData(UserDriverDetail $driver): array
+    protected function buildDriverShowData(UserDriverDetail $driver, bool $isCarrierContext = false): array
     {
         $effectiveStatus = $driver->getEffectiveStatus();
         $profilePhotoUrl = $driver->getFirstMediaUrl('profile_photo_driver') ?: null;
@@ -649,7 +649,7 @@ class DriverListController extends Controller
 
         $documentsByCategory = $this->buildDocumentsByCategory($driver);
         $stats = $this->buildDriverStats($driver, $documentsByCategory);
-        $hosDocuments = $this->buildHosDocuments($driver);
+        $hosDocuments = $this->buildHosDocuments($driver, $isCarrierContext);
 
         return [
             'driver' => array_merge($base, [
@@ -706,7 +706,7 @@ class DriverListController extends Controller
         ];
     }
 
-    protected function buildHosDocuments(UserDriverDetail $driver): array
+    protected function buildHosDocuments(UserDriverDetail $driver, bool $isCarrierContext = false): array
     {
         return Media::query()
             ->where('model_type', UserDriverDetail::class)
@@ -714,7 +714,7 @@ class DriverListController extends Controller
             ->whereIn('collection_name', ['trip_reports', 'inspection_reports', 'daily_logs', 'monthly_summaries'])
             ->orderByDesc('created_at')
             ->get()
-            ->map(function (Media $media) {
+            ->map(function (Media $media) use ($isCarrierContext) {
                 $isFmcsa = $media->getCustomProperty('document_type') === 'fmcsa_monthly';
                 $typeLabel = $isFmcsa ? 'FMCSA Monthly' : match ($media->collection_name) {
                     'trip_reports'       => 'Trip Report',
@@ -737,8 +737,12 @@ class DriverListController extends Controller
                     'size_label'    => $this->formatFileSize((int) $media->size),
                     'document_date' => $documentDate?->format('n/j/Y'),
                     'created_at'    => $media->created_at?->format('n/j/Y g:i A'),
-                    'preview_url'   => route('admin.hos.documents.preview', $media),
-                    'download_url'  => route('admin.hos.documents.download', $media),
+                    'preview_url'   => $isCarrierContext
+                        ? route('carrier.hos.documents.preview', $media)
+                        : route('admin.hos.documents.preview', $media),
+                    'download_url'  => $isCarrierContext
+                        ? route('carrier.hos.documents.download', $media)
+                        : route('admin.hos.documents.download', $media),
                 ];
             })
             ->all();

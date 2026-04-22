@@ -159,12 +159,6 @@
     </style>
 </head>
 <body>
-    @php
-        $formatDate = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('m/d/Y') : '';
-        $isOilChange = $repair->repair_name && stripos($repair->repair_name, 'oil change') !== false;
-        $nextOilMileage = ($isOilChange && $repair->odometer) ? number_format($repair->odometer + 5000) : '';
-    @endphp
-
     <div class="header-bar">Inspection, Repair &amp; Maintenance Record</div>
 
     <div class="main-title">
@@ -213,12 +207,23 @@
             </tr>
         </thead>
         <tbody>
+            @foreach($repairs as $r)
+            @php
+                $isOilChange = $r->repair_name && stripos($r->repair_name, 'oil change') !== false;
+                $nextOilMileage = ($isOilChange && $r->odometer) ? number_format($r->odometer + 5000) : '';
+            @endphp
             <tr>
-                <td>{{ $formatDate($repair->repair_date) }}</td>
-                <td>{{ $repair->odometer ? number_format($repair->odometer) : '' }}</td>
-                <td>{{ $repair->repair_name ?? '' }}{{ $repair->description ? ' - ' . $repair->description : '' }}{{ $nextOilMileage ? ' (Next oil change: ' . $nextOilMileage . ' mi)' : '' }}</td>
+                <td>{{ $r->repair_date ? $r->repair_date->format('m/d/Y') : '' }}</td>
+                <td>{{ $r->odometer ? number_format($r->odometer) : '' }}</td>
+                <td>{{ $r->repair_name ?? '' }}{{ $r->description ? ' - ' . $r->description : '' }}{{ $nextOilMileage ? ' (Next oil change: ' . $nextOilMileage . ' mi)' : '' }}</td>
             </tr>
-            @for($i = 0; $i < 19; $i++)
+            @endforeach
+            @php
+                $totalRows = count($repairs);
+                $emptyRows = max(0, 20 - $totalRows);
+                if ($totalRows > 20) { $emptyRows = 2; }
+            @endphp
+            @for($i = 0; $i < $emptyRows; $i++)
             <tr>
                 <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
             </tr>

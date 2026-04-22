@@ -63,12 +63,14 @@ class MessagesController extends MessagesBaseController
         $receivedTotal = max($accessibleTotal - $sentTotal, 0);
 
         $statusDistribution = (clone $accessibleQuery)
+            ->reorder()
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
 
         $priorityDistribution = (clone $accessibleQuery)
+            ->reorder()
             ->select('priority', DB::raw('count(*) as count'))
             ->groupBy('priority')
             ->pluck('count', 'priority')

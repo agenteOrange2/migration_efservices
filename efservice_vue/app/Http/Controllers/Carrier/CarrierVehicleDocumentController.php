@@ -95,6 +95,102 @@ class CarrierVehicleDocumentController extends VehicleDocumentController
             ->with('success', 'Vehicle document deleted successfully.');
     }
 
+    public function generateMaintenanceReport(\App\Models\Admin\Vehicle\Vehicle $vehicle): \Illuminate\Http\RedirectResponse
+    {
+        $this->authorizeVehicle($vehicle);
+        $vehicle->load('carrier');
+
+        $maintenances = \App\Models\Admin\Vehicle\VehicleMaintenance::where('vehicle_id', $vehicle->id)
+            ->orderBy('service_date', 'asc')
+            ->get();
+
+        abort_if($maintenances->isEmpty(), 404, 'No maintenance records found for this vehicle.');
+
+        $fileName = 'maintenance-report-' . $vehicle->id . '-' . now()->format('YmdHis') . '.pdf';
+        $tempDir = storage_path('app/temp');
+        $tempPath = $tempDir . DIRECTORY_SEPARATOR . $fileName;
+
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.vehicles.maintenance.full-report-pdf', [
+            'vehicle' => $vehicle,
+            'maintenances' => $maintenances,
+        ])->setPaper('letter', 'portrait')->save($tempPath);
+
+        try {
+            $document = \App\Models\Admin\Vehicle\VehicleDocument::create([
+                'vehicle_id' => $vehicle->id,
+                'document_type' => \App\Models\Admin\Vehicle\VehicleDocument::DOC_TYPE_MAINTENANCE_RECORD,
+                'document_number' => 'MR-' . $vehicle->id . '-' . now()->format('Ymd'),
+                'issued_date' => now()->toDateString(),
+                'status' => \App\Models\Admin\Vehicle\VehicleDocument::STATUS_ACTIVE,
+                'notes' => 'Auto-generated Vehicle Service Due Status Report (49 C.F.R. 396.3). Generated on ' . now()->format('m/d/Y h:i A') . '. Contains ' . $maintenances->count() . ' maintenance record(s).',
+            ]);
+
+            $document->addMedia($tempPath)
+                ->usingFileName($fileName)
+                ->toMediaCollection('document_files');
+        } finally {
+            if (file_exists($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+
+        return redirect()
+            ->route('carrier.vehicles.documents.index', $vehicle)
+            ->with('success', 'Maintenance report generated and saved to vehicle documents.');
+    }
+
+    public function generateRepairReport(\App\Models\Admin\Vehicle\Vehicle $vehicle): \Illuminate\Http\RedirectResponse
+    {
+        $this->authorizeVehicle($vehicle);
+        $vehicle->load('carrier');
+
+        $repairs = \App\Models\EmergencyRepair::where('vehicle_id', $vehicle->id)
+            ->orderBy('repair_date', 'asc')
+            ->get();
+
+        abort_if($repairs->isEmpty(), 404, 'No repair records found for this vehicle.');
+
+        $fileName = 'repair-report-' . $vehicle->id . '-' . now()->format('YmdHis') . '.pdf';
+        $tempDir = storage_path('app/temp');
+        $tempPath = $tempDir . DIRECTORY_SEPARATOR . $fileName;
+
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.vehicles.emergency-repairs.full-report-pdf', [
+            'vehicle' => $vehicle,
+            'repairs' => $repairs,
+        ])->setPaper('letter', 'portrait')->save($tempPath);
+
+        try {
+            $document = \App\Models\Admin\Vehicle\VehicleDocument::create([
+                'vehicle_id' => $vehicle->id,
+                'document_type' => \App\Models\Admin\Vehicle\VehicleDocument::DOC_TYPE_REPAIR_RECORD,
+                'document_number' => 'RR-' . $vehicle->id . '-' . now()->format('Ymd'),
+                'issued_date' => now()->toDateString(),
+                'status' => \App\Models\Admin\Vehicle\VehicleDocument::STATUS_ACTIVE,
+                'notes' => 'Auto-generated Inspection, Repair & Maintenance Record (49 C.F.R. 396.3). Generated on ' . now()->format('m/d/Y h:i A') . '. Contains ' . $repairs->count() . ' repair record(s).',
+            ]);
+
+            $document->addMedia($tempPath)
+                ->usingFileName($fileName)
+                ->toMediaCollection('document_files');
+        } finally {
+            if (file_exists($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+
+        return redirect()
+            ->route('carrier.vehicles.documents.index', $vehicle)
+            ->with('success', 'Repair report generated and saved to vehicle documents.');
+    }
+
     protected function isSuperadmin(): bool
     {
         return false;
@@ -115,6 +211,9 @@ class CarrierVehicleDocumentController extends VehicleDocumentController
             'documentsStore' => 'carrier.vehicles.documents.store',
             'documentsUpdate' => 'carrier.vehicles.documents.update',
             'documentsDestroy' => 'carrier.vehicles.documents.destroy',
+            'documentsDownloadAll' => 'carrier.vehicles.documents.download-all',
+            'documentsGenerateMaintenanceReport' => 'carrier.vehicles.documents.generate-maintenance-report',
+            'documentsGenerateRepairReport' => 'carrier.vehicles.documents.generate-repair-report',
         ];
     }
 
