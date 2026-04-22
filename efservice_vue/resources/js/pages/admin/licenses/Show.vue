@@ -76,14 +76,14 @@ const expirationStatus = computed(() => {
     const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
     if (diff < 0) {
-        return { label: 'Expired', className: 'bg-red-100 text-red-700' }
+        return { label: 'Expired', className: 'bg-danger/10 text-danger' }
     }
 
     if (diff <= 30) {
-        return { label: 'Expires Soon', className: 'bg-amber-100 text-amber-700' }
+        return { label: 'Expires Soon', className: 'bg-warning/10 text-warning' }
     }
 
-    return { label: 'Valid', className: 'bg-primary/10 text-primary' }
+    return { label: 'Valid', className: 'bg-success/10 text-success' }
 })
 
 function formatDate(value: string | null) {
@@ -139,15 +139,16 @@ function deleteLicense() {
                                 Documents ({{ license.document_count }})
                             </Button>
                         </Link>
-                        <button
+                        <Button
                             v-if="routeNames.destroy"
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                            variant="outline-danger"
+                            class="flex items-center gap-2"
                             @click="deleteLicense"
                         >
                             <Lucide icon="Trash2" class="w-4 h-4" />
                             Delete
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -181,7 +182,7 @@ function deleteLicense() {
                             <span v-if="license.is_primary" class="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
                                 Primary
                             </span>
-                            <span v-if="license.is_cdl" class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                            <span v-if="license.is_cdl" class="inline-flex rounded-full bg-info/10 px-2.5 py-1 text-xs font-medium text-info">
                                 CDL
                             </span>
                         </div>
@@ -228,7 +229,7 @@ function deleteLicense() {
                         class="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3"
                     >
                         <span class="text-sm font-medium text-slate-700">{{ endorsement.code }} - {{ endorsement.name }}</span>
-                        <span class="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">Active</span>
+                        <span class="inline-flex rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success">Active</span>
                     </div>
                 </div>
 

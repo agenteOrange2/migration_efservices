@@ -324,22 +324,19 @@ class CarrierService
     public function deleteCarrier(int $carrierId): bool
     {
         DB::beginTransaction();
-        
+
         try {
             $carrier = Carrier::findOrFail($carrierId);
-            
-            // Verificar si tiene relaciones activas
-            $activeRelations = $this->hasActiveRelations($carrierId);
-            if ($activeRelations) {
-                throw new Exception('No se puede eliminar el transportista porque tiene relaciones activas');
-            }
 
-            // Soft delete
-            $carrier->update(['status' => Carrier::STATUS_INACTIVE]);
-            
+            $carrier->clearMediaCollection('logo_carrier');
+            $carrier->clearMediaCollection('safety_data_system');
+            $carrier->clearMediaCollection('dot_policy_documents');
+
+            $carrier->delete();
+
             DB::commit();
             Log::info('Carrier eliminado exitosamente: ' . $carrierId);
-            
+
             return true;
         } catch (Exception $e) {
             DB::rollBack();

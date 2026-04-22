@@ -551,4 +551,23 @@ Route::prefix('notifications')->name('notifications.')->group(function () {
 | Admin Management (will be migrated in later phases)
 |--------------------------------------------------------------------------
 */
-// TODO: Messages, Roles, etc.
+// TODO: Messages
+
+/*
+|--------------------------------------------------------------------------
+| Roles & Permissions
+|--------------------------------------------------------------------------
+*/
+Route::prefix('roles')->name('roles.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\RoleController::class, 'index'])->name('index');
+    Route::post('/', [\App\Http\Controllers\Admin\RoleController::class, 'store'])->name('store');
+    Route::put('{role}', [\App\Http\Controllers\Admin\RoleController::class, 'update'])->name('update');
+    Route::delete('{role}', [\App\Http\Controllers\Admin\RoleController::class, 'destroy'])->name('destroy');
+});
+
+Route::prefix('permissions')->name('permissions.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\PermissionController::class, 'index'])->name('index');
+    Route::post('/', [\App\Http\Controllers\Admin\PermissionController::class, 'store'])->name('store');
+    Route::put('{permission}', [\App\Http\Controllers\Admin\PermissionController::class, 'update'])->name('update');
+    Route::delete('{permission}', [\App\Http\Controllers\Admin\PermissionController::class, 'destroy'])->name('destroy');
+});

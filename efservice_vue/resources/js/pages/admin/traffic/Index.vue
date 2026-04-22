@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { reactive, ref } from 'vue'
 import Lucide from '@/components/Base/Lucide'
+import Button from '@/components/Base/Button'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 import { FormInput } from '@/components/Base/Form'
@@ -134,9 +135,11 @@ function confirmDelete() {
                         </div>
                     </div>
 
-                    <Link :href="route(props.routeNames?.create ?? 'admin.traffic.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
-                        <Lucide icon="Plus" class="w-4 h-4" />
-                        Add Conviction
+                    <Link :href="route(props.routeNames?.create ?? 'admin.traffic.create')">
+                        <Button variant="primary" class="flex items-center gap-2">
+                            <Lucide icon="Plus" class="w-4 h-4" />
+                            Add Conviction
+                        </Button>
                     </Link>
                 </div>
             </div>
@@ -170,14 +173,14 @@ function confirmDelete() {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 mt-4">
-                    <button type="button" @click="applyFilters" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                    <Button type="button" variant="primary" class="flex items-center gap-2" @click="applyFilters">
                         <Lucide icon="Filter" class="w-4 h-4" />
                         Apply Filters
-                    </button>
-                    <button type="button" @click="resetFilters" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">
+                    </Button>
+                    <Button type="button" variant="outline-secondary" class="flex items-center gap-2" @click="resetFilters">
                         <Lucide icon="RotateCcw" class="w-4 h-4" />
                         Clear
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -233,14 +236,14 @@ function confirmDelete() {
                                     <div class="text-xs text-slate-500">{{ conviction.penalty ?? 'No penalty info' }}</div>
                                 </td>
                                 <td class="px-5 py-4 text-center">
-                                    <Link :href="route('admin.traffic.documents.show', conviction.id)" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-primary/10 hover:text-primary transition">{{ conviction.document_count }}</Link>
+                                    <Link :href="route('admin.traffic.documents.show', conviction.id)" class="inline-flex items-center rounded-full bg-info/10 px-2.5 py-1 text-xs font-medium text-info transition hover:bg-info/20">{{ conviction.document_count }}</Link>
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link v-if="conviction.driver" :href="route(props.routeNames?.driverHistory ?? 'admin.traffic.driver-history', conviction.driver.id)" class="p-1.5 text-slate-400 hover:text-sky-500 transition" title="Driver history"><Lucide icon="History" class="w-4 h-4" /></Link>
+                                        <Link v-if="conviction.driver" :href="route(props.routeNames?.driverHistory ?? 'admin.traffic.driver-history', conviction.driver.id)" class="p-1.5 text-slate-400 hover:text-info transition" title="Driver history"><Lucide icon="History" class="w-4 h-4" /></Link>
                                         <Link :href="route(props.routeNames?.documentsShow ?? 'admin.traffic.documents.show', conviction.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
-                                        <Link :href="route(props.routeNames?.edit ?? 'admin.traffic.edit', conviction.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
-                                        <button type="button" @click="openDeleteModal(conviction)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
+                                        <Link :href="route(props.routeNames?.edit ?? 'admin.traffic.edit', conviction.id)" class="p-1.5 text-slate-400 hover:text-warning transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                        <button type="button" @click="openDeleteModal(conviction)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
                                     </div>
                                 </td>
                             </tr>
@@ -281,8 +284,8 @@ function confirmDelete() {
             </div>
 
             <div class="flex justify-center gap-3 px-6 pb-8 pt-4">
-                <button type="button" class="min-w-24 rounded-lg border border-slate-300 px-6 py-2.5 text-base font-medium text-slate-600 hover:bg-slate-50" @click="deleteModalOpen = false">Cancel</button>
-                <button type="button" class="min-w-24 rounded-lg bg-danger px-6 py-2.5 text-base font-medium text-white hover:bg-danger/90" @click="confirmDelete">Delete</button>
+                <Button type="button" variant="outline-secondary" class="min-w-24" @click="deleteModalOpen = false">Cancel</Button>
+                <Button type="button" variant="danger" class="min-w-24" @click="confirmDelete">Delete</Button>
             </div>
         </Dialog.Panel>
     </Dialog>

@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { reactive } from 'vue'
 import Lucide from '@/components/Base/Lucide'
+import Button from '@/components/Base/Button'
 import { FormInput } from '@/components/Base/Form'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
@@ -59,9 +60,11 @@ function sortUrl(field: string) {
                         </div>
                     </div>
 
-                    <Link :href="route('admin.accidents.index')" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition">
-                        <Lucide icon="ArrowLeft" class="w-4 h-4" />
-                        Back
+                    <Link :href="route('admin.accidents.index')">
+                        <Button variant="outline-secondary" class="flex items-center gap-2">
+                            <Lucide icon="ArrowLeft" class="w-4 h-4" />
+                            Back
+                        </Button>
                     </Link>
                 </div>
             </div>
@@ -69,10 +72,10 @@ function sortUrl(field: string) {
             <div class="box box--stacked p-5 mb-6">
                 <div class="flex gap-3">
                     <FormInput v-model="filters.search_term" type="text" placeholder="Search accidents or drivers..." />
-                    <button type="button" @click="applyFilters" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                    <Button type="button" variant="primary" class="flex items-center gap-2" @click="applyFilters">
                         <Lucide icon="Search" class="w-4 h-4" />
                         Search
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -109,12 +112,12 @@ function sortUrl(field: string) {
                                 </td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ accident.accident_date_display }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-700">{{ accident.nature_of_accident }}</td>
-                                <td class="px-5 py-4 text-sm">{{ accident.had_injuries ? `Yes (${accident.number_of_injuries})` : 'No' }}</td>
-                                <td class="px-5 py-4 text-sm">{{ accident.had_fatalities ? `Yes (${accident.number_of_fatalities})` : 'No' }}</td>
-                                <td class="px-5 py-4 text-sm">{{ accident.document_count }}</td>
+                                <td class="px-5 py-4 text-sm" :class="accident.had_injuries ? 'text-success' : 'text-danger'">{{ accident.had_injuries ? `Yes (${accident.number_of_injuries})` : 'No' }}</td>
+                                <td class="px-5 py-4 text-sm" :class="accident.had_fatalities ? 'text-success' : 'text-danger'">{{ accident.had_fatalities ? `Yes (${accident.number_of_fatalities})` : 'No' }}</td>
+                                <td class="px-5 py-4 text-sm text-info">{{ accident.document_count }}</td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <Link :href="route('admin.accidents.edit', accident.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition">
+                                        <Link :href="route('admin.accidents.edit', accident.id)" class="p-1.5 text-slate-400 hover:text-warning transition">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
                                         <Link :href="route('admin.accidents.documents.show', accident.id)" class="p-1.5 text-slate-400 hover:text-primary transition">

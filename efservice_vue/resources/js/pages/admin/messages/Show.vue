@@ -61,15 +61,23 @@ function titleCase(value: string) {
 }
 
 function statusBadgeClass(status: string) {
-    if (status === 'sent') return 'bg-primary/10 text-primary'
-    if (status === 'draft') return 'bg-slate-100 text-slate-600'
-    return 'bg-slate-200 text-slate-700'
+    if (status === 'sent' || status === 'delivered') return 'bg-success/10 text-success'
+    if (status === 'draft' || status === 'pending') return 'bg-warning/10 text-warning'
+    if (status === 'failed') return 'bg-danger/10 text-danger'
+    return 'bg-info/10 text-info'
 }
 
 function priorityBadgeClass(priority: string) {
-    if (priority === 'high') return 'bg-slate-200 text-slate-700'
+    if (priority === 'high') return 'bg-danger/10 text-danger'
     if (priority === 'normal') return 'bg-primary/10 text-primary'
-    return 'bg-slate-100 text-slate-600'
+    return 'bg-info/10 text-info'
+}
+
+function statusIconClass(status: string) {
+    if (status === 'sent' || status === 'delivered') return 'bg-success/10 text-success'
+    if (status === 'draft' || status === 'pending') return 'bg-warning/10 text-warning'
+    if (status === 'failed') return 'bg-danger/10 text-danger'
+    return 'bg-info/10 text-info'
 }
 
 function recipientTypeLabel(type: string) {
@@ -133,15 +141,15 @@ function deleteMessage() {
                                 Edit Draft
                             </Button>
                         </Link>
-                        <Button variant="outline-secondary" class="flex items-center gap-2" @click="duplicateMessage">
+                        <Button variant="outline-pending" class="flex items-center gap-2" @click="duplicateMessage">
                             <Lucide icon="Copy" class="h-4 w-4" />
                             Duplicate
                         </Button>
-                        <Button v-if="message.can_resend" variant="outline-secondary" class="flex items-center gap-2" @click="resendMessage">
+                        <Button v-if="message.can_resend" variant="outline-success" class="flex items-center gap-2" @click="resendMessage">
                             <Lucide icon="Send" class="h-4 w-4" />
                             Resend
                         </Button>
-                        <Button v-if="message.can_delete" variant="outline-secondary" class="flex items-center gap-2" @click="deleteMessage">
+                        <Button v-if="message.can_delete" variant="outline-danger" class="flex items-center gap-2" @click="deleteMessage">
                             <Lucide icon="Trash2" class="h-4 w-4" />
                             Delete
                         </Button>
@@ -153,13 +161,13 @@ function deleteMessage() {
         <div class="col-span-12 xl:col-span-8 space-y-6">
             <div class="box box--stacked p-6">
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="rounded-2xl border border-info/10 bg-info/5 p-4">
                         <p class="text-xs uppercase tracking-wide text-slate-500">Sender</p>
                         <p class="mt-2 text-sm font-semibold text-slate-800">{{ message.sender.name }}</p>
                         <p class="mt-1 text-sm text-slate-500">{{ message.sender.email || 'No email' }}</p>
                         <p class="mt-1 text-xs text-slate-400">{{ message.sender.type }}</p>
                     </div>
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="rounded-2xl border p-4" :class="message.status === 'failed' ? 'border-danger/10 bg-danger/5' : message.status === 'draft' ? 'border-warning/10 bg-warning/5' : 'border-success/10 bg-success/5'">
                         <p class="text-xs uppercase tracking-wide text-slate-500">Delivery</p>
                         <p class="mt-2 text-sm font-semibold text-slate-800">{{ message.sent_at || 'Not sent yet' }}</p>
                         <p class="mt-1 text-sm text-slate-500">Status: {{ titleCase(message.status) }}</p>
@@ -198,7 +206,7 @@ function deleteMessage() {
                                     <p class="mt-1 text-xs text-slate-500">{{ recipient.email }}</p>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                    <span class="rounded-full bg-info/10 px-2.5 py-1 text-xs font-medium text-info">
                                         {{ recipientTypeLabel(recipient.recipient_type) }}
                                     </span>
                                 </td>
@@ -207,8 +215,8 @@ function deleteMessage() {
                                         {{ titleCase(recipient.delivery_status) }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-slate-500">{{ recipient.delivered_at || '—' }}</td>
-                                <td class="px-6 py-4 text-sm text-slate-500">{{ recipient.read_at || '—' }}</td>
+                                <td class="px-6 py-4 text-sm text-slate-500">{{ recipient.delivered_at || 'N/A' }}</td>
+                                <td class="px-6 py-4 text-sm text-slate-500">{{ recipient.read_at || 'N/A' }}</td>
                             </tr>
                             <tr v-if="!message.recipients.length">
                                 <td colspan="5" class="px-6 py-12 text-center text-sm text-slate-500">
@@ -225,26 +233,26 @@ function deleteMessage() {
             <div class="box box--stacked p-6">
                 <h2 class="text-base font-semibold text-slate-800">Message Statistics</h2>
                 <div class="mt-4 grid grid-cols-2 gap-3">
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="rounded-2xl border border-primary/10 bg-primary/5 p-4">
                         <p class="text-xs text-slate-500">Total</p>
-                        <p class="mt-1 text-2xl font-semibold text-slate-800">{{ message.stats.total }}</p>
+                        <p class="mt-1 text-2xl font-semibold text-primary">{{ message.stats.total }}</p>
                     </div>
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="rounded-2xl border border-success/10 bg-success/5 p-4">
                         <p class="text-xs text-slate-500">Delivered</p>
-                        <p class="mt-1 text-2xl font-semibold text-slate-800">{{ message.stats.delivered }}</p>
+                        <p class="mt-1 text-2xl font-semibold text-success">{{ message.stats.delivered }}</p>
                     </div>
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="rounded-2xl border border-warning/10 bg-warning/5 p-4">
                         <p class="text-xs text-slate-500">Pending</p>
-                        <p class="mt-1 text-2xl font-semibold text-slate-800">{{ message.stats.pending }}</p>
+                        <p class="mt-1 text-2xl font-semibold text-warning">{{ message.stats.pending }}</p>
                     </div>
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="rounded-2xl border border-danger/10 bg-danger/5 p-4">
                         <p class="text-xs text-slate-500">Failed</p>
-                        <p class="mt-1 text-2xl font-semibold text-slate-800">{{ message.stats.failed }}</p>
+                        <p class="mt-1 text-2xl font-semibold text-danger">{{ message.stats.failed }}</p>
                     </div>
                 </div>
-                <div class="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="mt-3 rounded-2xl border border-info/10 bg-info/5 p-4">
                     <p class="text-xs text-slate-500">Read</p>
-                    <p class="mt-1 text-2xl font-semibold text-slate-800">{{ message.stats.read }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-info">{{ message.stats.read }}</p>
                 </div>
             </div>
 
@@ -252,8 +260,8 @@ function deleteMessage() {
                 <h2 class="text-base font-semibold text-slate-800">Status History</h2>
                 <div v-if="message.status_logs.length" class="mt-4 space-y-4">
                     <div v-for="log in message.status_logs" :key="log.id" class="flex items-start gap-3">
-                        <div class="mt-1 rounded-full bg-primary/10 p-2">
-                            <Lucide icon="Clock3" class="h-4 w-4 text-primary" />
+                        <div class="mt-1 rounded-full p-2" :class="statusIconClass(log.status)">
+                            <Lucide icon="Clock3" class="h-4 w-4" />
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold text-slate-800">{{ titleCase(log.status) }}</p>

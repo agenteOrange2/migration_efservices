@@ -90,16 +90,16 @@ function submit() {
             <div class="box box--stacked p-6">
                 <h2 class="text-base font-semibold text-slate-800">Publishing Notes</h2>
                 <div class="mt-4 space-y-4 text-sm text-slate-600">
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                        <p class="font-medium text-slate-800">Draft</p>
+                    <div class="rounded-xl border border-warning/10 bg-warning/5 p-4">
+                        <p class="font-medium text-warning">Draft</p>
                         <p class="mt-1">Keeps the message editable so you can review recipients and content before delivery.</p>
                     </div>
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                        <p class="font-medium text-slate-800">Send Now</p>
+                    <div class="rounded-xl border border-success/10 bg-success/5 p-4">
+                        <p class="font-medium text-success">Send Now</p>
                         <p class="mt-1">Creates the record and attempts email delivery immediately for every valid recipient.</p>
                     </div>
-                    <div class="rounded-xl border border-dashed border-slate-300 bg-white p-4">
-                        <p class="font-medium text-slate-800">Tip</p>
+                    <div class="rounded-xl border border-info/10 bg-info/5 p-4">
+                        <p class="font-medium text-info">Tip</p>
                         <p class="mt-1">For larger announcements, save a draft first so the recipient list can be verified before sending.</p>
                     </div>
                 </div>

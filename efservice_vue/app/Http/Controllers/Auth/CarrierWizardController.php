@@ -191,7 +191,7 @@ class CarrierWizardController extends Controller
     public function showStep3(): Response|RedirectResponse
     {
         $user    = Auth::user();
-        $carrier = $user->carrierDetails?->carrier;
+        $carrier = $user->carrierDetails?->carrier()->first();
 
         if (! $carrier) {
             return redirect()->route('carrier.wizard.step2')
@@ -216,8 +216,15 @@ class CarrierWizardController extends Controller
         try {
             DB::beginTransaction();
 
-            $user       = Auth::user();
-            $carrier    = $user->carrierDetails->carrier;
+            $user    = Auth::user();
+            $carrier = $user->carrierDetails?->carrier()->first();
+
+            if (! $carrier) {
+                DB::rollBack();
+                return redirect()->route('carrier.wizard.step2')
+                    ->withErrors(['general' => 'Please complete your company information first.']);
+            }
+
             $membership = Membership::findOrFail($request->membership_id);
 
             $carrier->update([
@@ -265,7 +272,7 @@ class CarrierWizardController extends Controller
     public function showStep4(): Response|RedirectResponse
     {
         $user    = Auth::user();
-        $carrier = $user->carrierDetails->carrier;
+        $carrier = $user->carrierDetails?->carrier()->first();
 
         if (! $carrier || ! $carrier->id_plan) {
             return redirect()->route('carrier.wizard.step3')
@@ -283,7 +290,7 @@ class CarrierWizardController extends Controller
             DB::beginTransaction();
 
             $user    = Auth::user();
-            $carrier = $user->carrierDetails->carrier;
+            $carrier = $user->carrierDetails?->carrier()->first();
 
             if (! $carrier || ! $carrier->id_plan) {
                 return redirect()->route('carrier.wizard.step3')

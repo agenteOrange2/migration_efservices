@@ -96,7 +96,7 @@ class SecurityHeaders
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net unpkg.com", // Allow CDN scripts
                 "style-src 'self' 'unsafe-inline' fonts.googleapis.com fonts.bunny.net cdn.jsdelivr.net", // Allow CDN styles
                 "font-src 'self' fonts.gstatic.com fonts.bunny.net data:",
-                "img-src 'self' data: https: via.placeholder.com", // Allow placeholder images
+                "img-src 'self' data: blob: https: via.placeholder.com", // Allow placeholder images and blob previews
                 "connect-src 'self' fonts.bunny.net cdn.jsdelivr.net",
                 "object-src 'none'",
                 "base-uri 'self'",
@@ -127,7 +127,7 @@ class SecurityHeaders
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net unpkg.com",
                 "style-src 'self' 'unsafe-inline' fonts.googleapis.com fonts.bunny.net cdn.jsdelivr.net",
                 "font-src 'self' fonts.gstatic.com fonts.bunny.net data:",
-                "img-src 'self' data: https:",
+                "img-src 'self' data: blob: https:",
                 "connect-src 'self' cdn.jsdelivr.net",
                 "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com", // Allow video embeds for trainings
                 "object-src 'none'",
@@ -142,7 +142,7 @@ class SecurityHeaders
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net unpkg.com", // Allow CDN scripts for signature_pad, pikaday, swiper, lucide
             "style-src 'self' 'unsafe-inline' fonts.googleapis.com fonts.bunny.net cdn.jsdelivr.net", // Allow Swiper CSS
             "font-src 'self' fonts.gstatic.com fonts.bunny.net data:",
-            "img-src 'self' data: https:",
+            "img-src 'self' data: blob: https:",
             "connect-src 'self' cdn.jsdelivr.net", // Allow CDN connections for source maps
             "frame-src 'self'",
             "object-src 'none'",

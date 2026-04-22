@@ -147,7 +147,7 @@ function submit() {
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div v-if="!isCarrierContext">
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-danger">*</span></label>
                             <TomSelect v-model="selectedCarrierId">
                                 <option value="">Select carrier</option>
                                 <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">
@@ -162,7 +162,7 @@ function submit() {
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-danger">*</span></label>
                             <TomSelect
                                 v-model="form.user_driver_detail_id"
                             >
@@ -171,7 +171,7 @@ function submit() {
                                     {{ driver.name }}
                                 </option>
                             </TomSelect>
-                            <p v-if="form.errors.user_driver_detail_id" class="text-red-500 text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
+                            <p v-if="form.errors.user_driver_detail_id" class="text-danger text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
                         </div>
                     </div>
                 </div>
@@ -184,34 +184,34 @@ function submit() {
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">License Number <span class="text-red-500">*</span></label>
-                            <input v-model="form.license_number" type="text" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" :class="form.errors.license_number ? 'border-red-400' : ''" />
-                            <p v-if="form.errors.license_number" class="text-red-500 text-xs mt-1">{{ form.errors.license_number }}</p>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">License Number <span class="text-danger">*</span></label>
+                            <input v-model="form.license_number" type="text" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" :class="form.errors.license_number ? 'border-danger/60' : ''" />
+                            <p v-if="form.errors.license_number" class="text-danger text-xs mt-1">{{ form.errors.license_number }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">License Class <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">License Class <span class="text-danger">*</span></label>
                             <TomSelect v-model="form.license_class">
                                 <option value="A">Class A</option>
                                 <option value="B">Class B</option>
                                 <option value="C">Class C</option>
                             </TomSelect>
-                            <p v-if="form.errors.license_class" class="text-red-500 text-xs mt-1">{{ form.errors.license_class }}</p>
+                            <p v-if="form.errors.license_class" class="text-danger text-xs mt-1">{{ form.errors.license_class }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">State of Issue <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">State of Issue <span class="text-danger">*</span></label>
                             <TomSelect v-model="form.state_of_issue">
                                 <option value="">Select state</option>
                                 <option v-for="(label, code) in states" :key="code" :value="code">{{ label }}</option>
                             </TomSelect>
-                            <p v-if="form.errors.state_of_issue" class="text-red-500 text-xs mt-1">{{ form.errors.state_of_issue }}</p>
+                            <p v-if="form.errors.state_of_issue" class="text-danger text-xs mt-1">{{ form.errors.state_of_issue }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Expiration Date <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Expiration Date <span class="text-danger">*</span></label>
                             <Litepicker v-model="form.expiration_date" :options="lpOptions" />
-                            <p v-if="form.errors.expiration_date" class="text-red-500 text-xs mt-1">{{ form.errors.expiration_date }}</p>
+                            <p v-if="form.errors.expiration_date" class="text-danger text-xs mt-1">{{ form.errors.expiration_date }}</p>
                         </div>
                     </div>
                 </div>
@@ -252,7 +252,7 @@ function submit() {
                                 <span class="text-sm text-slate-700">{{ endorsement.code }} - {{ endorsement.name }}</span>
                             </label>
                         </div>
-                        <p v-if="form.errors.endorsement_ids" class="text-red-500 text-xs mt-2">{{ form.errors.endorsement_ids }}</p>
+                        <p v-if="form.errors.endorsement_ids" class="text-danger text-xs mt-2">{{ form.errors.endorsement_ids }}</p>
                     </div>
                 </div>
 
@@ -266,21 +266,21 @@ function submit() {
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Front Image</label>
                             <input type="file" accept=".jpg,.jpeg,.png,.pdf" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" @change="onFileChange('license_front_image', $event)" />
-                            <p v-if="form.errors.license_front_image" class="text-red-500 text-xs mt-1">{{ form.errors.license_front_image }}</p>
+                            <p v-if="form.errors.license_front_image" class="text-danger text-xs mt-1">{{ form.errors.license_front_image }}</p>
                         </div>
 
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Back Image</label>
                             <input type="file" accept=".jpg,.jpeg,.png,.pdf" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" @change="onFileChange('license_back_image', $event)" />
-                            <p v-if="form.errors.license_back_image" class="text-red-500 text-xs mt-1">{{ form.errors.license_back_image }}</p>
+                            <p v-if="form.errors.license_back_image" class="text-danger text-xs mt-1">{{ form.errors.license_back_image }}</p>
                         </div>
 
                         <div class="md:col-span-2">
                             <label class="block text-xs font-medium text-slate-600 mb-1.5">Additional Documents</label>
                             <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" @change="onDocumentFilesChange" />
                             <p class="text-xs text-slate-500 mt-1">Upload extra files related to this license if needed.</p>
-                            <p v-if="form.errors.license_documents" class="text-red-500 text-xs mt-1">{{ form.errors.license_documents }}</p>
-                            <p v-if="form.errors['license_documents.0']" class="text-red-500 text-xs mt-1">{{ form.errors['license_documents.0'] }}</p>
+                            <p v-if="form.errors.license_documents" class="text-danger text-xs mt-1">{{ form.errors.license_documents }}</p>
+                            <p v-if="form.errors['license_documents.0']" class="text-danger text-xs mt-1">{{ form.errors['license_documents.0'] }}</p>
                         </div>
                     </div>
                 </div>

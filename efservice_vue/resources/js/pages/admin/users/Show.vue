@@ -38,15 +38,25 @@ function deleteUser() {
 }
 
 const statusLabel = props.user.status === 1 ? 'Active' : 'Inactive'
-const statusClass = props.user.status === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+const statusClass = props.user.status === 1 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
 
-const roleBadge = (role: string) => {
+function roleBadge(role: string) {
     const map: Record<string, string> = {
-        superadmin: 'bg-purple-100 text-purple-700',
-        user_carrier: 'bg-blue-100 text-blue-700',
-        user_driver: 'bg-amber-100 text-amber-700',
+        superadmin: 'bg-danger/10 text-danger',
+        admin: 'bg-primary/10 text-primary',
+        user_carrier: 'bg-info/10 text-info',
+        user_driver: 'bg-warning/10 text-warning',
     }
-    return map[role] ?? 'bg-slate-100 text-slate-600'
+
+    return map[role] ?? 'bg-pending/10 text-pending'
+}
+
+function roleLabel(role: string) {
+    return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function driverStatusClass(status: number) {
+    return status === 1 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
 }
 
 const daysSinceCreation = Math.floor(
@@ -58,118 +68,125 @@ const daysSinceCreation = Math.floor(
     <Head :title="user.name" />
 
     <div class="grid grid-cols-12 gap-y-10 gap-x-6">
-        <!-- Header -->
         <div class="col-span-12">
-            <div class="flex flex-col md:h-10 gap-y-3 md:items-center md:flex-row">
-                <div class="text-base font-medium">
-                    <Link :href="route('admin.users.index')" class="text-primary hover:underline">Users</Link>
-                    <span class="mx-2 text-slate-400">/</span>
-                    {{ user.name }}
-                </div>
-                <div class="flex flex-col sm:flex-row gap-x-3 gap-y-2 md:ml-auto">
-                    <Link :href="route('admin.users.edit', user.id)">
-                        <Button variant="outline-primary" class="w-full sm:w-auto">
-                            <Lucide icon="PenSquare" class="w-4 h-4 mr-2" /> Edit User
+            <div class="box box--stacked p-6">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="rounded-2xl border border-primary/20 bg-primary/10 p-3">
+                            <Lucide icon="User" class="h-8 w-8 text-primary" />
+                        </div>
+                        <div>
+                            <div class="text-base font-medium">
+                                <Link :href="route('admin.users.index')" class="text-primary hover:underline">Users</Link>
+                                <span class="mx-2 text-slate-400">/</span>
+                                {{ user.name }}
+                            </div>
+                            <p class="mt-1 text-sm text-slate-500">Profile details, role assignments, and linked carrier or driver information.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                        <Link :href="route('admin.users.edit', user.id)">
+                            <Button variant="outline-primary" class="w-full sm:w-auto">
+                                <Lucide icon="PenSquare" class="mr-2 h-4 w-4" /> Edit User
+                            </Button>
+                        </Link>
+                        <Button variant="outline-danger" class="w-full sm:w-auto" @click="deleteUser">
+                            <Lucide icon="Trash2" class="mr-2 h-4 w-4" /> Delete
                         </Button>
-                    </Link>
-                    <Button variant="outline-danger" class="w-full sm:w-auto" @click="deleteUser">
-                        <Lucide icon="Trash2" class="w-4 h-4 mr-2" /> Delete
-                    </Button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Profile Card -->
         <div class="col-span-12 lg:col-span-4">
             <div class="box box--stacked p-6">
                 <div class="flex flex-col items-center text-center">
-                    <div class="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg mb-4">
-                        <img v-if="user.profile_photo_url" :src="user.profile_photo_url" :alt="user.name" class="w-full h-full object-cover" />
-                        <Lucide v-else icon="User" class="w-12 h-12 text-primary" />
+                    <div class="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-primary/10 shadow-lg">
+                        <img v-if="user.profile_photo_url" :src="user.profile_photo_url" :alt="user.name" class="h-full w-full object-cover" />
+                        <Lucide v-else icon="User" class="h-12 w-12 text-primary" />
                     </div>
-                    <h2 class="text-xl font-bold text-slate-800">{{ user.name }}</h2>
-                    <p class="text-sm text-slate-500 mt-1">{{ user.email }}</p>
 
-                    <span :class="[statusClass, 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium mt-3']">
+                    <h2 class="text-xl font-bold text-slate-800">{{ user.name }}</h2>
+                    <p class="mt-1 text-sm text-slate-500">{{ user.email }}</p>
+
+                    <span :class="[statusClass, 'mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium']">
                         {{ statusLabel }}
                     </span>
 
-                    <div class="flex flex-wrap justify-center gap-2 mt-4">
+                    <div class="mt-4 flex flex-wrap justify-center gap-2">
                         <span
                             v-for="r in user.roles"
                             :key="r.id"
-                            :class="[roleBadge(r.name), 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium']"
+                            :class="[roleBadge(r.name), 'inline-flex items-center rounded-full px-3 py-1 text-xs font-medium']"
                         >
-                            {{ r.name }}
+                            {{ roleLabel(r.name) }}
                         </span>
                     </div>
                 </div>
 
-                <div class="mt-6 pt-6 border-t border-slate-200 space-y-3">
+                <div class="mt-6 space-y-3 border-t border-slate-200 pt-6">
                     <div class="flex items-center gap-3 text-sm">
-                        <Lucide icon="Calendar" class="w-4 h-4 text-slate-400" />
+                        <Lucide icon="Calendar" class="h-4 w-4 text-slate-400" />
                         <span class="text-slate-600">Joined {{ new Date(user.created_at).toLocaleDateString() }}</span>
                     </div>
                     <div class="flex items-center gap-3 text-sm">
-                        <Lucide icon="Clock" class="w-4 h-4 text-slate-400" />
+                        <Lucide icon="Clock" class="h-4 w-4 text-slate-400" />
                         <span class="text-slate-600">{{ daysSinceCreation }} days since creation</span>
                     </div>
                     <div class="flex items-center gap-3 text-sm">
-                        <Lucide icon="RefreshCw" class="w-4 h-4 text-slate-400" />
+                        <Lucide icon="RefreshCw" class="h-4 w-4 text-slate-400" />
                         <span class="text-slate-600">Last updated {{ new Date(user.updated_at).toLocaleDateString() }}</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Details -->
-        <div class="col-span-12 lg:col-span-8 space-y-6">
-            <!-- Main Info -->
+        <div class="col-span-12 space-y-6 lg:col-span-8">
             <div class="box box--stacked p-6">
-                <div class="flex items-center gap-3 mb-6">
-                    <Lucide icon="Info" class="w-5 h-5 text-primary" />
+                <div class="mb-6 flex items-center gap-3">
+                    <Lucide icon="Info" class="h-5 w-5 text-primary" />
                     <h3 class="text-lg font-semibold text-slate-800">Main Information</h3>
                 </div>
 
-                <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-slate-50/50 rounded-lg p-4 border border-slate-100">
-                        <dt class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Full Name</dt>
+                <dl class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="rounded-lg border border-primary/10 bg-primary/5 p-4">
+                        <dt class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Full Name</dt>
                         <dd class="text-sm font-semibold text-slate-800">{{ user.name }}</dd>
                     </div>
-                    <div class="bg-slate-50/50 rounded-lg p-4 border border-slate-100">
-                        <dt class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Email</dt>
+                    <div class="rounded-lg border border-info/10 bg-info/5 p-4">
+                        <dt class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Email</dt>
                         <dd class="text-sm font-semibold text-slate-800">{{ user.email }}</dd>
                     </div>
-                    <div class="bg-slate-50/50 rounded-lg p-4 border border-slate-100">
-                        <dt class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Status</dt>
+                    <div class="rounded-lg border p-4" :class="user.status === 1 ? 'border-success/10 bg-success/5' : 'border-danger/10 bg-danger/5'">
+                        <dt class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Status</dt>
                         <dd>
-                            <span :class="[statusClass, 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium']">
+                            <span :class="[statusClass, 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium']">
                                 {{ statusLabel }}
                             </span>
                         </dd>
                     </div>
-                    <div class="bg-slate-50/50 rounded-lg p-4 border border-slate-100">
-                        <dt class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Created At</dt>
+                    <div class="rounded-lg border border-pending/10 bg-pending/5 p-4">
+                        <dt class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Created At</dt>
                         <dd class="text-sm font-semibold text-slate-800">{{ new Date(user.created_at).toLocaleString() }}</dd>
                     </div>
                 </dl>
             </div>
 
-            <!-- Roles -->
             <div class="box box--stacked p-6">
-                <div class="flex items-center gap-3 mb-6">
-                    <Lucide icon="Shield" class="w-5 h-5 text-primary" />
+                <div class="mb-6 flex items-center gap-3">
+                    <Lucide icon="Shield" class="h-5 w-5 text-primary" />
                     <h3 class="text-lg font-semibold text-slate-800">Roles & Permissions</h3>
                 </div>
 
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="bg-slate-50/50 rounded-lg p-4 border border-slate-100 text-center">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="rounded-lg border border-primary/10 bg-primary/5 p-4 text-center">
                         <div class="text-2xl font-bold text-primary">{{ user.roles.length }}</div>
-                        <div class="text-xs text-slate-500 mt-1">Assigned Roles</div>
+                        <div class="mt-1 text-xs text-slate-500">Assigned Roles</div>
                     </div>
-                    <div class="bg-slate-50/50 rounded-lg p-4 border border-slate-100 text-center">
-                        <div class="text-2xl font-bold text-slate-700">{{ daysSinceCreation }}</div>
-                        <div class="text-xs text-slate-500 mt-1">Days Active</div>
+                    <div class="rounded-lg border border-info/10 bg-info/5 p-4 text-center">
+                        <div class="text-2xl font-bold text-info">{{ daysSinceCreation }}</div>
+                        <div class="mt-1 text-xs text-slate-500">Days Active</div>
                     </div>
                 </div>
 
@@ -177,25 +194,25 @@ const daysSinceCreation = Math.floor(
                     <div
                         v-for="r in user.roles"
                         :key="r.id"
-                        class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50"
+                        class="flex items-center gap-3 rounded-lg border p-3"
+                        :class="roleBadge(r.name)"
                     >
-                        <div :class="[roleBadge(r.name), 'w-8 h-8 rounded-full flex items-center justify-center']">
-                            <Lucide icon="Shield" class="w-4 h-4" />
+                        <div class="flex h-8 w-8 items-center justify-center rounded-full bg-white/80">
+                            <Lucide icon="Shield" class="h-4 w-4" />
                         </div>
-                        <span class="text-sm font-medium text-slate-700">{{ r.name }}</span>
+                        <span class="text-sm font-medium">{{ roleLabel(r.name) }}</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Carrier/Driver Info -->
             <div v-if="carrierInfo || driverInfo" class="box box--stacked p-6">
-                <div class="flex items-center gap-3 mb-6">
-                    <Lucide icon="Link" class="w-5 h-5 text-primary" />
+                <div class="mb-6 flex items-center gap-3">
+                    <Lucide icon="Link" class="h-5 w-5 text-primary" />
                     <h3 class="text-lg font-semibold text-slate-800">Associated Details</h3>
                 </div>
 
-                <div v-if="carrierInfo" class="bg-blue-50/50 rounded-lg p-4 border border-blue-100 mb-4">
-                    <h4 class="text-xs font-medium text-blue-600 uppercase tracking-wide mb-2">Carrier Association</h4>
+                <div v-if="carrierInfo" class="mb-4 rounded-lg border border-info/10 bg-info/5 p-4">
+                    <h4 class="mb-2 text-xs font-medium uppercase tracking-wide text-info">Carrier Association</h4>
                     <dl class="grid grid-cols-2 gap-2">
                         <div>
                             <dt class="text-xs text-slate-500">Carrier</dt>
@@ -212,8 +229,8 @@ const daysSinceCreation = Math.floor(
                     </dl>
                 </div>
 
-                <div v-if="driverInfo" class="bg-amber-50/50 rounded-lg p-4 border border-amber-100">
-                    <h4 class="text-xs font-medium text-amber-600 uppercase tracking-wide mb-2">Driver Association</h4>
+                <div v-if="driverInfo" class="rounded-lg border border-warning/10 bg-warning/5 p-4">
+                    <h4 class="mb-2 text-xs font-medium uppercase tracking-wide text-warning">Driver Association</h4>
                     <dl class="grid grid-cols-2 gap-2">
                         <div>
                             <dt class="text-xs text-slate-500">Carrier</dt>
@@ -221,7 +238,11 @@ const daysSinceCreation = Math.floor(
                         </div>
                         <div>
                             <dt class="text-xs text-slate-500">Status</dt>
-                            <dd class="text-sm font-medium">{{ driverInfo.status === 1 ? 'Active' : 'Inactive' }}</dd>
+                            <dd>
+                                <span :class="[driverStatusClass(driverInfo.status), 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium']">
+                                    {{ driverInfo.status === 1 ? 'Active' : 'Inactive' }}
+                                </span>
+                            </dd>
                         </div>
                     </dl>
                 </div>

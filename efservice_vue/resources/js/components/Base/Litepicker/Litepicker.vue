@@ -46,6 +46,17 @@ const vLitepickerDirective = {
       tempValue.value = props.modelValue;
     }
   },
+  beforeUnmount(el: LitepickerElement) {
+    if (el?.litePickerInstance) {
+      try {
+        el.litePickerInstance.destroy();
+      } catch {
+        // Instance already disposed — ignore.
+      }
+      // @ts-expect-error — intentional cleanup of the attached instance
+      el.litePickerInstance = undefined;
+    }
+  },
 };
 
 const bindInstance = (el: LitepickerElement) => {

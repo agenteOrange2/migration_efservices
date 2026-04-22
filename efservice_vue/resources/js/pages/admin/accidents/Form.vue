@@ -226,14 +226,14 @@ function submit() {
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div v-if="!props.isCarrierContext">
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-danger">*</span></label>
                             <TomSelect v-model="selectedCarrierId">
                                 <option value="">Select carrier</option>
                                 <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">
                                     {{ carrier.name }}
                                 </option>
                             </TomSelect>
-                            <p v-if="form.errors.carrier_id" class="text-red-500 text-xs mt-1">{{ form.errors.carrier_id }}</p>
+                            <p v-if="form.errors.carrier_id" class="text-danger text-xs mt-1">{{ form.errors.carrier_id }}</p>
                         </div>
 
                         <div v-else class="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
@@ -243,14 +243,14 @@ function submit() {
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-danger">*</span></label>
                             <TomSelect v-model="form.user_driver_detail_id">
                                 <option value="">Select driver</option>
                                 <option v-for="driver in filteredDrivers" :key="driver.id" :value="String(driver.id)">
                                     {{ driver.name }}
                                 </option>
                             </TomSelect>
-                            <p v-if="form.errors.user_driver_detail_id" class="text-red-500 text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
+                            <p v-if="form.errors.user_driver_detail_id" class="text-danger text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
                         </div>
                     </div>
                 </div>
@@ -268,15 +268,15 @@ function submit() {
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Accident Date <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Accident Date <span class="text-danger">*</span></label>
                             <Litepicker v-model="form.accident_date" :options="lpOptions" />
-                            <p v-if="form.errors.accident_date" class="text-red-500 text-xs mt-1">{{ form.errors.accident_date }}</p>
+                            <p v-if="form.errors.accident_date" class="text-danger text-xs mt-1">{{ form.errors.accident_date }}</p>
                         </div>
 
                         <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Nature of Accident <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Nature of Accident <span class="text-danger">*</span></label>
                             <FormInput v-model="form.nature_of_accident" type="text" placeholder="Describe the accident" />
-                            <p v-if="form.errors.nature_of_accident" class="text-red-500 text-xs mt-1">{{ form.errors.nature_of_accident }}</p>
+                            <p v-if="form.errors.nature_of_accident" class="text-danger text-xs mt-1">{{ form.errors.nature_of_accident }}</p>
                         </div>
                     </div>
                 </div>
@@ -297,7 +297,7 @@ function submit() {
                             <div v-if="form.had_injuries" class="mt-4">
                                 <label class="block text-xs font-medium text-slate-600 mb-1.5">Number of Injuries</label>
                                 <FormInput v-model="form.number_of_injuries" type="number" min="0" />
-                                <p v-if="form.errors.number_of_injuries" class="text-red-500 text-xs mt-1">{{ form.errors.number_of_injuries }}</p>
+                                <p v-if="form.errors.number_of_injuries" class="text-danger text-xs mt-1">{{ form.errors.number_of_injuries }}</p>
                             </div>
                         </div>
 
@@ -310,7 +310,7 @@ function submit() {
                             <div v-if="form.had_fatalities" class="mt-4">
                                 <label class="block text-xs font-medium text-slate-600 mb-1.5">Number of Fatalities</label>
                                 <FormInput v-model="form.number_of_fatalities" type="number" min="0" />
-                                <p v-if="form.errors.number_of_fatalities" class="text-red-500 text-xs mt-1">{{ form.errors.number_of_fatalities }}</p>
+                                <p v-if="form.errors.number_of_fatalities" class="text-danger text-xs mt-1">{{ form.errors.number_of_fatalities }}</p>
                             </div>
                         </div>
                     </div>
@@ -323,7 +323,7 @@ function submit() {
                             class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:border-primary focus:ring-primary"
                             placeholder="Add any relevant details about the accident..."
                         />
-                        <p v-if="form.errors.comments" class="text-red-500 text-xs mt-1">{{ form.errors.comments }}</p>
+                        <p v-if="form.errors.comments" class="text-danger text-xs mt-1">{{ form.errors.comments }}</p>
                     </div>
                 </div>
 
@@ -343,8 +343,8 @@ function submit() {
                             @change="onFilesChange"
                         />
                         <p class="text-xs text-slate-500 mt-2">Accepted: JPG, PNG, PDF, DOC, DOCX up to 10MB each.</p>
-                        <p v-if="form.errors.attachments" class="text-red-500 text-xs mt-1">{{ form.errors.attachments }}</p>
-                        <p v-if="form.errors['attachments.0']" class="text-red-500 text-xs mt-1">{{ form.errors['attachments.0'] }}</p>
+                        <p v-if="form.errors.attachments" class="text-danger text-xs mt-1">{{ form.errors.attachments }}</p>
+                        <p v-if="form.errors['attachments.0']" class="text-danger text-xs mt-1">{{ form.errors['attachments.0'] }}</p>
                     </div>
 
                     <div v-if="form.attachments.length" class="mt-4 space-y-2">

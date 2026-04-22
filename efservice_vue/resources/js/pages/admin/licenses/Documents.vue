@@ -210,14 +210,14 @@ function deleteDocument(document: DocumentRow) {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 mt-4">
-                    <button type="button" @click="applyFilters" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                    <Button type="button" variant="primary" class="flex items-center gap-2" @click="applyFilters">
                         <Lucide icon="Filter" class="w-4 h-4" />
                         Apply Filters
-                    </button>
-                    <button type="button" @click="resetFilters" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">
+                    </Button>
+                    <Button type="button" variant="outline-secondary" class="flex items-center gap-2" @click="resetFilters">
                         <Lucide icon="RotateCcw" class="w-4 h-4" />
                         Clear
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -249,7 +249,7 @@ function deleteDocument(document: DocumentRow) {
                                 <td class="px-5 py-4 text-sm text-slate-700">{{ document.driver_name }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-700">{{ document.license_number ?? 'N/A' }}</td>
                                 <td class="px-5 py-4">
-                                    <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                    <span class="inline-flex rounded-full bg-info/10 px-2.5 py-1 text-xs font-medium text-info">
                                         {{ document.collection_label }}
                                     </span>
                                 </td>
@@ -266,13 +266,13 @@ function deleteDocument(document: DocumentRow) {
                                         <a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </a>
-                                        <Link v-if="document.license_id" :href="namedRoute('documentsShow', document.license_id)" class="p-1.5 text-slate-400 hover:text-sky-500 transition" title="Open documents">
+                                        <Link v-if="document.license_id" :href="namedRoute('documentsShow', document.license_id)" class="p-1.5 text-slate-400 hover:text-info transition" title="Open documents">
                                             <Lucide icon="Files" class="w-4 h-4" />
                                         </Link>
-                                        <Link v-if="document.license_id" :href="namedRoute('edit', document.license_id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit license">
+                                        <Link v-if="document.license_id" :href="namedRoute('edit', document.license_id)" class="p-1.5 text-slate-400 hover:text-warning transition" title="Edit license">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
-                                        <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
+                                        <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete">
                                             <Lucide icon="Trash2" class="w-4 h-4" />
                                         </button>
                                     </div>

@@ -150,12 +150,12 @@ function submit() {
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div v-if="!props.isCarrierContext">
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Carrier <span class="text-danger">*</span></label>
                             <TomSelect v-model="selectedCarrierId">
                                 <option value="">Select carrier</option>
                                 <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">{{ carrier.name }}</option>
                             </TomSelect>
-                            <p v-if="form.errors.carrier_id" class="text-red-500 text-xs mt-1">{{ form.errors.carrier_id }}</p>
+                            <p v-if="form.errors.carrier_id" class="text-danger text-xs mt-1">{{ form.errors.carrier_id }}</p>
                         </div>
 
                         <div v-else class="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
@@ -165,12 +165,12 @@ function submit() {
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Driver <span class="text-danger">*</span></label>
                             <TomSelect v-model="form.user_driver_detail_id">
                                 <option value="">Select driver</option>
                                 <option v-for="driver in filteredDrivers" :key="driver.id" :value="String(driver.id)">{{ driver.name }}</option>
                             </TomSelect>
-                            <p v-if="form.errors.user_driver_detail_id" class="text-red-500 text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
+                            <p v-if="form.errors.user_driver_detail_id" class="text-danger text-xs mt-1">{{ form.errors.user_driver_detail_id }}</p>
                         </div>
                     </div>
                 </div>
@@ -183,27 +183,27 @@ function submit() {
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Conviction Date <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Conviction Date <span class="text-danger">*</span></label>
                             <Litepicker v-model="form.conviction_date" :options="lpOptions" />
-                            <p v-if="form.errors.conviction_date" class="text-red-500 text-xs mt-1">{{ form.errors.conviction_date }}</p>
+                            <p v-if="form.errors.conviction_date" class="text-danger text-xs mt-1">{{ form.errors.conviction_date }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Location <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Location <span class="text-danger">*</span></label>
                             <FormInput v-model="form.location" type="text" placeholder="City, State" />
-                            <p v-if="form.errors.location" class="text-red-500 text-xs mt-1">{{ form.errors.location }}</p>
+                            <p v-if="form.errors.location" class="text-danger text-xs mt-1">{{ form.errors.location }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Charge <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Charge <span class="text-danger">*</span></label>
                             <FormInput v-model="form.charge" type="text" placeholder="Speeding, lane violation, etc." />
-                            <p v-if="form.errors.charge" class="text-red-500 text-xs mt-1">{{ form.errors.charge }}</p>
+                            <p v-if="form.errors.charge" class="text-danger text-xs mt-1">{{ form.errors.charge }}</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Penalty <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1.5">Penalty <span class="text-danger">*</span></label>
                             <FormInput v-model="form.penalty" type="text" placeholder="Fine, points, suspension..." />
-                            <p v-if="form.errors.penalty" class="text-red-500 text-xs mt-1">{{ form.errors.penalty }}</p>
+                            <p v-if="form.errors.penalty" class="text-danger text-xs mt-1">{{ form.errors.penalty }}</p>
                         </div>
                     </div>
                 </div>
@@ -218,8 +218,8 @@ function submit() {
                         <label class="block text-xs font-medium text-slate-600 mb-1.5">Attachments</label>
                         <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" @change="onFileChange" />
                         <p class="text-xs text-slate-500 mt-1">You can upload citation scans, PDFs or other support files.</p>
-                        <p v-if="form.errors.attachments" class="text-red-500 text-xs mt-1">{{ form.errors.attachments }}</p>
-                        <p v-if="form.errors['attachments.0']" class="text-red-500 text-xs mt-1">{{ form.errors['attachments.0'] }}</p>
+                        <p v-if="form.errors.attachments" class="text-danger text-xs mt-1">{{ form.errors.attachments }}</p>
+                        <p v-if="form.errors['attachments.0']" class="text-danger text-xs mt-1">{{ form.errors['attachments.0'] }}</p>
                     </div>
                 </div>
 

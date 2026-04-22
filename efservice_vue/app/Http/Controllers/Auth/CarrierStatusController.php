@@ -16,7 +16,7 @@ class CarrierStatusController extends Controller
     public function pendingValidation(): Response|RedirectResponse
     {
         $user    = Auth::user();
-        $carrier = $user->carrierDetails?->carrier;
+        $carrier = $user->carrierDetails?->carrier()->first();
 
         if (! $carrier) {
             return redirect()->route('carrier.wizard.step1');
@@ -49,7 +49,7 @@ class CarrierStatusController extends Controller
     public function showConfirmation(): Response|RedirectResponse
     {
         $user    = Auth::user();
-        $carrier = $user->carrierDetails?->carrier;
+        $carrier = $user->carrierDetails?->carrier()->first();
 
         if (! $carrier) {
             return redirect()->route('carrier.wizard.step2')
@@ -67,7 +67,7 @@ class CarrierStatusController extends Controller
     public function showInactive(): Response|RedirectResponse
     {
         $user    = Auth::user();
-        $carrier = $user->carrierDetails?->carrier;
+        $carrier = $user->carrierDetails?->carrier()->first();
 
         if (! $carrier) {
             return redirect()->route('carrier.wizard.step1');
@@ -85,7 +85,7 @@ class CarrierStatusController extends Controller
     public function showBankingRejected(): Response|RedirectResponse
     {
         $user           = Auth::user();
-        $carrier        = $user->carrierDetails?->carrier;
+        $carrier        = $user->carrierDetails?->carrier()->first();
         $bankingDetails = $carrier?->bankingDetails;
 
         if (! $carrier || ! $bankingDetails?->isRejected()) {
@@ -108,7 +108,7 @@ class CarrierStatusController extends Controller
         ]);
 
         $user    = Auth::user();
-        $carrier = $user->carrierDetails?->carrier;
+        $carrier = $user->carrierDetails?->carrier()->first();
 
         Log::info('Carrier requested reactivation', [
             'user_id'    => $user->id,

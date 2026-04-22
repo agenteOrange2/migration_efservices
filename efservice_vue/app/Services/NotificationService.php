@@ -177,7 +177,7 @@ class NotificationService
         try {
             // Send email to each recipient
             foreach ($recipients as $recipient) {
-                Mail::to($recipient)->queue(new NewCarrierAdminNotification($user, $carrier, $eventType, $step, $data));
+                Mail::to($recipient)->send(new NewCarrierAdminNotification($user, $carrier, $eventType, $step, $data));
             }
 
             // Send native Laravel notifications to admin users (for the bell icon)
@@ -346,7 +346,7 @@ class NotificationService
         try {
             $adminEmail = config('app.admin_notification_email', env('ADMIN_NOTIFICATION_EMAIL', 'frontend@kuiraweb.com'));
             
-            Mail::to($adminEmail)->queue(new AdminNotificationMail(
+            Mail::to($adminEmail)->send(new AdminNotificationMail(
                 $user,
                 $carrier,
                 $eventType,

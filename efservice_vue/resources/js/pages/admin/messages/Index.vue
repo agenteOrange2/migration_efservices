@@ -86,15 +86,16 @@ function titleCase(value: string) {
 }
 
 function statusBadgeClass(status: string) {
-    if (status === 'sent') return 'bg-primary/10 text-primary'
-    if (status === 'draft') return 'bg-slate-100 text-slate-600'
-    return 'bg-slate-200 text-slate-700'
+    if (status === 'sent' || status === 'delivered') return 'bg-success/10 text-success'
+    if (status === 'draft' || status === 'pending') return 'bg-warning/10 text-warning'
+    if (status === 'failed') return 'bg-danger/10 text-danger'
+    return 'bg-info/10 text-info'
 }
 
 function priorityBadgeClass(priority: string) {
-    if (priority === 'high') return 'bg-slate-200 text-slate-700'
+    if (priority === 'high') return 'bg-danger/10 text-danger'
     if (priority === 'normal') return 'bg-primary/10 text-primary'
-    return 'bg-slate-100 text-slate-600'
+    return 'bg-info/10 text-info'
 }
 
 function deleteMessage(message: MessageRow) {
@@ -149,21 +150,22 @@ function resendMessage(message: MessageRow) {
         </div>
 
         <div class="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-primary/10 p-5">
                 <p class="text-sm text-slate-500">Total</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.total }}</p>
+                <p class="mt-2 text-3xl font-semibold text-primary">{{ stats.total }}</p>
             </div>
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-success/10 p-5">
                 <p class="text-sm text-slate-500">Sent</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.sent }}</p>
+                <p class="mt-2 text-3xl font-semibold text-success">{{ stats.sent }}</p>
             </div>
-            <div class="box box--stacked p-5">
+            <div class="box box--stacked border border-warning/10 p-5">
                 <p class="text-sm text-slate-500">Drafts</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.draft }}</p>
+                <p class="mt-2 text-3xl font-semibold text-warning">{{ stats.draft }}</p>
             </div>
-            <div class="box box--stacked p-5">
-                <p class="text-sm text-slate-500">Created Today</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.sent_today }}</p>
+            <div class="box box--stacked border border-danger/10 p-5">
+                <p class="text-sm text-slate-500">Failed</p>
+                <p class="mt-2 text-3xl font-semibold text-danger">{{ stats.failed }}</p>
+                <p class="mt-2 text-xs text-slate-500">{{ stats.sent_today }} created today</p>
             </div>
         </div>
 
@@ -267,19 +269,19 @@ function resendMessage(message: MessageRow) {
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center justify-end gap-2">
-                                        <Link :href="route('admin.messages.show', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-primary">
+                                        <Link :href="route('admin.messages.show', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-primary/30 hover:text-primary">
                                             <Lucide icon="Eye" class="h-4 w-4" />
                                         </Link>
-                                        <Link v-if="message.can_edit" :href="route('admin.messages.edit', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-primary">
+                                        <Link v-if="message.can_edit" :href="route('admin.messages.edit', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-warning/30 hover:text-warning">
                                             <Lucide icon="PenLine" class="h-4 w-4" />
                                         </Link>
-                                        <button type="button" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-primary" @click="duplicateMessage(message)">
+                                        <button type="button" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-info/30 hover:text-info" @click="duplicateMessage(message)">
                                             <Lucide icon="Copy" class="h-4 w-4" />
                                         </button>
-                                        <button v-if="message.can_resend" type="button" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-primary" @click="resendMessage(message)">
+                                        <button v-if="message.can_resend" type="button" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-success/30 hover:text-success" @click="resendMessage(message)">
                                             <Lucide icon="Send" class="h-4 w-4" />
                                         </button>
-                                        <button v-if="message.can_delete" type="button" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-700" @click="deleteMessage(message)">
+                                        <button v-if="message.can_delete" type="button" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-danger/30 hover:text-danger" @click="deleteMessage(message)">
                                             <Lucide icon="Trash2" class="h-4 w-4" />
                                         </button>
                                     </div>

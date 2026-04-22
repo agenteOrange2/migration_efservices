@@ -58,7 +58,7 @@ class CheckCarrierStatus
         }
 
         // Validate carrier status
-        $carrier = $user->carrierDetails->carrier;
+        $carrier = $user->carrierDetails->carrier()->first();
         return $this->handleCarrierStatus($request, $next, $user, $carrier);
     }
 
@@ -71,7 +71,7 @@ class CheckCarrierStatus
             return false;
         }
 
-        $carrier = $user->carrierDetails->carrier;
+        $carrier = $user->carrierDetails->carrier()->first();
 
         // Redirect if carrier is active
         if ($carrier && $carrier->status === Carrier::STATUS_ACTIVE) {

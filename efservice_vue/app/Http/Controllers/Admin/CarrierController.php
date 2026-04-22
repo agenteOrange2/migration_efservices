@@ -363,7 +363,7 @@ class CarrierController extends Controller
 
             return redirect()
                 ->route('admin.carriers.index')
-                ->with('success', 'Carrier deactivated successfully.');
+                ->with('success', 'Carrier deleted successfully.');
         } catch (\Exception $e) {
             return back()->with('error', 'Error: ' . $e->getMessage());
         }

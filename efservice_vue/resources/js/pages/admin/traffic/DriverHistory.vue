@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { reactive } from 'vue'
 import Lucide from '@/components/Base/Lucide'
+import Button from '@/components/Base/Button'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import { FormInput } from '@/components/Base/Form'
 import RazeLayout from '@/layouts/RazeLayout.vue'
@@ -91,13 +92,17 @@ function sortUrl(field: string) {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route(props.routeNames?.driverShow ?? 'admin.drivers.show', driver.id)" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">
-                            <Lucide icon="ArrowLeft" class="w-4 h-4" />
-                            Back to Driver
+                        <Link :href="route(props.routeNames?.driverShow ?? 'admin.drivers.show', driver.id)">
+                            <Button variant="outline-secondary" class="flex items-center gap-2">
+                                <Lucide icon="ArrowLeft" class="w-4 h-4" />
+                                Back to Driver
+                            </Button>
                         </Link>
-                        <Link :href="route(props.routeNames?.create ?? 'admin.traffic.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
-                            <Lucide icon="Plus" class="w-4 h-4" />
-                            Add Conviction
+                        <Link :href="route(props.routeNames?.create ?? 'admin.traffic.create')">
+                            <Button variant="primary" class="flex items-center gap-2">
+                                <Lucide icon="Plus" class="w-4 h-4" />
+                                Add Conviction
+                            </Button>
                         </Link>
                     </div>
                 </div>
@@ -114,14 +119,14 @@ function sortUrl(field: string) {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 mt-4">
-                    <button type="button" @click="applyFilters" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                    <Button type="button" variant="primary" class="flex items-center gap-2" @click="applyFilters">
                         <Lucide icon="Filter" class="w-4 h-4" />
                         Apply Filters
-                    </button>
-                    <button type="button" @click="resetFilters" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">
+                    </Button>
+                    <Button type="button" variant="outline-secondary" class="flex items-center gap-2" @click="resetFilters">
                         <Lucide icon="RotateCcw" class="w-4 h-4" />
                         Clear
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -161,11 +166,11 @@ function sortUrl(field: string) {
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ conviction.location ?? 'N/A' }}</td>
                                 <td class="px-5 py-4 text-sm font-medium text-slate-700">{{ conviction.charge ?? 'N/A' }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ conviction.penalty ?? 'N/A' }}</td>
-                                <td class="px-5 py-4 text-center text-sm font-medium text-slate-700">{{ conviction.document_count }}</td>
+                                <td class="px-5 py-4 text-center text-sm font-medium text-info">{{ conviction.document_count }}</td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
                                         <Link :href="route(props.routeNames?.documentsShow ?? 'admin.traffic.documents.show', conviction.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Documents"><Lucide icon="Files" class="w-4 h-4" /></Link>
-                                        <Link :href="route(props.routeNames?.edit ?? 'admin.traffic.edit', conviction.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
+                                        <Link :href="route(props.routeNames?.edit ?? 'admin.traffic.edit', conviction.id)" class="p-1.5 text-slate-400 hover:text-warning transition" title="Edit"><Lucide icon="PenLine" class="w-4 h-4" /></Link>
                                     </div>
                                 </td>
                             </tr>

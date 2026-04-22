@@ -104,7 +104,7 @@ const customEmailsPreview = computed(() => {
                 <div>
                     <FormLabel>Subject *</FormLabel>
                     <FormInput v-model="form.subject" type="text" placeholder="Enter message subject..." />
-                    <p v-if="form.errors.subject" class="mt-1 text-xs text-red-500">{{ form.errors.subject }}</p>
+                    <p v-if="form.errors.subject" class="mt-1 text-xs text-danger">{{ form.errors.subject }}</p>
                 </div>
 
                 <div>
@@ -114,7 +114,7 @@ const customEmailsPreview = computed(() => {
                         <span>Keep the content clear and direct.</span>
                         <span>{{ messageLength }}/2000</span>
                     </div>
-                    <p v-if="form.errors.message" class="mt-1 text-xs text-red-500">{{ form.errors.message }}</p>
+                    <p v-if="form.errors.message" class="mt-1 text-xs text-danger">{{ form.errors.message }}</p>
                 </div>
 
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -125,7 +125,7 @@ const customEmailsPreview = computed(() => {
                             <option value="normal">Normal</option>
                             <option value="high">High</option>
                         </FormSelect>
-                        <p v-if="form.errors.priority" class="mt-1 text-xs text-red-500">{{ form.errors.priority }}</p>
+                        <p v-if="form.errors.priority" class="mt-1 text-xs text-danger">{{ form.errors.priority }}</p>
                     </div>
 
                     <div>
@@ -137,7 +137,7 @@ const customEmailsPreview = computed(() => {
                         <FormHelp>
                             {{ mode === 'create' ? 'Drafts can be reviewed before sending.' : 'Changing to "Send Now" will deliver the draft to all pending recipients.' }}
                         </FormHelp>
-                        <p v-if="form.errors.status" class="mt-1 text-xs text-red-500">{{ form.errors.status }}</p>
+                        <p v-if="form.errors.status" class="mt-1 text-xs text-danger">{{ form.errors.status }}</p>
                     </div>
                 </div>
             </div>
@@ -155,19 +155,19 @@ const customEmailsPreview = computed(() => {
             </div>
 
             <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div class="rounded-2xl border border-dashed border-slate-300/80 bg-slate-50/80 p-4">
+                <div class="rounded-2xl border border-primary/10 bg-primary/5 p-4">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Drivers</p>
-                    <p class="mt-2 text-2xl font-semibold text-slate-800">{{ selectedDriverCount }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-primary">{{ selectedDriverCount }}</p>
                     <p class="mt-1 text-xs text-slate-500">Currently selected in this form.</p>
                 </div>
-                <div class="rounded-2xl border border-dashed border-slate-300/80 bg-slate-50/80 p-4">
+                <div class="rounded-2xl border border-success/10 bg-success/5 p-4">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Carriers</p>
-                    <p class="mt-2 text-2xl font-semibold text-slate-800">{{ selectedCarrierCount }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-success">{{ selectedCarrierCount }}</p>
                     <p class="mt-1 text-xs text-slate-500">Carrier contacts that will receive the message.</p>
                 </div>
-                <div class="rounded-2xl border border-dashed border-slate-300/80 bg-slate-50/80 p-4">
+                <div class="rounded-2xl border border-info/10 bg-info/5 p-4">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Email Entries</p>
-                    <p class="mt-2 text-2xl font-semibold text-slate-800">{{ customEmailsPreview }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-info">{{ customEmailsPreview }}</p>
                     <p class="mt-1 text-xs text-slate-500">Detected from the pasted email list.</p>
                 </div>
             </div>
@@ -261,8 +261,8 @@ const customEmailsPreview = computed(() => {
                         {{ driver.name }}{{ driver.email ? ` (${driver.email})` : '' }}{{ driver.carrier_name ? ` - ${driver.carrier_name}` : '' }}
                     </option>
                 </TomSelect>
-                <p v-if="mode === 'create' && form.errors.driver_ids" class="mt-1 text-xs text-red-500">{{ form.errors.driver_ids }}</p>
-                <p v-if="mode === 'edit' && form.errors.add_driver_ids" class="mt-1 text-xs text-red-500">{{ form.errors.add_driver_ids }}</p>
+                <p v-if="mode === 'create' && form.errors.driver_ids" class="mt-1 text-xs text-danger">{{ form.errors.driver_ids }}</p>
+                <p v-if="mode === 'edit' && form.errors.add_driver_ids" class="mt-1 text-xs text-danger">{{ form.errors.add_driver_ids }}</p>
             </div>
 
             <div v-if="selectedType === 'specific_carriers'" class="mt-6">
@@ -276,8 +276,8 @@ const customEmailsPreview = computed(() => {
                         {{ carrier.name }}{{ carrier.email ? ` (${carrier.email})` : '' }}
                     </option>
                 </TomSelect>
-                <p v-if="mode === 'create' && form.errors.carrier_ids" class="mt-1 text-xs text-red-500">{{ form.errors.carrier_ids }}</p>
-                <p v-if="mode === 'edit' && form.errors.add_carrier_ids" class="mt-1 text-xs text-red-500">{{ form.errors.add_carrier_ids }}</p>
+                <p v-if="mode === 'create' && form.errors.carrier_ids" class="mt-1 text-xs text-danger">{{ form.errors.carrier_ids }}</p>
+                <p v-if="mode === 'edit' && form.errors.add_carrier_ids" class="mt-1 text-xs text-danger">{{ form.errors.add_carrier_ids }}</p>
             </div>
 
             <div v-if="selectedType === 'custom_emails'" class="mt-6">
@@ -288,8 +288,8 @@ const customEmailsPreview = computed(() => {
                     placeholder="email1@example.com, email2@example.com"
                 />
                 <FormHelp>Separate multiple emails with commas, spaces, or new lines.</FormHelp>
-                <p v-if="mode === 'create' && form.errors.custom_emails" class="mt-1 text-xs text-red-500">{{ form.errors.custom_emails }}</p>
-                <p v-if="mode === 'edit' && form.errors.add_custom_emails" class="mt-1 text-xs text-red-500">{{ form.errors.add_custom_emails }}</p>
+                <p v-if="mode === 'create' && form.errors.custom_emails" class="mt-1 text-xs text-danger">{{ form.errors.custom_emails }}</p>
+                <p v-if="mode === 'edit' && form.errors.add_custom_emails" class="mt-1 text-xs text-danger">{{ form.errors.add_custom_emails }}</p>
             </div>
         </div>
     </div>

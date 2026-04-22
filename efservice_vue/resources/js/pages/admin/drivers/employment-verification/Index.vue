@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import Button from '@/components/Base/Button'
 import Lucide from '@/components/Base/Lucide'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
@@ -52,8 +52,6 @@ function applyFilters() {
 function clearFilters() {
     router.get(route('admin.drivers.employment-verification.index'))
 }
-
-watch([statusFilter, driverFilter], applyFilters)
 
 function resendEmail(id: number) {
     if (!confirm('Resend verification email to the employer?')) return
@@ -285,49 +283,54 @@ const statusIcon = (status: string) => {
                             <td class="px-5 py-4 align-top text-sm text-slate-500 whitespace-nowrap">{{ v.updated_at }}</td>
                             <td class="px-5 py-4 align-top">
                                 <div class="flex items-center justify-center gap-1.5">
-                                    <Link
-                                        :href="route('admin.drivers.employment-verification.show', v.id)"
-                                        title="View details"
-                                        class="btn btn-outline-primary btn-xs"
-                                    >
-                                        <Lucide icon="Eye" class="w-3.5 h-3.5" />
+                                    <Link :href="route('admin.drivers.employment-verification.show', v.id)" title="View details">
+                                        <Button variant="outline-primary" size="sm" class="!px-2.5 !py-2">
+                                            <Lucide icon="Eye" class="w-3.5 h-3.5" />
+                                        </Button>
                                     </Link>
 
-                                    <button
+                                    <Button
                                         @click="resendEmail(v.id)"
                                         :disabled="v.attempt_count >= 3"
                                         title="Resend verification email"
-                                        class="btn btn-outline-secondary btn-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                                        variant="outline-secondary"
+                                        size="sm"
+                                        class="!px-2.5 !py-2 disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                         <Lucide icon="Mail" class="w-3.5 h-3.5" />
-                                    </button>
+                                    </Button>
 
-                                    <button
+                                    <Button
                                         @click="toggleEmailFlag(v)"
                                         :title="v.email_sent ? 'Mark as not sent' : 'Mark as sent'"
-                                        class="btn btn-xs"
-                                        :class="v.email_sent ? 'btn-outline-secondary' : 'btn-outline-success'"
+                                        :variant="v.email_sent ? 'outline-secondary' : 'outline-success'"
+                                        size="sm"
+                                        class="!px-2.5 !py-2"
                                     >
                                         <Lucide :icon="v.email_sent ? 'X' : 'Check'" class="w-3.5 h-3.5" />
-                                    </button>
+                                    </Button>
 
-                                    <button
+                                    <Button
                                         v-if="v.verification_status !== 'verified'"
                                         @click="markVerified(v.id)"
                                         title="Mark as verified"
-                                        class="btn btn-outline-success btn-xs"
+                                        variant="outline-success"
+                                        size="sm"
+                                        class="!px-2.5 !py-2"
                                     >
                                         <Lucide icon="CheckCircle" class="w-3.5 h-3.5" />
-                                    </button>
+                                    </Button>
 
-                                    <button
+                                    <Button
                                         v-if="v.verification_status !== 'rejected'"
                                         @click="markRejected(v.id)"
                                         title="Mark as rejected"
-                                        class="btn btn-outline-danger btn-xs"
+                                        variant="outline-danger"
+                                        size="sm"
+                                        class="!px-2.5 !py-2"
                                     >
                                         <Lucide icon="XCircle" class="w-3.5 h-3.5" />
-                                    </button>
+                                    </Button>
                                 </div>
                             </td>
                         </tr>

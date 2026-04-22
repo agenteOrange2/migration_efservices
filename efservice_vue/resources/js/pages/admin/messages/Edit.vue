@@ -82,9 +82,9 @@ function recipientTypeLabel(type: string) {
 }
 
 function deliveryBadgeClass(status: string) {
-    if (status === 'delivered') return 'bg-primary/10 text-primary'
-    if (status === 'failed') return 'bg-slate-200 text-slate-700'
-    return 'bg-slate-100 text-slate-600'
+    if (status === 'delivered' || status === 'sent') return 'bg-success/10 text-success'
+    if (status === 'failed') return 'bg-danger/10 text-danger'
+    return 'bg-warning/10 text-warning'
 }
 
 function removeRecipient(recipient: RecipientRow) {
@@ -110,7 +110,7 @@ function removeRecipient(recipient: RecipientRow) {
                         <div>
                             <div class="flex flex-wrap items-center gap-3">
                                 <h1 class="text-2xl font-bold text-slate-800">Edit Draft Message</h1>
-                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">Draft #{{ message.id }}</span>
+                                <span class="rounded-full bg-warning/10 px-3 py-1 text-xs font-medium text-warning">Draft #{{ message.id }}</span>
                             </div>
                             <p class="text-sm text-slate-500">Update the content, add more recipients, or send this draft when it is ready.</p>
                         </div>
@@ -142,13 +142,13 @@ function removeRecipient(recipient: RecipientRow) {
             <div class="box box--stacked p-6">
                 <h2 class="text-base font-semibold text-slate-800">Draft Snapshot</h2>
                 <div class="mt-4 grid grid-cols-2 gap-3">
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="rounded-xl border border-primary/10 bg-primary/5 p-4">
                         <p class="text-xs text-slate-500">Recipients</p>
-                        <p class="mt-1 text-2xl font-semibold text-slate-800">{{ message.stats.total }}</p>
+                        <p class="mt-1 text-2xl font-semibold text-primary">{{ message.stats.total }}</p>
                     </div>
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="rounded-xl border border-info/10 bg-info/5 p-4">
                         <p class="text-xs text-slate-500">Reads</p>
-                        <p class="mt-1 text-2xl font-semibold text-slate-800">{{ message.stats.read }}</p>
+                        <p class="mt-1 text-2xl font-semibold text-info">{{ message.stats.read }}</p>
                     </div>
                 </div>
                 <p class="mt-4 text-sm text-slate-500">Created {{ message.created_at || 'recently' }}. Sending this draft will attempt delivery to all pending recipients.</p>
@@ -178,18 +178,18 @@ function removeRecipient(recipient: RecipientRow) {
                                 <p class="truncate text-sm font-semibold text-slate-800">{{ recipient.name }}</p>
                                 <p class="truncate text-xs text-slate-500">{{ recipient.email }}</p>
                                 <div class="mt-2 flex flex-wrap items-center gap-2">
-                                    <span class="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
+                                    <span class="rounded-full bg-info/10 px-2.5 py-1 text-[11px] font-medium text-info">
                                         {{ recipientTypeLabel(recipient.recipient_type) }}
                                     </span>
                                     <span class="rounded-full px-2.5 py-1 text-[11px] font-medium" :class="deliveryBadgeClass(recipient.delivery_status)">
-                                        {{ recipient.delivery_status }}
+                                        {{ recipient.delivery_status.charAt(0).toUpperCase() + recipient.delivery_status.slice(1) }}
                                     </span>
                                 </div>
                             </div>
 
                             <button
                                 type="button"
-                                class="rounded-lg border border-slate-200 p-2 text-slate-400 transition hover:border-slate-300 hover:text-slate-700"
+                                class="rounded-lg border border-slate-200 p-2 text-slate-400 transition hover:border-danger/30 hover:text-danger"
                                 @click="removeRecipient(recipient)"
                             >
                                 <Lucide icon="Trash2" class="h-4 w-4" />
@@ -200,6 +200,24 @@ function removeRecipient(recipient: RecipientRow) {
 
                 <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
                     This draft does not have recipients yet.
+                </div>
+            </div>
+
+            <div class="box box--stacked p-6">
+                <h2 class="text-base font-semibold text-slate-800">Delivery Status Guide</h2>
+                <div class="mt-4 space-y-3 text-sm text-slate-600">
+                    <div class="rounded-xl border border-success/10 bg-success/5 p-4">
+                        <p class="font-medium text-success">Delivered</p>
+                        <p class="mt-1">The email was accepted and recorded as delivered for the recipient.</p>
+                    </div>
+                    <div class="rounded-xl border border-warning/10 bg-warning/5 p-4">
+                        <p class="font-medium text-warning">Pending</p>
+                        <p class="mt-1">This recipient will be processed when the draft is sent or retried.</p>
+                    </div>
+                    <div class="rounded-xl border border-danger/10 bg-danger/5 p-4">
+                        <p class="font-medium text-danger">Failed</p>
+                        <p class="mt-1">Delivery could not be completed and may need a resend after correction.</p>
+                    </div>
                 </div>
             </div>
         </div>

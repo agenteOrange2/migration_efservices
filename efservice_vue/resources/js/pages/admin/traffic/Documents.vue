@@ -132,7 +132,7 @@ function deleteDocument(document: DocumentRow) {
                                 <td class="px-5 py-4">
                                     <div class="flex items-center justify-center gap-2">
                                         <a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview"><Lucide icon="Eye" class="w-4 h-4" /></a>
-                                        <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
+                                        <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete"><Lucide icon="Trash2" class="w-4 h-4" /></button>
                                     </div>
                                 </td>
                             </tr>

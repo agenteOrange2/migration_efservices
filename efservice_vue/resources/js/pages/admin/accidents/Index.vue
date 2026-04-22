@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { reactive, ref } from 'vue'
 import Lucide from '@/components/Base/Lucide'
+import Button from '@/components/Base/Button'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 import { Dialog } from '@/components/Base/Headless'
@@ -127,13 +128,17 @@ function confirmDelete() {
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <Link :href="route(props.routeNames?.documentsIndex ?? 'admin.accidents.documents.index')" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition">
-                            <Lucide icon="FileText" class="w-4 h-4" />
-                            View All Documents
+                        <Link :href="route(props.routeNames?.documentsIndex ?? 'admin.accidents.documents.index')">
+                            <Button variant="outline-primary" class="flex items-center gap-2">
+                                <Lucide icon="FileText" class="w-4 h-4" />
+                                View All Documents
+                            </Button>
                         </Link>
-                        <Link :href="route(props.routeNames?.create ?? 'admin.accidents.create')" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
-                            <Lucide icon="Plus" class="w-4 h-4" />
-                            Add Accident
+                        <Link :href="route(props.routeNames?.create ?? 'admin.accidents.create')">
+                            <Button variant="primary" class="flex items-center gap-2">
+                                <Lucide icon="Plus" class="w-4 h-4" />
+                                Add Accident
+                            </Button>
                         </Link>
                     </div>
                 </div>
@@ -168,15 +173,15 @@ function confirmDelete() {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 mt-4">
-                    <button type="button" @click="applyFilters" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                    <Button type="button" variant="primary" class="flex items-center gap-2" @click="applyFilters">
                         <Lucide icon="Filter" class="w-4 h-4" />
                         Apply Filters
-                    </button>
+                    </Button>
 
-                    <button type="button" @click="resetFilters" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">
+                    <Button type="button" variant="outline-secondary" class="flex items-center gap-2" @click="resetFilters">
                         <Lucide icon="RotateCcw" class="w-4 h-4" />
                         Clear
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -222,12 +227,12 @@ function confirmDelete() {
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ accident.nature_of_accident }}</td>
                                 <td class="px-5 py-4 text-sm text-slate-600">{{ accident.accident_date_display }}</td>
                                 <td class="px-5 py-4 text-sm">
-                                    <span :class="accident.had_injuries ? 'text-emerald-600' : 'text-red-500'">
+                                    <span :class="accident.had_injuries ? 'text-success' : 'text-danger'">
                                         {{ accident.had_injuries ? `Yes (${accident.number_of_injuries})` : 'No' }}
                                     </span>
                                 </td>
                                 <td class="px-5 py-4 text-sm">
-                                    <span :class="accident.had_fatalities ? 'text-emerald-600' : 'text-red-500'">
+                                    <span :class="accident.had_fatalities ? 'text-success' : 'text-danger'">
                                         {{ accident.had_fatalities ? `Yes (${accident.number_of_fatalities})` : 'No' }}
                                     </span>
                                 </td>
@@ -236,13 +241,13 @@ function confirmDelete() {
                                         <Link v-if="accident.driver" :href="route(props.routeNames?.driverHistory ?? 'admin.accidents.driver-history', accident.driver.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View history">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="route(props.routeNames?.documentsShow ?? 'admin.accidents.documents.show', accident.id)" class="p-1.5 text-slate-400 hover:text-blue-500 transition" title="View documents">
+                                        <Link :href="route(props.routeNames?.documentsShow ?? 'admin.accidents.documents.show', accident.id)" class="p-1.5 text-slate-400 hover:text-info transition" title="View documents">
                                             <Lucide icon="FileText" class="w-4 h-4" />
                                         </Link>
-                                        <Link :href="route(props.routeNames?.edit ?? 'admin.accidents.edit', accident.id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit">
+                                        <Link :href="route(props.routeNames?.edit ?? 'admin.accidents.edit', accident.id)" class="p-1.5 text-slate-400 hover:text-warning transition" title="Edit">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
-                                        <button type="button" @click="openDeleteModal(accident)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
+                                        <button type="button" @click="openDeleteModal(accident)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete">
                                             <Lucide icon="Trash2" class="w-4 h-4" />
                                         </button>
                                     </div>
@@ -253,9 +258,11 @@ function confirmDelete() {
                                 <td colspan="8" class="px-5 py-12 text-center text-slate-400">
                                     <Lucide icon="AlertTriangle" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
                                     <p>No accident records found</p>
-                                    <Link :href="route(props.routeNames?.create ?? 'admin.accidents.create')" class="inline-flex items-center gap-2 mt-4 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition">
-                                        <Lucide icon="Plus" class="w-4 h-4" />
-                                        Add First Accident
+                                    <Link :href="route(props.routeNames?.create ?? 'admin.accidents.create')">
+                                        <Button variant="outline-primary" class="mt-4 flex items-center gap-2">
+                                            <Lucide icon="Plus" class="w-4 h-4" />
+                                            Add First Accident
+                                        </Button>
                                     </Link>
                                 </td>
                             </tr>
@@ -291,8 +298,8 @@ function confirmDelete() {
                 <p v-if="selectedAccident" class="mt-4 text-sm font-medium text-slate-700">{{ selectedAccident.nature_of_accident }}</p>
             </div>
             <div class="flex justify-center gap-3 px-6 pb-8 pt-4">
-                <button type="button" class="min-w-24 rounded-lg border border-slate-300 px-6 py-2.5 text-base font-medium text-slate-600 hover:bg-slate-50" @click="deleteModalOpen = false">Cancel</button>
-                <button type="button" class="min-w-24 rounded-lg bg-danger px-6 py-2.5 text-base font-medium text-white hover:bg-danger/90" @click="confirmDelete">Delete</button>
+                <Button type="button" variant="outline-secondary" class="min-w-24" @click="deleteModalOpen = false">Cancel</Button>
+                <Button type="button" variant="danger" class="min-w-24" @click="confirmDelete">Delete</Button>
             </div>
         </Dialog.Panel>
     </Dialog>

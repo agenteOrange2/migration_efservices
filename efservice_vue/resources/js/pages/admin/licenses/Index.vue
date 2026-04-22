@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { computed, reactive, ref } from 'vue'
 import Lucide from '@/components/Base/Lucide'
+import Button from '@/components/Base/Button'
 import { FormInput } from '@/components/Base/Form'
 import { Dialog } from '@/components/Base/Headless'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
@@ -184,19 +185,17 @@ function confirmDelete() {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <Link
-                            :href="namedRoute('documentsIndex')"
-                            class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition"
-                        >
-                            <Lucide icon="Files" class="w-4 h-4" />
-                            Documents
+                        <Link :href="namedRoute('documentsIndex')">
+                            <Button variant="outline-secondary" class="flex items-center gap-2">
+                                <Lucide icon="Files" class="w-4 h-4" />
+                                Documents
+                            </Button>
                         </Link>
-                        <Link
-                            :href="namedRoute('create')"
-                            class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition"
-                        >
-                            <Lucide icon="Plus" class="w-4 h-4" />
-                            {{ createLabel }}
+                        <Link :href="namedRoute('create')">
+                            <Button variant="primary" class="flex items-center gap-2">
+                                <Lucide icon="Plus" class="w-4 h-4" />
+                                {{ createLabel }}
+                            </Button>
                         </Link>
                     </div>
                 </div>
@@ -230,23 +229,25 @@ function confirmDelete() {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 mt-4">
-                    <button
+                    <Button
                         type="button"
+                        variant="primary"
+                        class="flex items-center gap-2"
                         @click="applyFilters"
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition"
                     >
                         <Lucide icon="Filter" class="w-4 h-4" />
                         Apply Filters
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                         type="button"
+                        variant="outline-secondary"
+                        class="flex items-center gap-2"
                         @click="resetFilters"
-                        class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition"
                     >
                         <Lucide icon="RotateCcw" class="w-4 h-4" />
                         Clear
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -301,7 +302,7 @@ function confirmDelete() {
                                         <span v-if="license.is_primary" class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
                                             Primary
                                         </span>
-                                        <span v-if="license.is_cdl" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                                        <span v-if="license.is_cdl" class="inline-flex items-center rounded-full bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info">
                                             CDL
                                         </span>
                                     </div>
@@ -313,7 +314,7 @@ function confirmDelete() {
                                 <td class="px-5 py-4 text-center">
                                     <Link
                                         :href="namedRoute('documentsShow', license.id)"
-                                        class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-primary/10 hover:text-primary transition"
+                                        class="inline-flex items-center rounded-full bg-info/10 px-2.5 py-1 text-xs font-medium text-info transition hover:bg-info/20"
                                     >
                                         {{ license.document_count }}
                                     </Link>
@@ -330,7 +331,7 @@ function confirmDelete() {
                                         </Link>
                                         <Link
                                             :href="namedRoute('documentsShow', license.id)"
-                                            class="p-1.5 text-slate-400 hover:text-sky-500 transition"
+                                            class="p-1.5 text-slate-400 hover:text-info transition"
                                             title="Documents"
                                         >
                                             <Lucide icon="Files" class="w-4 h-4" />
@@ -346,7 +347,7 @@ function confirmDelete() {
 
                                         <Link
                                             :href="namedRoute('edit', license.id)"
-                                            class="p-1.5 text-slate-400 hover:text-amber-500 transition"
+                                            class="p-1.5 text-slate-400 hover:text-warning transition"
                                             title="Edit"
                                         >
                                             <Lucide icon="PenLine" class="w-4 h-4" />
@@ -355,7 +356,7 @@ function confirmDelete() {
                                         <button
                                             type="button"
                                             @click="openDeleteModal(license)"
-                                            class="p-1.5 text-slate-400 hover:text-red-500 transition"
+                                            class="p-1.5 text-slate-400 hover:text-danger transition"
                                             title="Delete"
                                         >
                                             <Lucide icon="Trash2" class="w-4 h-4" />
@@ -421,20 +422,22 @@ function confirmDelete() {
             </div>
 
             <div class="flex justify-center gap-3 px-6 pb-8 pt-4">
-                <button
+                <Button
                     type="button"
-                    class="min-w-24 rounded-lg border border-slate-300 px-6 py-2.5 text-base font-medium text-slate-600 hover:bg-slate-50"
+                    variant="outline-secondary"
+                    class="min-w-24"
                     @click="deleteModalOpen = false"
                 >
                     Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                     type="button"
-                    class="min-w-24 rounded-lg bg-danger px-6 py-2.5 text-base font-medium text-white hover:bg-danger/90"
+                    variant="danger"
+                    class="min-w-24"
                     @click="confirmDelete"
                 >
                     Delete
-                </button>
+                </Button>
             </div>
         </Dialog.Panel>
     </Dialog>

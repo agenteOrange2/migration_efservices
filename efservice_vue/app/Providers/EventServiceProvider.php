@@ -5,7 +5,6 @@ namespace App\Providers;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Event;
 use App\Events\CarrierStepCompleted;
 use App\Events\CarrierRegistrationCompleted;
 use App\Listeners\SendCarrierNotifications;
@@ -24,11 +23,11 @@ class EventServiceProvider extends ServiceProvider
         
         // Eventos del sistema de notificaciones de carriers
         CarrierStepCompleted::class => [
-            SendCarrierNotifications::class . '@handleStepCompleted',
+            [SendCarrierNotifications::class, 'handleStepCompleted'],
         ],
-        
+
         CarrierRegistrationCompleted::class => [
-            SendCarrierNotifications::class . '@handleRegistrationCompleted',
+            [SendCarrierNotifications::class, 'handleRegistrationCompleted'],
         ],
         
         // Nuevos eventos del sistema
@@ -50,9 +49,7 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Registrar eventos manualmente para asegurar que funcionen
-        Event::listen(CarrierStepCompleted::class, [SendCarrierNotifications::class, 'handleStepCompleted']);
-        Event::listen(CarrierRegistrationCompleted::class, [SendCarrierNotifications::class, 'handleRegistrationCompleted']);
+        //
     }
 
     /**

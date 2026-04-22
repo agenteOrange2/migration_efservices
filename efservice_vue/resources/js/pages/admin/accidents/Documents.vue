@@ -112,10 +112,10 @@ function deleteDocument(document: any) {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 mt-4">
-                    <button type="button" @click="applyFilters" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                    <Button type="button" variant="primary" class="flex items-center gap-2" @click="applyFilters">
                         <Lucide icon="Filter" class="w-4 h-4" />
                         Apply Filters
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -165,10 +165,10 @@ function deleteDocument(document: any) {
                                         <a :href="document.preview_url" target="_blank" class="p-1.5 text-slate-400 hover:text-primary transition" title="Preview">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </a>
-                                        <Link v-if="document.accident_id" :href="route(props.routeNames?.edit ?? 'admin.accidents.edit', document.accident_id)" class="p-1.5 text-slate-400 hover:text-amber-500 transition" title="Edit accident">
+                                        <Link v-if="document.accident_id" :href="route(props.routeNames?.edit ?? 'admin.accidents.edit', document.accident_id)" class="p-1.5 text-slate-400 hover:text-warning transition" title="Edit accident">
                                             <Lucide icon="PenLine" class="w-4 h-4" />
                                         </Link>
-                                        <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-red-500 transition" title="Delete">
+                                        <button type="button" @click="deleteDocument(document)" class="p-1.5 text-slate-400 hover:text-danger transition" title="Delete">
                                             <Lucide icon="Trash2" class="w-4 h-4" />
                                         </button>
                                     </div>

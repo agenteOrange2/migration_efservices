@@ -8,7 +8,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\DatabaseMessage;
 
-class CarrierNotification extends Notification implements ShouldQueue
+class CarrierNotification extends Notification
 {
     use Queueable;
 

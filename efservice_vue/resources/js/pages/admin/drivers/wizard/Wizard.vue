@@ -20,6 +20,9 @@ declare function route(name: string, params?: any): string
 // Litepicker config – US format MM/DD/YYYY
 const lpOptions = { singleMode: true, format: 'MM/DD/YYYY', autoApply: true }
 
+// Shared Tailwind classes for native file inputs across every step.
+const fileInputClass = 'w-full text-sm text-slate-500 cursor-pointer file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary hover:file:bg-primary/20'
+
 // Convert backend Y-m-d to US MM/DD/YYYY for display
 function toUsDate(val: string | null | undefined): string {
     if (!val) return ''
@@ -53,6 +56,9 @@ interface DriverBase {
     application_completed: boolean
     hos_cycle_type: string
     photo_url: string | null
+    terms_accepted: boolean
+    use_custom_dates: boolean
+    custom_created_at: string | null
 }
 
 interface WizardRouteNames {
@@ -159,10 +165,10 @@ const step1 = reactive({
     password:      '',
     password_confirmation: '',
     hos_cycle_type: props.driver?.hos_cycle_type ?? '70_8',
-    status:         String((props.driver as any)?.status ?? 1),
-    terms_accepted: (props.driver as any)?.terms_accepted ?? false,
-    use_custom_dates: (props.driver as any)?.use_custom_dates ?? false,
-    custom_created_at: toUsDate((props.driver as any)?.custom_created_at),
+    status:         String(props.driver?.status ?? 1),
+    terms_accepted: props.driver?.terms_accepted ?? false,
+    use_custom_dates: props.driver?.use_custom_dates ?? false,
+    custom_created_at: toUsDate(props.driver?.custom_created_at),
     photo: null as File | null,
     photoPreview: props.driver?.photo_url ?? null as string | null,
 })
@@ -1191,18 +1197,18 @@ function submitStep15() {
 <template>
     <div>
         <Head :title="isEditMode ? 'Edit Driver – Wizard' : 'Register Driver – Wizard'" />
-        <div class="p-5">
+        <div class="p-0 sm:p-3">
         <!-- Header -->
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
-                <h1 class="text-2xl font-semibold text-slate-800 dark:text-slate-100">
+                <h1 class="text-xl sm:text-2xl font-semibold text-slate-800 dark:text-slate-100">
                     {{ isEditMode ? 'Edit Driver Registration' : 'Register New Driver' }}
                 </h1>
                 <p v-if="isEditMode" class="text-sm text-slate-500 mt-1">
                     {{ driver!.name }} {{ driver!.last_name }} &bull; {{ driver!.carrier_name }}
                 </p>
             </div>
-            <a :href="namedRoute('index')" class="flex items-center gap-1 text-slate-500 hover:text-slate-700 text-sm">
+            <a :href="namedRoute('index')" class="flex items-center gap-1 text-slate-500 hover:text-slate-700 text-sm shrink-0">
                 <Lucide icon="ArrowLeft" class="w-4 h-4" />
                 Back to Drivers
             </a>
@@ -1245,7 +1251,7 @@ function submitStep15() {
         </div>
 
         <!-- Step Panels -->
-        <div class="bg-white dark:bg-darkmode-600 rounded-xl border border-slate-200 dark:border-slate-600 p-6">
+        <div class="bg-white dark:bg-darkmode-600 rounded-xl border border-slate-200 dark:border-slate-600 p-4 sm:p-6">
 
             <!-- ====================================================
                  STEP 1 – General Info
@@ -1311,7 +1317,7 @@ function submitStep15() {
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Profile Photo</label>
-                        <input type="file" accept="image/*" @change="handlePhotoChange" class="w-full text-sm" />
+                        <input type="file" accept="image/*" @change="handlePhotoChange" :class="fileInputClass" />
                         <img v-if="step1.photoPreview" :src="step1.photoPreview" class="mt-2 h-20 w-20 rounded-full object-cover border" />
                     </div>
                 </div>
@@ -1892,14 +1898,18 @@ function submitStep15() {
                         </div>
                         <div class="flex items-center pt-5">
                             <FormCheck>
-                                <FormCheck.Input v-model="lic.is_cdl" type="checkbox" />
+                                <FormCheck.Input
+                                    v-model="lic.is_cdl"
+                                    type="checkbox"
+                                    @change="(e: Event) => { if (!(e.target as HTMLInputElement).checked) lic.endorsements = [] }"
+                                />
                                 <FormCheck.Label>This is a Commercial Driver's License (CDL)</FormCheck.Label>
                             </FormCheck>
                         </div>
                     </div>
 
                     <!-- Endorsements -->
-                    <div v-if="props.endorsements && props.endorsements.length" class="mt-3">
+                    <div v-if="lic.is_cdl && props.endorsements && props.endorsements.length" class="mt-3">
                         <label class="block text-xs font-medium mb-2">Endorsements</label>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
                             <FormCheck v-for="end in props.endorsements" :key="end.id">
@@ -1924,7 +1934,7 @@ function submitStep15() {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium mb-1">License Front</label>
-                                <input type="file" accept="image/*,application/pdf" @change="(e) => onLicFront(e, i)" class="w-full text-sm" />
+                                <input type="file" accept="image/*,application/pdf" @change="(e) => onLicFront(e, i)" :class="fileInputClass" />
                                 <img v-if="licFrontPreviews[i]" :src="licFrontPreviews[i]!" alt="License front preview" class="mt-2 rounded border max-h-32 object-contain" />
                                 <template v-else-if="lic.front_url">
                                     <img :src="lic.front_url" alt="License front" class="mt-2 rounded border max-h-32 object-contain" />
@@ -1933,7 +1943,7 @@ function submitStep15() {
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">License Back</label>
-                                <input type="file" accept="image/*,application/pdf" @change="(e) => onLicBack(e, i)" class="w-full text-sm" />
+                                <input type="file" accept="image/*,application/pdf" @change="(e) => onLicBack(e, i)" :class="fileInputClass" />
                                 <img v-if="licBackPreviews[i]" :src="licBackPreviews[i]!" alt="License back preview" class="mt-2 rounded border max-h-32 object-contain" />
                                 <template v-else-if="lic.back_url">
                                     <img :src="lic.back_url" alt="License back" class="mt-2 rounded border max-h-32 object-contain" />
@@ -2031,7 +2041,7 @@ function submitStep15() {
                             <label class="block text-xs font-medium mb-1">Social Security Card</label>
                             <input type="file" accept="image/*,application/pdf"
                                 @change="e => step5.social_security_card = (e.target as HTMLInputElement).files?.[0] ?? null"
-                                class="w-full text-sm" />
+                                :class="fileInputClass" />
                             <a v-if="step5.ss_card_url" :href="step5.ss_card_url" target="_blank" class="text-xs text-primary mt-1 block">
                                 <Lucide icon="Paperclip" class="w-3 h-3 inline mr-1" />View current file
                             </a>
@@ -2061,7 +2071,7 @@ function submitStep15() {
                             <label class="block text-xs font-medium mb-1">Medical Card Document</label>
                             <input type="file" accept="image/*,application/pdf"
                                 @change="e => step5.medical_card = (e.target as HTMLInputElement).files?.[0] ?? null"
-                                class="w-full text-sm" />
+                                :class="fileInputClass" />
                             <a v-if="step5.medical_card_url" :href="step5.medical_card_url" target="_blank" class="text-xs text-primary mt-1 block">
                                 <Lucide icon="Paperclip" class="w-3 h-3 inline mr-1" />View current file
                             </a>
@@ -2125,7 +2135,7 @@ function submitStep15() {
                             <label class="block text-xs font-medium mb-1">Date End</label>
                             <Litepicker v-model="school.date_end" :options="lpOptions" />
                         </div>
-                        <div class="flex gap-4 md:col-span-2">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2 md:col-span-2">
                             <FormCheck>
                                 <FormCheck.Input v-model="school.graduated" type="checkbox" />
                                 <FormCheck.Label>Graduated</FormCheck.Label>
@@ -2163,7 +2173,7 @@ function submitStep15() {
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-xs font-medium mb-1">Certificate (PDF or image)</label>
-                            <input type="file" accept=".pdf,image/*" @change="e => onSchoolCertChange(e, si)" class="w-full text-sm" />
+                            <input type="file" accept=".pdf,image/*" @change="e => onSchoolCertChange(e, si)" :class="fileInputClass" />
                             <a v-if="school.certificate_url && !school.certificate_file" :href="school.certificate_url" target="_blank" class="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1">
                                 <Lucide icon="FileText" class="w-3 h-3" /> View current certificate
                             </a>
@@ -2215,7 +2225,7 @@ function submitStep15() {
                             </div>
                             <div class="md:col-span-3">
                                 <label class="block text-xs font-medium mb-1">Certificate (PDF or image)</label>
-                                <input type="file" accept=".pdf,image/*" @change="e => onCourseCertChange(e, ci)" class="w-full text-sm" />
+                                <input type="file" accept=".pdf,image/*" @change="e => onCourseCertChange(e, ci)" :class="fileInputClass" />
                                 <a v-if="course.certificate_url && !course.certificate_file" :href="course.certificate_url" target="_blank" class="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1">
                                     <Lucide icon="FileText" class="w-3 h-3" /> View current certificate
                                 </a>
@@ -2277,7 +2287,7 @@ function submitStep15() {
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-xs font-medium mb-1">Supporting Document (PDF or image)</label>
-                                <input type="file" accept=".pdf,image/*" @change="e => onConvictionImageChange(e, i)" class="w-full text-sm" />
+                                <input type="file" accept=".pdf,image/*" @change="e => onConvictionImageChange(e, i)" :class="fileInputClass" />
                                 <a v-if="c.image_url && !c.image_file" :href="c.image_url" target="_blank" class="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1">
                                     <Lucide icon="FileText" class="w-3 h-3" /> View current document
                                 </a>
@@ -2353,7 +2363,7 @@ function submitStep15() {
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-xs font-medium mb-1">Supporting Document (PDF or image)</label>
-                                <input type="file" accept=".pdf,image/*" @change="e => onAccidentImageChange(e, i)" class="w-full text-sm" />
+                                <input type="file" accept=".pdf,image/*" @change="e => onAccidentImageChange(e, i)" :class="fileInputClass" />
                                 <a v-if="a.image_url && !a.image_file" :href="a.image_url" target="_blank" class="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1">
                                     <Lucide icon="FileText" class="w-3 h-3" /> View current document
                                 </a>
@@ -2524,12 +2534,12 @@ function submitStep15() {
                 </div>
 
                 <!-- Unsent emails banner -->
-                <div v-if="unsentEmailCount > 0" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
+                <div v-if="unsentEmailCount > 0" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-center gap-2 text-sm text-blue-800">
-                        <Lucide icon="Mail" class="w-4 h-4 text-blue-600" />
+                        <Lucide icon="Mail" class="w-4 h-4 text-blue-600 shrink-0" />
                         <span><strong>{{ unsentEmailCount }}</strong> verification {{ unsentEmailCount === 1 ? 'email' : 'emails' }} ready to send</span>
                     </div>
-                    <Button size="sm" variant="primary" @click="step10.companies.filter((c:any)=>c.email&&!c.email_sent&&c.id).forEach((c:any)=>sendEmail(c))">
+                    <Button size="sm" variant="primary" class="w-full sm:w-auto shrink-0" @click="step10.companies.filter((c:any)=>c.email&&!c.email_sent&&c.id).forEach((c:any)=>sendEmail(c))">
                         <Lucide icon="Send" class="w-3.5 h-3.5 mr-1" /> Send All Verification Emails
                     </Button>
                 </div>
@@ -2541,7 +2551,8 @@ function submitStep15() {
                     <div v-if="combinedHistory.length === 0" class="text-center py-5 text-slate-400 text-sm border border-dashed rounded-lg">
                         No employment records yet. Use the buttons below to add companies, unemployment periods, or other positions.
                     </div>
-                    <div v-else class="overflow-x-auto rounded-lg border border-slate-200">
+                    <!-- Desktop: table view -->
+                    <div v-else class="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
                         <table class="min-w-full text-sm">
                             <thead class="bg-slate-50 text-xs text-slate-500 uppercase">
                                 <tr>
@@ -2621,6 +2632,73 @@ function submitStep15() {
                         </table>
                     </div>
 
+                    <!-- Mobile: card list -->
+                    <div v-if="combinedHistory.length > 0" class="md:hidden space-y-3">
+                        <div v-for="(item, i) in combinedHistory" :key="'card-' + i" class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <span v-if="item.type === 'employed'" class="inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">EMPLOYED</span>
+                                <span v-else-if="item.type === 'related'" class="inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800">RELATED</span>
+                                <span v-else class="inline-flex items-center rounded bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">UNEMPLOYED</span>
+
+                                <template v-if="item.type === 'employed'">
+                                    <span v-if="!item.email" class="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">No Email</span>
+                                    <span v-else-if="item.email_sent" class="inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Sent</span>
+                                    <span v-else class="inline-flex items-center rounded bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-700">Not Sent</span>
+                                </template>
+                            </div>
+
+                            <p class="text-sm font-medium text-slate-800 break-words">{{ item.note }}</p>
+
+                            <div class="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                                <Lucide icon="Calendar" class="w-3 h-3 shrink-0" />
+                                <span>{{ item.from || '—' }} → {{ item.to || '—' }}</span>
+                            </div>
+
+                            <div class="mt-3 flex flex-wrap gap-1 border-t border-slate-100 pt-3">
+                                <button
+                                    @click="item.type==='employed' ? openEditCompany(item.idx) : item.type==='unemployed' ? openEditUnemployment(item.idx) : openEditRelated(item.idx)"
+                                    class="text-primary border border-primary rounded px-2 py-1 text-xs flex items-center gap-1 hover:opacity-70">
+                                    <Lucide icon="Pencil" class="w-3 h-3" /> Edit
+                                </button>
+                                <button
+                                    @click="item.type==='employed' ? removeCompany(item.idx) : item.type==='unemployed' ? removeUnemployment(item.idx) : removeRelated(item.idx)"
+                                    class="text-danger border border-danger rounded px-2 py-1 text-xs flex items-center gap-1 hover:opacity-70">
+                                    <Lucide icon="Trash2" class="w-3 h-3" /> Delete
+                                </button>
+                                <template v-if="item.type === 'employed' && item.email && item.id">
+                                    <button v-if="!item.email_sent"
+                                        @click="sendEmail(step10.companies[item.idx])"
+                                        :disabled="emailLoading[item.id]"
+                                        class="text-purple-600 border border-purple-400 rounded px-2 py-1 text-xs flex items-center gap-1 hover:opacity-70 disabled:opacity-50">
+                                        <Lucide icon="Send" class="w-3 h-3" />
+                                        <span v-if="emailLoading[item.id]">...</span>
+                                        <span v-else>Send</span>
+                                    </button>
+                                    <button v-else
+                                        @click="resendEmail(step10.companies[item.idx])"
+                                        :disabled="emailLoading[item.id]"
+                                        class="text-green-600 border border-green-500 rounded px-2 py-1 text-xs flex items-center gap-1 hover:opacity-70 disabled:opacity-50">
+                                        <Lucide icon="MailCheck" class="w-3 h-3" />
+                                        <span v-if="emailLoading[item.id]">...</span>
+                                        <span v-else>Resend</span>
+                                    </button>
+                                    <button v-if="item.email_sent"
+                                        @click="toggleEmailSent(step10.companies[item.idx], false)"
+                                        class="text-orange-500 border border-orange-400 rounded px-2 py-1 text-xs flex items-center gap-1 hover:opacity-70"
+                                        title="Mark as not sent">
+                                        <Lucide icon="X" class="w-3 h-3" /> Unsent
+                                    </button>
+                                    <button v-else
+                                        @click="toggleEmailSent(step10.companies[item.idx], true)"
+                                        class="text-slate-500 border border-slate-300 rounded px-2 py-1 text-xs flex items-center gap-1 hover:opacity-70"
+                                        title="Mark as sent">
+                                        <Lucide icon="Check" class="w-3 h-3" /> Mark Sent
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Coverage indicator -->
                     <div class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                         <div class="flex justify-between items-center mb-2">
@@ -2632,7 +2710,7 @@ function submitStep15() {
                         <div class="w-full bg-slate-200 rounded-full h-2.5 mb-2">
                             <div :class="coverageStats.is_complete ? 'bg-success' : 'bg-danger'" class="h-2.5 rounded-full transition-all duration-300" :style="{ width: coverageStats.coverage_percentage + '%' }" />
                         </div>
-                        <div class="grid grid-cols-3 gap-2 text-xs text-slate-500">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 text-xs text-slate-500">
                             <span>Employment: <strong>{{ coverageStats.employment_years }} yrs</strong></span>
                             <span>Unemployment: <strong>{{ coverageStats.unemployment_years }} yrs</strong></span>
                             <span>Related: <strong>{{ coverageStats.related_employment_years }} yrs</strong></span>
@@ -2643,11 +2721,11 @@ function submitStep15() {
                     </div>
 
                     <!-- Action buttons below summary -->
-                    <div class="flex gap-2 mt-3">
-                        <Button size="sm" variant="outline-success" @click="showSearchModal = true; companySearchTerm = ''; searchResults = []; searchError = ''">
+                    <div class="flex flex-col sm:flex-row gap-2 mt-3">
+                        <Button size="sm" variant="outline-success" class="w-full sm:w-auto" @click="showSearchModal = true; companySearchTerm = ''; searchResults = []; searchError = ''">
                             <Lucide icon="Search" class="w-3.5 h-3.5 mr-1" /> Search Company
                         </Button>
-                        <Button size="sm" variant="primary" @click="openAddCompany">
+                        <Button size="sm" variant="primary" class="w-full sm:w-auto" @click="openAddCompany">
                             <Lucide icon="Plus" class="w-3.5 h-3.5 mr-1" /> Add New Employment
                         </Button>
                     </div>
@@ -2655,10 +2733,12 @@ function submitStep15() {
 
                 <!-- ── Unemployment Periods ───────────────────────── -->
                 <div class="mb-4 border border-slate-200 rounded-lg p-4">
-                    <div class="flex items-center gap-3">
-                        <FormCheck.Input v-model="step10.has_unemployment_periods" type="checkbox" id="has_unemployment" />
-                        <label for="has_unemployment" class="text-sm font-medium cursor-pointer flex-1">Have you been unemployed at any time within the last 10 years?</label>
-                        <Button v-if="step10.has_unemployment_periods" size="sm" variant="outline-secondary" @click="openAddUnemployment">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <div class="flex items-center gap-3 flex-1">
+                            <FormCheck.Input v-model="step10.has_unemployment_periods" type="checkbox" id="has_unemployment" />
+                            <label for="has_unemployment" class="text-sm font-medium cursor-pointer flex-1">Have you been unemployed at any time within the last 10 years?</label>
+                        </div>
+                        <Button v-if="step10.has_unemployment_periods" size="sm" variant="outline-secondary" class="w-full sm:w-auto shrink-0" @click="openAddUnemployment">
                             <Lucide icon="Plus" class="w-3.5 h-3.5 mr-1" /> Add Unemployment Period
                         </Button>
                     </div>
@@ -2672,12 +2752,12 @@ function submitStep15() {
 
                 <!-- ── Other Employment ───────────────────────────── -->
                 <div class="border border-slate-200 rounded-lg p-4">
-                    <div class="flex items-center justify-between">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h3 class="text-sm font-semibold">Other Employment</h3>
                             <p class="text-xs text-slate-500 mt-0.5">Other positions (Cook, Warehouseman, Carpenter, Clerk…) not part of your regular employment history. Count toward the 10-year requirement.</p>
                         </div>
-                        <Button size="sm" variant="outline-secondary" class="ml-4 shrink-0" @click="openAddRelated">
+                        <Button size="sm" variant="outline-secondary" class="w-full sm:w-auto sm:ml-4 shrink-0" @click="openAddRelated">
                             <Lucide icon="Plus" class="w-3.5 h-3.5 mr-1" /> Add Other Position
                         </Button>
                     </div>
@@ -2755,14 +2835,14 @@ function submitStep15() {
                                     <div v-for="c in searchResults" :key="c.id"
                                         @click="selectSearchedCompany(c)"
                                         class="p-4 hover:bg-slate-50 cursor-pointer transition">
-                                        <div class="flex items-center justify-between">
-                                            <div>
-                                                <p class="text-sm font-medium text-slate-800">{{ c.company_name }}</p>
-                                                <p class="text-xs text-slate-500 mt-0.5">
+                                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-medium text-slate-800 break-words">{{ c.company_name }}</p>
+                                                <p class="text-xs text-slate-500 mt-0.5 break-words">
                                                     {{ [c.address, c.city, c.state, c.zip].filter(Boolean).join(', ') || 'No address' }}
                                                 </p>
                                             </div>
-                                            <div class="text-right text-xs text-slate-400">
+                                            <div class="text-xs text-slate-400 sm:text-right shrink-0 break-words">
                                                 <p v-if="c.phone">📞 {{ c.phone }}</p>
                                                 <p v-if="c.email">✉️ {{ c.email }}</p>
                                             </div>
@@ -2815,7 +2895,7 @@ function submitStep15() {
                                     <label class="block text-xs font-medium mb-1">Address</label>
                                     <FormInput v-model="companyForm.address" placeholder="123 Main Street" />
                                 </div>
-                                <div class="grid grid-cols-3 gap-3 mb-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                                     <div>
                                         <label class="block text-xs font-medium mb-1">City</label>
                                         <FormInput v-model="companyForm.city" placeholder="City" />
@@ -2832,7 +2912,7 @@ function submitStep15() {
                                         <FormInput v-model="companyForm.zip" placeholder="12345" />
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-xs font-medium mb-1">Contact Person</label>
                                         <FormInput v-model="companyForm.contact" placeholder="Contact name" />
@@ -2847,7 +2927,7 @@ function submitStep15() {
                             <!-- Employment Details -->
                             <div class="border border-slate-200 rounded-lg bg-white p-4 mb-4">
                                 <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3 flex items-center gap-1"><Lucide icon="Briefcase" class="w-3.5 h-3.5" /> Employment Details</p>
-                                <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                     <div>
                                         <label class="block text-xs font-medium mb-1">Employed From <span class="text-danger">*</span></label>
                                         <Litepicker v-model="companyForm.employed_from" :options="lpOptions" />
@@ -2912,7 +2992,7 @@ function submitStep15() {
                                 <h3 class="text-lg font-semibold">{{ editingUnemploymentIdx !== null ? 'Edit' : 'Add' }} Unemployment Period</h3>
                                 <button @click="showUnemploymentModal = false" class="text-slate-400 hover:text-slate-600"><Lucide icon="X" class="w-5 h-5" /></button>
                             </div>
-                            <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="block text-xs font-medium mb-1">Start Date <span class="text-danger">*</span></label>
                                     <Litepicker v-model="unemploymentForm.start_date" :options="lpOptions" />
@@ -2944,7 +3024,7 @@ function submitStep15() {
                                 <h3 class="text-lg font-semibold">{{ editingRelatedIdx !== null ? 'Edit' : 'Add' }} Other Employment</h3>
                                 <button @click="showRelatedModal = false" class="text-slate-400 hover:text-slate-600"><Lucide icon="X" class="w-5 h-5" /></button>
                             </div>
-                            <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="block text-xs font-medium mb-1">Start Date <span class="text-danger">*</span></label>
                                     <Litepicker v-model="relatedForm.start_date" :options="lpOptions" />

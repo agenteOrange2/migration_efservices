@@ -223,7 +223,7 @@ const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
                 :class="verification.attempt_count >= verification.max_attempts ? 'border-danger/10 bg-danger/[0.04]' : 'border-primary/10 bg-primary/[0.04]'"
             >
                 <div class="p-2 rounded-lg border" :class="verification.attempt_count >= verification.max_attempts ? 'bg-danger/10 border-danger/10' : 'bg-primary/10 border-primary/10'">
-                    <Lucide icon="RefreshCw" class="w-5 h-5 text-primary" />
+                    <Lucide icon="RefreshCw" class="w-5 h-5" :class="verification.attempt_count >= verification.max_attempts ? 'text-danger' : 'text-primary'" />
                 </div>
                 <div>
                     <p class="text-xs text-slate-500">Attempts</p>
@@ -517,15 +517,17 @@ const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
                                 <p class="mt-1 text-xs text-slate-400">Max 500 characters</p>
                             </div>
                             <div class="flex justify-end">
-                                <button
+                                <Button
                                     type="submit"
                                     :disabled="uploading || !uploadFile"
-                                    class="btn btn-primary btn-sm inline-flex items-center gap-2 disabled:opacity-60"
+                                    variant="primary"
+                                    size="sm"
+                                    class="inline-flex items-center gap-2 disabled:opacity-60"
                                 >
                                     <Lucide v-if="uploading" icon="Loader" class="w-4 h-4 animate-spin" />
                                     <Lucide v-else icon="Upload" class="w-4 h-4" />
                                     {{ uploading ? 'Uploading…' : 'Upload Document' }}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     </div>
@@ -559,15 +561,19 @@ const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 ml-3 flex-shrink-0">
-                                    <a :href="doc.url" target="_blank" class="btn btn-outline-primary btn-xs inline-flex items-center gap-1">
-                                        <Lucide icon="Eye" class="w-3 h-3" /> View
+                                    <a :href="doc.url" target="_blank">
+                                        <Button variant="outline-primary" size="sm" class="inline-flex items-center gap-1">
+                                            <Lucide icon="Eye" class="w-3 h-3" /> View
+                                        </Button>
                                     </a>
-                                    <a :href="doc.url" download class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1">
-                                        <Lucide icon="Download" class="w-3 h-3" /> Download
+                                    <a :href="doc.url" download>
+                                        <Button variant="outline-secondary" size="sm" class="inline-flex items-center gap-1">
+                                            <Lucide icon="Download" class="w-3 h-3" /> Download
+                                        </Button>
                                     </a>
-                                    <button @click="deleteDocument(doc.id)" class="btn btn-outline-danger btn-xs inline-flex items-center gap-1">
+                                    <Button @click="deleteDocument(doc.id)" variant="outline-danger" size="sm" class="inline-flex items-center gap-1">
                                         <Lucide icon="Trash2" class="w-3 h-3" /> Delete
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -607,19 +613,15 @@ const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
                                     <span class="text-sm font-medium text-slate-700">Employment Verification — Signed PDF</span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <a
-                                        :href="signedToken.document_url!"
-                                        target="_blank"
-                                        class="btn btn-outline-primary btn-xs inline-flex items-center gap-1"
-                                    >
-                                        <Lucide icon="ExternalLink" class="w-3 h-3" /> Open
+                                    <a :href="signedToken.document_url!" target="_blank">
+                                        <Button variant="outline-primary" size="sm" class="inline-flex items-center gap-1">
+                                            <Lucide icon="ExternalLink" class="w-3 h-3" /> Open
+                                        </Button>
                                     </a>
-                                    <a
-                                        :href="signedToken.document_url!"
-                                        download
-                                        class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1"
-                                    >
-                                        <Lucide icon="Download" class="w-3 h-3" /> Download
+                                    <a :href="signedToken.document_url!" download>
+                                        <Button variant="outline-secondary" size="sm" class="inline-flex items-center gap-1">
+                                            <Lucide icon="Download" class="w-3 h-3" /> Download
+                                        </Button>
                                     </a>
                                 </div>
                             </div>
@@ -639,11 +641,15 @@ const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
                                     <span class="text-sm font-medium text-slate-700">Employment Verification — Signed Document</span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <a :href="signedToken.document_url!" target="_blank" class="btn btn-outline-primary btn-xs inline-flex items-center gap-1">
-                                        <Lucide icon="ExternalLink" class="w-3 h-3" /> Open
+                                    <a :href="signedToken.document_url!" target="_blank">
+                                        <Button variant="outline-primary" size="sm" class="inline-flex items-center gap-1">
+                                            <Lucide icon="ExternalLink" class="w-3 h-3" /> Open
+                                        </Button>
                                     </a>
-                                    <a :href="signedToken.document_url!" download class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1">
-                                        <Lucide icon="Download" class="w-3 h-3" /> Download
+                                    <a :href="signedToken.document_url!" download>
+                                        <Button variant="outline-secondary" size="sm" class="inline-flex items-center gap-1">
+                                            <Lucide icon="Download" class="w-3 h-3" /> Download
+                                        </Button>
                                     </a>
                                 </div>
                             </div>
@@ -724,20 +730,23 @@ const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
                                             v-if="token.document_url"
                                             :href="token.document_url"
                                             target="_blank"
-                                            class="btn btn-outline-success btn-xs inline-flex items-center gap-1"
                                         >
-                                            <Lucide icon="FileText" class="w-3 h-3" /> View
+                                            <Button variant="outline-success" size="sm" class="inline-flex items-center gap-1">
+                                                <Lucide icon="FileText" class="w-3 h-3" /> View
+                                            </Button>
                                         </a>
                                         <span v-else class="text-xs text-slate-400">—</span>
                                     </td>
                                     <td class="px-5 py-4 text-center align-top">
-                                        <button
+                                        <Button
                                             v-if="!token.is_verified"
                                             @click="deleteToken(token.id)"
-                                            class="btn btn-outline-danger btn-xs inline-flex items-center gap-1"
+                                            variant="outline-danger"
+                                            size="sm"
+                                            class="inline-flex items-center gap-1"
                                         >
                                             <Lucide icon="Trash2" class="w-3 h-3" /> Delete
-                                        </button>
+                                        </Button>
                                         <span v-else class="text-xs text-slate-400">—</span>
                                     </td>
                                 </tr>

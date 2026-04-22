@@ -356,6 +356,7 @@ class DriverAdminWizardController extends Controller
             'hos_cycle_type'   => 'nullable|string|in:60_7,70_8',
             'photo'            => 'nullable|image|max:10240',
             'status'           => 'nullable|integer|in:0,1,2',
+            'terms_accepted'   => 'nullable|boolean',
             'use_custom_dates' => 'nullable|boolean',
             'custom_created_at'=> 'nullable|date',
         ]);
@@ -377,6 +378,7 @@ class DriverAdminWizardController extends Controller
             'date_of_birth'    => $this->toDbDate($validated['date_of_birth']),
             'hos_cycle_type'   => $validated['hos_cycle_type'] ?? $driver->hos_cycle_type ?? '70_8',
             'status'           => $validated['status'] ?? $driver->status,
+            'terms_accepted'   => $request->boolean('terms_accepted'),
             'use_custom_dates' => $request->boolean('use_custom_dates'),
             'custom_created_at'=> $this->toDbDate($validated['custom_created_at'] ?? null),
             'updated_by_admin' => Auth::id(),
@@ -1469,6 +1471,9 @@ class DriverAdminWizardController extends Controller
             'application_completed'=> $driver->application_completed,
             'hos_cycle_type'       => $driver->hos_cycle_type ?? '70_8',
             'photo_url'            => $driver->getFirstMediaUrl('profile_photo_driver') ?: null,
+            'terms_accepted'       => (bool) $driver->terms_accepted,
+            'use_custom_dates'     => (bool) $driver->use_custom_dates,
+            'custom_created_at'    => $driver->custom_created_at?->format('Y-m-d'),
         ];
     }
 

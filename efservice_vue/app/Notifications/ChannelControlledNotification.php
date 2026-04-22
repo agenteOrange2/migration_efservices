@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class ChannelControlledNotification extends Notification implements ShouldQueue
+class ChannelControlledNotification extends Notification
 {
     use Queueable;
 

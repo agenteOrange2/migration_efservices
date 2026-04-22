@@ -62,15 +62,29 @@ function titleCase(value: string) {
 }
 
 function statusBadgeClass(status: string) {
-    if (status === 'sent') return 'bg-primary/10 text-primary'
-    if (status === 'draft') return 'bg-slate-100 text-slate-600'
-    return 'bg-slate-200 text-slate-700'
+    if (status === 'sent' || status === 'delivered') return 'bg-success/10 text-success'
+    if (status === 'draft' || status === 'pending') return 'bg-warning/10 text-warning'
+    if (status === 'failed') return 'bg-danger/10 text-danger'
+    return 'bg-info/10 text-info'
 }
 
 function priorityBadgeClass(priority: string) {
-    if (priority === 'high') return 'bg-slate-200 text-slate-700'
+    if (priority === 'high') return 'bg-danger/10 text-danger'
     if (priority === 'normal') return 'bg-primary/10 text-primary'
-    return 'bg-slate-100 text-slate-600'
+    return 'bg-info/10 text-info'
+}
+
+function statusBarClass(status: string) {
+    if (status === 'sent' || status === 'delivered') return 'bg-success'
+    if (status === 'draft' || status === 'pending') return 'bg-warning'
+    if (status === 'failed') return 'bg-danger'
+    return 'bg-info'
+}
+
+function priorityCardClass(priority: string) {
+    if (priority === 'high') return 'border-danger/10 bg-danger/5'
+    if (priority === 'normal') return 'border-primary/10 bg-primary/5'
+    return 'border-info/10 bg-info/5'
 }
 
 const deliveryRate = percentage(props.deliveryStats.delivered, props.deliveryStats.total)
@@ -113,24 +127,24 @@ const readRate = percentage(props.deliveryStats.read, props.deliveryStats.total)
         </div>
 
         <div class="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="box box--stacked rounded-2xl p-5">
+            <div class="box box--stacked rounded-2xl border border-primary/10 p-5">
                 <p class="text-sm text-slate-500">Total Messages</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.total }}</p>
+                <p class="mt-2 text-3xl font-semibold text-primary">{{ stats.total }}</p>
                 <p class="mt-2 text-xs text-slate-500">{{ stats.sent_this_month }} created this month</p>
             </div>
-            <div class="box box--stacked rounded-2xl p-5">
+            <div class="box box--stacked rounded-2xl border border-success/10 p-5">
                 <p class="text-sm text-slate-500">Sent</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.sent }}</p>
+                <p class="mt-2 text-3xl font-semibold text-success">{{ stats.sent }}</p>
                 <p class="mt-2 text-xs text-slate-500">{{ stats.sent_today }} today, {{ stats.sent_this_week }} this week</p>
             </div>
-            <div class="box box--stacked rounded-2xl p-5">
+            <div class="box box--stacked rounded-2xl border border-warning/10 p-5">
                 <p class="text-sm text-slate-500">Drafts</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ stats.draft }}</p>
+                <p class="mt-2 text-3xl font-semibold text-warning">{{ stats.draft }}</p>
                 <p class="mt-2 text-xs text-slate-500">Messages still editable before delivery.</p>
             </div>
-            <div class="box box--stacked rounded-2xl p-5">
+            <div class="box box--stacked rounded-2xl border border-info/10 p-5">
                 <p class="text-sm text-slate-500">Delivery Rate</p>
-                <p class="mt-2 text-3xl font-semibold text-slate-800">{{ deliveryRate }}%</p>
+                <p class="mt-2 text-3xl font-semibold text-info">{{ deliveryRate }}%</p>
                 <p class="mt-2 text-xs text-slate-500">{{ deliveryStats.delivered }} of {{ deliveryStats.total }} recipient rows delivered</p>
             </div>
         </div>
@@ -149,7 +163,7 @@ const readRate = percentage(props.deliveryStats.read, props.deliveryStats.total)
                                 <p class="text-sm text-slate-500">{{ item.value }} / {{ percentage(item.value, stats.total) }}%</p>
                             </div>
                             <div class="h-2 rounded-full bg-slate-100">
-                                <div class="h-2 rounded-full bg-primary" :style="{ width: `${percentage(item.value, stats.total)}%` }" />
+                                <div class="h-2 rounded-full" :class="statusBarClass(item.label)" :style="{ width: `${percentage(item.value, stats.total)}%` }" />
                             </div>
                         </div>
                     </div>
@@ -161,21 +175,21 @@ const readRate = percentage(props.deliveryStats.read, props.deliveryStats.total)
                         <h2 class="text-base font-semibold text-slate-800">Delivery Overview</h2>
                     </div>
                     <div class="mt-5 grid grid-cols-2 gap-4">
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="rounded-2xl border border-success/10 bg-success/5 p-4">
                             <p class="text-xs uppercase tracking-wide text-slate-500">Delivered</p>
-                            <p class="mt-2 text-2xl font-semibold text-slate-800">{{ deliveryStats.delivered }}</p>
+                            <p class="mt-2 text-2xl font-semibold text-success">{{ deliveryStats.delivered }}</p>
                         </div>
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="rounded-2xl border border-warning/10 bg-warning/5 p-4">
                             <p class="text-xs uppercase tracking-wide text-slate-500">Pending</p>
-                            <p class="mt-2 text-2xl font-semibold text-slate-800">{{ deliveryStats.pending }}</p>
+                            <p class="mt-2 text-2xl font-semibold text-warning">{{ deliveryStats.pending }}</p>
                         </div>
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="rounded-2xl border border-danger/10 bg-danger/5 p-4">
                             <p class="text-xs uppercase tracking-wide text-slate-500">Failed</p>
-                            <p class="mt-2 text-2xl font-semibold text-slate-800">{{ deliveryStats.failed }}</p>
+                            <p class="mt-2 text-2xl font-semibold text-danger">{{ deliveryStats.failed }}</p>
                         </div>
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="rounded-2xl border border-info/10 bg-info/5 p-4">
                             <p class="text-xs uppercase tracking-wide text-slate-500">Read</p>
-                            <p class="mt-2 text-2xl font-semibold text-slate-800">{{ deliveryStats.read }}</p>
+                            <p class="mt-2 text-2xl font-semibold text-info">{{ deliveryStats.read }}</p>
                         </div>
                     </div>
 
@@ -195,7 +209,7 @@ const readRate = percentage(props.deliveryStats.read, props.deliveryStats.total)
                                 <span class="text-sm text-slate-500">{{ readRate }}%</span>
                             </div>
                             <div class="h-2 rounded-full bg-slate-100">
-                                <div class="h-2 rounded-full bg-slate-500" :style="{ width: `${readRate}%` }" />
+                                <div class="h-2 rounded-full bg-info" :style="{ width: `${readRate}%` }" />
                             </div>
                         </div>
                     </div>
@@ -254,10 +268,10 @@ const readRate = percentage(props.deliveryStats.read, props.deliveryStats.total)
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <Link :href="route('admin.messages.show', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-primary">
+                                        <Link :href="route('admin.messages.show', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-primary/30 hover:text-primary">
                                             <Lucide icon="Eye" class="h-4 w-4" />
                                         </Link>
-                                        <Link v-if="message.can_edit" :href="route('admin.messages.edit', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-primary">
+                                        <Link v-if="message.can_edit" :href="route('admin.messages.edit', message.id)" class="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-warning/30 hover:text-warning">
                                             <Lucide icon="PenLine" class="h-4 w-4" />
                                         </Link>
                                     </div>
@@ -278,10 +292,10 @@ const readRate = percentage(props.deliveryStats.read, props.deliveryStats.total)
             <div class="box box--stacked p-6">
                 <h2 class="text-base font-semibold text-slate-800">Priority Mix</h2>
                 <div class="mt-4 space-y-4">
-                    <div v-for="item in asEntries(priorityDistribution)" :key="item.label" class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div v-for="item in asEntries(priorityDistribution)" :key="item.label" class="rounded-2xl border p-4" :class="priorityCardClass(item.label)">
                         <div class="flex items-center justify-between">
                             <p class="text-sm font-medium text-slate-700">{{ titleCase(item.label) }}</p>
-                            <p class="text-sm text-slate-500">{{ item.value }}</p>
+                            <p class="text-sm font-medium" :class="priorityBadgeClass(item.label)">{{ item.value }}</p>
                         </div>
                         <p class="mt-2 text-xs text-slate-500">{{ percentage(item.value, stats.total) }}% of all messages</p>
                     </div>
