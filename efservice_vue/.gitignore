@@ -27,7 +27,3 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
-.junie/
-.cursor/
-github/*
-efservice_vue.zip
