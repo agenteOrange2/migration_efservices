@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\Carrier;
 use App\Models\DocumentType;
 use App\Models\CarrierDocument;
+use Illuminate\Support\Facades\Cache;
 
 class CarrierDocumentRepository
 {
@@ -93,6 +94,27 @@ class CarrierDocumentRepository
         }
 
         return $document->fresh();
+    }
+
+    /**
+     * Sincroniza carrier.document_status con el progreso real de documentos.
+     * Debe llamarse tras cualquier cambio en documentos del carrier.
+     */
+    public function syncCarrierDocumentStatus(Carrier $carrier): void
+    {
+        $progress = $this->calculateDocumentProgress($carrier);
+
+        $statusMap = [
+            'inactive' => Carrier::DOCUMENT_STATUS_PENDING,
+            'pending'  => Carrier::DOCUMENT_STATUS_IN_PROGRESS,
+            'active'   => Carrier::DOCUMENT_STATUS_COMPLETED,
+        ];
+
+        $newStatus = $statusMap[$progress['status']] ?? Carrier::DOCUMENT_STATUS_PENDING;
+
+        $carrier->update(['document_status' => $newStatus]);
+
+        Cache::forget("carrier_stats_{$carrier->id}");
     }
 
     /**

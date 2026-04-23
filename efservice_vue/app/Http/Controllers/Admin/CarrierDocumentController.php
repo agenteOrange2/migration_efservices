@@ -163,6 +163,8 @@ class CarrierDocumentController extends Controller
             $request->input('notes')
         );
 
+        $this->documentRepository->syncCarrierDocumentStatus($carrier);
+
         return back()->with('success', 'Document uploaded successfully.');
     }
 
@@ -189,7 +191,7 @@ class CarrierDocumentController extends Controller
             'notes' => $validated['notes'] ?? $document->notes,
         ]);
 
-        \Cache::forget("carrier_stats_{$carrier->id}");
+        $this->documentRepository->syncCarrierDocumentStatus($carrier);
 
         return back()->with('success', 'Document updated.');
     }
@@ -201,6 +203,8 @@ class CarrierDocumentController extends Controller
         $document->status = $request->approved ? CarrierDocument::STATUS_APPROVED : CarrierDocument::STATUS_PENDING;
         $document->save();
         $document->refresh();
+
+        $this->documentRepository->syncCarrierDocumentStatus($carrier);
 
         return response()->json([
             'status' => 'success',
@@ -217,6 +221,8 @@ class CarrierDocumentController extends Controller
 
         $document->clearMediaCollection('carrier_documents');
         $document->delete();
+
+        $this->documentRepository->syncCarrierDocumentStatus($carrier);
 
         return back()->with('success', 'Document deleted.');
     }

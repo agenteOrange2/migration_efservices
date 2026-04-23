@@ -5,6 +5,19 @@ import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+    build: {
+        sourcemap: false,
+        reportCompressedSize: false,
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes('node_modules')) {
+                        return 'vendor';
+                    }
+                },
+            },
+        },
+    },
     plugins: [
         laravel({
             input: ['resources/js/app.ts'],
