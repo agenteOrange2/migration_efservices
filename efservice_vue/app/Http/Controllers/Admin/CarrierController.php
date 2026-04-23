@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Services\CarrierService;
 use App\Services\CarrierDocumentService;
 use App\Services\DotPolicyPdfService;
+use App\Repositories\CarrierDocumentRepository;
 use App\Traits\SendsCustomNotifications;
 use App\Mail\PaymentValidatedMail;
 use App\Mail\BankingRejectedMail;
@@ -32,13 +33,16 @@ class CarrierController extends Controller
 
     protected $carrierService;
     protected $documentService;
+    protected CarrierDocumentRepository $documentRepository;
 
     public function __construct(
         CarrierService $carrierService,
-        CarrierDocumentService $documentService
+        CarrierDocumentService $documentService,
+        CarrierDocumentRepository $documentRepository
     ) {
-        $this->carrierService = $carrierService;
-        $this->documentService = $documentService;
+        $this->carrierService       = $carrierService;
+        $this->documentService      = $documentService;
+        $this->documentRepository   = $documentRepository;
     }
 
     public function index(Request $request): Response
@@ -192,13 +196,17 @@ class CarrierController extends Controller
             ]);
 
             $documents = $carrierData['documents']->map(fn ($doc) => [
-                'id' => $doc->id,
+                'id'               => $doc->id,
                 'document_type_id' => $doc->document_type_id,
-                'status' => $doc->status,
-                'date' => $doc->date,
-                'created_at' => $doc->created_at,
-                'document_type' => $doc->documentType ? $doc->documentType->only(['id', 'name', 'requirement']) : null,
-                'file_url' => $doc->getFirstMediaUrl('carrier_documents') ?: null,
+                'status'           => $doc->status,
+                'status_name'      => $doc->status_name,
+                'date'             => $doc->date,
+                'created_at'       => $doc->created_at,
+                'updated_at'       => $doc->updated_at,
+                'document_type'    => $doc->documentType ? $doc->documentType->only(['id', 'name', 'requirement']) : null,
+                'file_url'         => $doc->getFirstMediaUrl('carrier_documents') ?: null,
+                'has_file'         => (bool) $doc->getFirstMediaUrl('carrier_documents'),
+                'notes'            => $doc->notes,
             ]);
 
             $bankingData = $carrierModel->bankingDetails
@@ -404,10 +412,30 @@ class CarrierController extends Controller
 
         $document->update(['status' => (int) $validated['status']]);
 
+        // Sync carrier.document_status to reflect the change
+        $carrier = Carrier::find($document->carrier_id);
+        if ($carrier) {
+            $this->documentRepository->syncCarrierDocumentStatus($carrier);
+        }
+
         \Cache::forget("carrier_stats_{$document->carrier_id}");
         \Cache::forget("carrier_details_{$document->carrier_id}");
 
         return back()->with('success', 'Document status updated successfully.');
+    }
+
+    public function regenerateReferrerToken(Carrier $carrier): RedirectResponse
+    {
+        $token = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(8));
+
+        // Ensure uniqueness
+        while (Carrier::where('referrer_token', $token)->where('id', '!=', $carrier->id)->exists()) {
+            $token = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(8));
+        }
+
+        $carrier->update(['referrer_token' => $token]);
+
+        return back()->with('success', 'Referrer token regenerated successfully.');
     }
 
     public function generateMissingDocuments(Carrier $carrier): RedirectResponse

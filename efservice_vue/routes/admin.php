@@ -67,6 +67,7 @@ Route::prefix('carriers/{carrier}')->name('carriers.')->group(function () {
     Route::post('generate-missing-documents', [CarrierController::class, 'generateMissingDocuments'])->name('generate-missing-documents');
     Route::post('delete-photo', [CarrierController::class, 'deletePhoto'])->name('delete-photo');
     Route::post('generate-dot-policy', [CarrierController::class, 'regenerateDotPolicy'])->name('generate-dot-policy');
+    Route::post('regenerate-referrer-token', [CarrierController::class, 'regenerateReferrerToken'])->name('regenerate-referrer-token');
 
     // Banking
     Route::post('banking/store', [CarrierController::class, 'storeBanking'])->name('banking.store');

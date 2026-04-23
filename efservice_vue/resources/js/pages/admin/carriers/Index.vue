@@ -60,14 +60,15 @@ function getStatus(status: number) {
     return statusMap[status] ?? { label: 'Unknown', color: 'text-slate-500', icon: 'HelpCircle' }
 }
 
-function getDocStatusColor(docStatus: string | null): string {
-    const map: Record<string, string> = {
-        pending: 'bg-warning/10 text-warning',
-        in_progress: 'bg-info/10 text-info',
-        completed: 'bg-success/10 text-success',
-        skipped: 'bg-slate-100 text-slate-500',
-    }
-    return map[docStatus ?? ''] ?? 'bg-slate-100 text-slate-500'
+const docStatusMap: Record<string, { label: string; classes: string }> = {
+    pending:     { label: 'Pending',     classes: 'bg-warning/10 text-warning'  },
+    in_progress: { label: 'In Progress', classes: 'bg-info/10 text-info'        },
+    completed:   { label: 'Completed',   classes: 'bg-success/10 text-success'  },
+    skipped:     { label: 'Skipped',     classes: 'bg-slate-100 text-slate-500' },
+}
+
+function getDocStatus(docStatus: string | null) {
+    return docStatusMap[docStatus ?? ''] ?? { label: 'N/A', classes: 'bg-slate-100 text-slate-400' }
 }
 
 let debounce: ReturnType<typeof setTimeout>
@@ -243,8 +244,8 @@ function confirmDelete(carrier: CarrierItem) {
                                         </div>
                                     </td>
                                     <td>
-                                        <span :class="['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', getDocStatusColor(carrier.document_status)]">
-                                            {{ carrier.document_status ?? 'N/A' }}
+                                        <span :class="['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', getDocStatus(carrier.document_status).classes]">
+                                            {{ getDocStatus(carrier.document_status).label }}
                                         </span>
                                     </td>
                                     <td>

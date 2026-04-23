@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         Commands\SendMaintenanceDueNotifications::class,
         Commands\CheckDriverExpirations::class,
         Commands\CheckVehicleExpirations::class,
+        Commands\AutoSuspendExpiredVehicles::class,
     ];
 
     /**
@@ -60,6 +61,12 @@ class Kernel extends ConsoleKernel
         // Driver License & Medical Card Expiration Check - daily at 7:00 AM
         // Notifies drivers, carriers, and admins at 30, 15, and 7 days before expiration
         $schedule->command('drivers:check-expirations --days=30,15,7')->dailyAt('07:00');
+
+        // Vehicle Auto-Suspend - daily at 6:00 AM (before notifications)
+        // Suspends active vehicles whose registration or annual inspection has already expired
+        $schedule->command('vehicles:auto-suspend-expired')
+            ->dailyAt('06:00')
+            ->withoutOverlapping();
 
         // Vehicle Registration, Inspection & Document Expiration Check - daily at 7:15 AM
         $schedule->command('vehicles:check-expirations --days=30,15,7')->dailyAt('07:15');

@@ -108,6 +108,11 @@ async function copyReferralUrl() {
     }
 }
 
+function regenerateReferrerToken() {
+    if (!confirm('Regenerate the referrer token? The current link will stop working immediately.')) return
+    router.post(route('admin.carriers.regenerate-referrer-token', props.carrier.slug), {}, { preserveScroll: true })
+}
+
 function deleteCarrierUser(userId: number) {
     if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
         router.delete(route('admin.carriers.user-carriers.destroy', { carrier: props.carrier.slug, userCarrier: userId }), {
@@ -151,6 +156,17 @@ const vehicleStatusMap: Record<string, { label: string; color: string; bg: strin
 
 function getVehicleStatus(status: string) {
     return vehicleStatusMap[status] ?? { label: status ?? 'Unknown', color: 'text-slate-500', bg: 'bg-slate-100' }
+}
+
+const docStatusMap: Record<string, { label: string; color: string; bg: string }> = {
+    pending:     { label: 'Pending',     color: 'text-warning', bg: 'bg-warning/10' },
+    in_progress: { label: 'In Progress', color: 'text-info',    bg: 'bg-info/10'    },
+    completed:   { label: 'Completed',   color: 'text-success', bg: 'bg-success/10' },
+    skipped:     { label: 'Skipped',     color: 'text-slate-500', bg: 'bg-slate-100' },
+}
+
+function getDocStatus(status: string | null) {
+    return docStatusMap[status ?? ''] ?? { label: 'N/A', color: 'text-slate-400', bg: 'bg-slate-100' }
 }
 </script>
 
@@ -273,7 +289,7 @@ function getVehicleStatus(status: string) {
                                         : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300',
                                 ]"
                             >
-                                <Lucide :icon="tab.icon" class="w-4 h-4 mr-2" />
+                                <Lucide :icon="tab.icon as any" class="w-4 h-4 mr-2" />
                                 {{ tab.label }}
                             </button>
                         </nav>
@@ -338,7 +354,12 @@ function getVehicleStatus(status: string) {
                                     </div>
                                     <div>
                                         <dt class="text-sm text-slate-500 w-32 flex-shrink-0">Document Status</dt>
-                                        <dd class="text-sm font-medium text-slate-800 capitalize">{{ carrier.document_status ?? 'N/A' }}</dd>
+                                        <dd>
+                                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                                  :class="[getDocStatus(carrier.document_status).bg, getDocStatus(carrier.document_status).color]">
+                                                {{ getDocStatus(carrier.document_status).label }}
+                                            </span>
+                                        </dd>
                                     </div>
                                     <div>
                                         <dt class="text-sm text-slate-500 w-32 flex-shrink-0">Created</dt>
@@ -351,42 +372,59 @@ function getVehicleStatus(status: string) {
                                 </dl>
                             </div>
                         </div>
-                        <div v-if="carrier.referrer_token" class="mt-6 pt-6 border-t border-slate-200">
-                            <div class="rounded-xl border border-slate-200 bg-white p-5">
-                                <div class="flex items-start gap-3">
-                                    <div class="rounded-lg bg-primary/10 p-2">
-                                        <Lucide icon="Link" class="h-5 w-5 text-primary" />
+                                                <!-- Driver Registration Referral -->
+                                                <div class="mt-6 pt-6 border-t border-slate-200">
+                            <div class="p-5 rounded-xl border bg-slate-50 border-slate-200">
+                                <div class="flex items-start gap-3 mb-4">
+                                    <div class="p-2 rounded-lg bg-success/10 shrink-0">
+                                        <Lucide icon="UserPlus" class="w-5 h-5 text-success" />
                                     </div>
-                                    <div class="min-w-0 flex-1">
-                                        <h4 class="font-semibold text-slate-800">Referrer Token</h4>
-                                        <p class="mt-1 text-sm text-slate-500">Driver registration referral.</p>
-                                        <p class="text-xs text-slate-500">Use this token or its referral link when sharing the carrier registration access with drivers.</p>
+                                    <div>
+                                        <h4 class="font-semibold text-slate-800">Driver Registration Referral</h4>
+                                        <p class="text-xs text-slate-500 mt-0.5">Share this link so drivers can register directly under this carrier</p>
+                                    </div>
+                                </div>
 
-                                        <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                                            <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Token</div>
-                                            <div class="mt-1 break-all font-mono text-sm font-medium text-slate-800">{{ carrier.referrer_token }}</div>
-                                        </div>
+                                <div class="space-y-3">
+                                    <!-- Referrer Token -->
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs font-medium text-slate-500 w-24 shrink-0">Referrer Token</span>
+                                        <code v-if="carrier.referrer_token" class="flex-1 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-mono text-slate-700 truncate">
+                                            {{ carrier.referrer_token }}
+                                        </code>
+                                        <span v-else class="text-xs text-slate-400 italic">No token assigned</span>
+                                        <button
+                                            @click="regenerateReferrerToken"
+                                            class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                                            title="Regenerate token — current link will stop working"
+                                        >
+                                            <Lucide icon="RefreshCw" class="w-3.5 h-3.5" />
+                                            Regenerate
+                                        </button>
+                                    </div>
 
-                                        <div v-if="carrier.referral_url" class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                                            <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Referral Link</div>
-                                            <p class="mt-2 text-sm text-slate-600">Copy the driver registration link and share it with the carrier.</p>
-                                            <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                                                <input
-                                                    type="text"
-                                                    :value="carrier.referral_url"
-                                                    readonly
-                                                    class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                                                >
-                                                <button
-                                                    type="button"
-                                                    @click="copyReferralUrl"
-                                                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 sm:flex-shrink-0"
-                                                >
-                                                    <Lucide :icon="referralCopied ? 'Check' : 'Copy'" class="h-4 w-4" />
-                                                    {{ referralCopied ? 'Copied!' : 'Copy' }}
-                                                </button>
-                                            </div>
+                                    <!-- Referral URL -->
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-medium text-slate-500 w-24 shrink-0">Referral Link</span>
+                                        <div v-if="carrier.referral_url" class="flex flex-1 items-center gap-2 min-w-0">
+                                            <input
+                                                :value="carrier.referral_url"
+                                                readonly
+                                                class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono text-slate-600 truncate focus:outline-none"
+                                            />
+                                            <button
+                                                @click="copyReferralUrl"
+                                                class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                                            >
+                                                <Lucide :icon="referralCopied ? 'Check' : 'Copy'" class="w-3.5 h-3.5" :class="referralCopied ? 'text-success' : ''" />
+                                                {{ referralCopied ? 'Copied!' : 'Copy' }}
+                                            </button>
+                                            <a :href="carrier.referral_url" target="_blank" class="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition hover:bg-primary/90">
+                                                <Lucide icon="ExternalLink" class="w-3.5 h-3.5" />
+                                                Open
+                                            </a>
                                         </div>
+                                        <span v-else class="text-xs text-slate-400 italic">Generate a token first</span>
                                     </div>
                                 </div>
                             </div>
@@ -461,14 +499,34 @@ function getVehicleStatus(status: string) {
                                 <thead>
                                     <tr class="[&>th]:px-4 [&>th]:py-3 [&>th]:font-medium [&>th]:text-slate-500 [&>th]:text-sm [&>th]:border-b">
                                         <th>Document Type</th>
-                                        <th>Status</th>
-                                        <th>Date</th>
+                                        <th>Current Status</th>
+                                        <th>Change Status</th>
+                                        <th>Updated</th>
                                         <th class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="doc in documents" :key="doc.id" class="[&>td]:px-4 [&>td]:py-3 [&>td]:border-b [&>td]:border-slate-100 hover:bg-slate-50/50">
-                                        <td class="text-sm font-medium">{{ doc.document_type?.name ?? 'Unknown' }}</td>
+                                        <td>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-sm font-medium text-slate-800">{{ doc.document_type?.name ?? 'Unknown' }}</span>
+                                                <span v-if="doc.document_type?.requirement" class="text-[10px] font-semibold uppercase tracking-wide text-danger">Required</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="flex items-center gap-2">
+                                                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                                      :class="{
+                                                          'bg-success/10 text-success':  doc.status === 1,
+                                                          'bg-danger/10 text-danger':    doc.status === 2,
+                                                          'bg-info/10 text-info':        doc.status === 3,
+                                                          'bg-warning/10 text-warning':  doc.status === 0 || doc.status == null,
+                                                      }">
+                                                    {{ doc.status_name ?? 'Pending' }}
+                                                </span>
+                                                <Lucide v-if="doc.has_file" icon="Paperclip" class="w-3.5 h-3.5 text-slate-400" title="File attached" />
+                                            </div>
+                                        </td>
                                         <td>
                                             <FormSelect
                                                 :modelValue="String(doc.status)"
@@ -481,9 +539,13 @@ function getVehicleStatus(status: string) {
                                                 <option value="3">In Process</option>
                                             </FormSelect>
                                         </td>
-                                        <td class="text-sm text-slate-500">{{ formatDate(doc.date) }}</td>
+                                        <td class="text-sm text-slate-500">{{ formatDate(doc.updated_at ?? doc.date) }}</td>
                                         <td class="text-center">
-                                            <div class="flex items-center justify-center gap-2">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <a v-if="doc.file_url" :href="doc.file_url" target="_blank"
+                                                   class="p-1 rounded hover:bg-primary/10 text-primary" title="View file">
+                                                    <Lucide icon="Eye" class="w-4 h-4" />
+                                                </a>
                                                 <button @click="updateDocumentStatus(doc.id, 1)" class="p-1 rounded hover:bg-success/10 text-success" title="Approve">
                                                     <Lucide icon="Check" class="w-4 h-4" />
                                                 </button>
@@ -494,7 +556,7 @@ function getVehicleStatus(status: string) {
                                         </td>
                                     </tr>
                                     <tr v-if="!documents.length">
-                                        <td colspan="4" class="px-4 py-8 text-center text-slate-400">No documents found</td>
+                                        <td colspan="5" class="px-4 py-8 text-center text-slate-400">No documents found</td>
                                     </tr>
                                 </tbody>
                             </table>
