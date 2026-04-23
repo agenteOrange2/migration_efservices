@@ -66,7 +66,7 @@ class DriverRegistrationController extends Controller
         $token         = $request->route('token') ?? $request->query('token');
         $isIndependent = empty($token);
 
-        $carrierData = $carrier->only(['id', 'name', 'slug', 'status', 'address', 'state']);
+        $carrierData = $carrier->only(['id', 'name', 'slug', 'status', 'address', 'state', 'dot_number', 'mc_number', 'zipcode', 'city']);
         $carrierData['logo_url'] = $carrier->getFirstMediaUrl('logo_carrier') ?: null;
 
         if ($carrier->status !== Carrier::STATUS_ACTIVE) {

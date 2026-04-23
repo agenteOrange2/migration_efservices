@@ -1,47 +1,77 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import { Building2, AlertTriangle } from 'lucide-vue-next'
-import type { Carrier } from '@/types'
+import RegistrationLayout from '@/layouts/RegistrationLayout.vue'
+import Lucide from '@/components/Base/Lucide'
 
-interface Props {
-    carrier: Carrier
-}
+declare function route(name: string, params?: any): string
 
-defineProps<Props>()
+defineOptions({ layout: RegistrationLayout })
+
+defineProps<{
+    carrier: {
+        id: number
+        name: string
+        slug: string
+        logo_url?: string | null
+        dot_number?: string | null
+        mc_number?: string | null
+        state?: string | null
+        address?: string | null
+    }
+}>()
 </script>
 
 <template>
     <Head title="Carrier Unavailable" />
-    <AuthLayout>
-        <div class="mx-auto w-full max-w-lg px-4 py-12">
-            <div class="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
-                    <AlertTriangle class="size-8 text-orange-600 dark:text-orange-400" />
-                </div>
 
-                <h1 class="mt-5 text-2xl font-bold text-gray-900 dark:text-white">Carrier Unavailable</h1>
-                <p class="mt-3 text-gray-500 dark:text-gray-400">
-                    <span class="font-semibold text-gray-900 dark:text-white">{{ carrier.name }}</span>
-                    is currently not accepting new driver registrations. The carrier may be pending approval or inactive.
-                </p>
-
-                <div class="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-                    <Link
-                        :href="route('driver.register.select')"
-                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90"
-                    >
-                        <Building2 class="size-4" />
-                        Select Another Carrier
-                    </Link>
-                    <Link
-                        :href="route('login')"
-                        class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                    >
-                        Return to Home
-                    </Link>
+    <!-- Carrier header — same style as Register.vue -->
+    <div class="box box--stacked mb-6 overflow-hidden">
+        <div class="flex flex-col gap-6 p-6 sm:flex-row sm:items-start sm:p-8">
+            <div class="flex h-28 w-28 shrink-0 items-center justify-center rounded-xl border-2 border-slate-200 bg-white p-3 shadow-sm">
+                <img v-if="carrier.logo_url" :src="carrier.logo_url" :alt="carrier.name" class="h-full w-full object-contain" />
+                <Lucide v-else icon="Truck" class="h-14 w-14 text-slate-300" />
+            </div>
+            <div class="flex-1">
+                <h1 class="text-3xl font-bold text-slate-800">{{ carrier.name }}</h1>
+                <p class="mt-1 text-base text-slate-500">Driver Registration Application</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span v-if="carrier.dot_number"
+                          class="inline-flex items-center gap-2 rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">
+                        <Lucide icon="FileText" class="h-4 w-4" /> DOT: {{ carrier.dot_number }}
+                    </span>
+                    <span v-if="carrier.mc_number"
+                          class="inline-flex items-center gap-2 rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">
+                        <Lucide icon="FileText" class="h-4 w-4" /> MC: {{ carrier.mc_number }}
+                    </span>
                 </div>
             </div>
         </div>
-    </AuthLayout>
+    </div>
+
+    <!-- Error card -->
+    <div class="box box--stacked p-8 text-center">
+        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-warning/10">
+            <Lucide icon="AlertTriangle" class="h-8 w-8 text-warning" />
+        </div>
+
+        <h2 class="mt-5 text-xl font-bold text-slate-800">Registration Temporarily Unavailable</h2>
+        <p class="mx-auto mt-3 max-w-md text-slate-500">
+            <span class="font-semibold text-slate-700">{{ carrier.name }}</span>
+            is currently not accepting new driver registrations. The carrier may be pending approval or inactive.
+            Please contact the carrier directly for more information.
+        </p>
+
+        <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link :href="route('driver.register.select')"
+                  class="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90">
+                <Lucide icon="Building2" class="h-4 w-4" />
+                Select Another Carrier
+            </Link>
+            <Link :href="route('home')"
+                  class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+                <Lucide icon="Home" class="h-4 w-4" />
+                Return to Home
+            </Link>
+        </div>
+    </div>
 </template>

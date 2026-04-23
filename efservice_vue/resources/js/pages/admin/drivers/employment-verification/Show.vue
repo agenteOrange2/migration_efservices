@@ -31,6 +31,17 @@ interface Document {
     size_formatted: string
 }
 
+interface AttemptPdf {
+    id: number
+    label: string
+    file_name: string
+    attempt_number: number
+    email_sent_to: string | null
+    sent_at: string | null
+    url: string
+    size_formatted: string
+}
+
 interface Verification {
     id: number
     driver_id: number
@@ -52,6 +63,7 @@ interface Verification {
     can_send_more: boolean
     tokens: Token[]
     documents: Document[]
+    attempt_pdfs: AttemptPdf[]
     latest_token: Token | null
 }
 
@@ -759,6 +771,52 @@ const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
                             <Lucide icon="History" class="w-8 h-8" />
                         </div>
                         <p class="text-sm font-medium">No verification attempts yet</p>
+                    </div>
+
+                    <!-- ── Email Attempt Record PDFs ──────────────────────── -->
+                    <div v-if="verification.attempt_pdfs.length > 0" class="mt-8">
+                        <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                            <Lucide icon="FileText" class="w-4 h-4 text-primary" />
+                            Email Attempt Records
+                            <span class="ml-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
+                                {{ verification.attempt_pdfs.length }}
+                            </span>
+                        </h3>
+                        <div class="space-y-2">
+                            <div
+                                v-for="pdf in verification.attempt_pdfs"
+                                :key="pdf.id"
+                                class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3 hover:border-slate-300 transition-colors"
+                            >
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                        <Lucide icon="FileText" class="w-4 h-4 text-primary" />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-medium text-slate-800">
+                                            Attempt #{{ pdf.attempt_number }} — Email Attempt Record
+                                        </p>
+                                        <p class="text-xs text-slate-400">
+                                            {{ pdf.size_formatted }}
+                                            <template v-if="pdf.sent_at"> · Sent {{ pdf.sent_at }}</template>
+                                            <template v-if="pdf.email_sent_to"> · to {{ pdf.email_sent_to }}</template>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 ml-3 shrink-0">
+                                    <a :href="pdf.url" target="_blank">
+                                        <Button variant="outline-primary" size="sm" class="inline-flex items-center gap-1">
+                                            <Lucide icon="Eye" class="w-3 h-3" /> View
+                                        </Button>
+                                    </a>
+                                    <a :href="pdf.url" download>
+                                        <Button variant="outline-secondary" size="sm" class="inline-flex items-center gap-1">
+                                            <Lucide icon="Download" class="w-3 h-3" /> Download
+                                        </Button>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

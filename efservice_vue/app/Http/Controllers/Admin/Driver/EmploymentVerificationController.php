@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Inertia\Inertia;
 
 class EmploymentVerificationController extends Controller
@@ -140,38 +141,57 @@ class EmploymentVerificationController extends Controller
         $latestToken = $tokens->last();
 
         $documents = $company->getMedia('employment_verification_documents')->map(fn ($m) => [
-            'id'           => $m->id,
-            'file_name'    => $m->file_name,
-            'original_name' => $m->getCustomProperty('original_name'),
-            'uploaded_by'  => $m->getCustomProperty('uploaded_by'),
-            'uploaded_at'  => $m->created_at?->format('M d, Y H:i'),
-            'url'          => $m->getUrl(),
+            'id'             => $m->id,
+            'file_name'      => $m->file_name,
+            'original_name'  => $m->getCustomProperty('original_name'),
+            'uploaded_by'    => $m->getCustomProperty('uploaded_by'),
+            'uploaded_at'    => $m->created_at?->format('M d, Y H:i'),
+            'url'            => $m->getUrl(),
             'size_formatted' => number_format($m->size / 1024, 1) . ' KB',
         ]);
 
+        // Attempt Record PDFs — stored on the driver model filtered by company_id
+        $attemptPdfs = $driver
+            ? $driver->getMedia('employment_verification_attempts')
+                ->filter(fn ($m) => $m->getCustomProperty('company_id') == $company->id)
+                ->sortBy('created_at')
+                ->values()
+                ->map(fn ($m) => [
+                    'id'             => $m->id,
+                    'label'          => $m->name,
+                    'file_name'      => $m->file_name,
+                    'attempt_number' => $m->getCustomProperty('attempt_number'),
+                    'email_sent_to'  => $m->getCustomProperty('email_sent_to'),
+                    'sent_at'        => $m->getCustomProperty('sent_at'),
+                    'url'            => $m->getUrl(),
+                    'size_formatted' => number_format($m->size / 1024, 1) . ' KB',
+                ])
+            : collect();
+
         return Inertia::render('admin/drivers/employment-verification/Show', [
             'verification' => [
-                'id'                       => $company->id,
-                'driver_id'                => $company->user_driver_detail_id,
-                'driver_name'              => $driver ? trim(($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')) : '—',
-                'company_name'             => $masterCompany?->company_name ?? ($company->company_name ?? 'Custom Company'),
-                'email'                    => $company->email,
-                'email_sent'               => $company->email_sent,
-                'verification_status'      => $company->verification_status,
-                'verification_date'        => $company->verification_date?->format('M d, Y H:i'),
-                'verification_notes'       => $company->verification_notes,
-                'positions_held'           => $company->positions_held,
-                'employed_from'            => $company->employed_from?->format('M d, Y'),
-                'employed_to'              => $company->employed_to?->format('M d, Y'),
-                'subject_to_fmcsr'         => $company->subject_to_fmcsr,
+                'id'                        => $company->id,
+                'driver_id'                 => $company->user_driver_detail_id,
+                'driver_name'               => $driver ? trim(($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')) : '—',
+                'company_name'              => $masterCompany?->company_name ?? ($company->company_name ?? 'Custom Company'),
+                'email'                     => $company->email,
+                'email_sent'                => $company->email_sent,
+                'verification_status'       => $company->verification_status,
+                'verification_date'         => $company->verification_date?->format('M d, Y H:i'),
+                'verification_notes'        => $company->verification_notes,
+                'positions_held'            => $company->positions_held,
+                'employed_from'             => $company->employed_from?->format('M d, Y'),
+                'employed_to'               => $company->employed_to?->format('M d, Y'),
+                'subject_to_fmcsr'          => $company->subject_to_fmcsr,
                 'safety_sensitive_function' => $company->safety_sensitive_function,
-                'reason_for_leaving'       => $company->reason_for_leaving,
-                'attempt_count'            => $attemptCount,
-                'max_attempts'             => $maxAttempts,
-                'can_send_more'            => $attemptCount < $maxAttempts,
-                'tokens'                   => $tokens,
-                'latest_token'             => $latestToken,
-                'documents'                => $documents,
+                'reason_for_leaving'        => $company->reason_for_leaving,
+                'attempt_count'             => $attemptCount,
+                'max_attempts'              => $maxAttempts,
+                'can_send_more'             => $attemptCount < $maxAttempts,
+                'tokens'                    => $tokens,
+                'latest_token'              => $latestToken,
+                'documents'                 => $documents,
+                'attempt_pdfs'              => $attemptPdfs->values(),
             ],
         ]);
     }
@@ -469,6 +489,76 @@ class EmploymentVerificationController extends Controller
 
         $company->update(['email_sent' => true]);
 
-        return $attemptCount + 1;
+        $attemptNumber = $attemptCount + 1;
+
+        // Generate Email Attempt Record PDF (same as efservices)
+        $this->generateAttemptPdf($company, $driver, $companyName, $driverName, $token, $attemptNumber);
+
+        return $attemptNumber;
+    }
+
+    protected function generateAttemptPdf(
+        DriverEmploymentCompany $company,
+        ?object $driver,
+        string $companyName,
+        string $driverName,
+        string $token,
+        int $attemptNumber
+    ): void {
+        if (!$driver) return;
+
+        try {
+            $pdfData = [
+                'attemptNumber'  => $attemptNumber,
+                'attemptDate'    => now()->format('m/d/Y'),
+                'attemptTime'    => now()->format('h:i:s A'),
+                'emailSentTo'    => $company->email,
+                'driverName'     => $driverName,
+                'driverId'       => $driver->id,
+                'companyName'    => $companyName,
+                'companyEmail'   => $company->email,
+                'employedFrom'   => $company->employed_from?->format('m/d/Y') ?? 'Not specified',
+                'employedTo'     => $company->employed_to?->format('m/d/Y') ?? 'Not specified',
+                'positionsHeld'  => $company->positions_held ?? 'Not specified',
+                'reasonForLeaving' => $company->reason_for_leaving ?? 'Not specified',
+                'token'          => $token,
+                'expiresAt'      => now()->addDays(30)->format('m/d/Y h:i A'),
+                'generatedAt'    => now()->format('m/d/Y h:i:s A'),
+            ];
+
+            $pdf = Pdf::loadView('pdf.driver.employment-verification-attempt', $pdfData);
+
+            $companySlug  = preg_replace('/[^a-zA-Z0-9]/', '_', $companyName);
+            $pdfFileName  = "employment_verification_attempt_{$attemptNumber}_{$companySlug}_" . time() . '.pdf';
+            $tempPath     = storage_path('app/temp/' . $pdfFileName);
+
+            Storage::disk('local')->makeDirectory('temp');
+            $pdf->save($tempPath);
+
+            $driver->addMedia($tempPath)
+                ->usingFileName($pdfFileName)
+                ->usingName("Employment Verification Attempt #{$attemptNumber} - {$companyName}")
+                ->withCustomProperties([
+                    'attempt_number' => $attemptNumber,
+                    'company_name'   => $companyName,
+                    'company_id'     => $company->id,
+                    'email_sent_to'  => $company->email,
+                    'sent_at'        => now()->toDateTimeString(),
+                ])
+                ->toMediaCollection('employment_verification_attempts');
+
+            Log::info('Employment verification attempt PDF generated', [
+                'driver_id'      => $driver->id,
+                'company_id'     => $company->id,
+                'attempt_number' => $attemptNumber,
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('Failed to generate employment verification attempt PDF', [
+                'error'      => $e->getMessage(),
+                'company_id' => $company->id,
+                'driver_id'  => $driver->id ?? null,
+            ]);
+        }
     }
 }

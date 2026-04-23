@@ -139,7 +139,7 @@ class CarrierProfileController extends Controller
                 'safety_url' => $carrier->safety_data_system_url,
                 'safety_image_url' => $carrier->hasSafetyDataSystemImage() ? $carrier->getSafetyDataSystemImageUrl() : null,
                 'referrer_token' => $carrier->referrer_token,
-                'referral_url' => url('/driver/register/' . $carrier->slug . '?token=' . $carrier->referrer_token),
+                'referral_url' => route('driver.register', [$carrier->slug, 'token' => $carrier->referrer_token]),
                 'created_at' => optional($carrier->created_at)->format('M d, Y'),
                 'updated_at' => optional($carrier->updated_at)->format('M d, Y'),
             ],

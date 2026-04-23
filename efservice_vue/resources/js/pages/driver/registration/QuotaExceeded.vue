@@ -1,30 +1,32 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import { Users } from 'lucide-vue-next'
+import RegistrationLayout from '@/layouts/RegistrationLayout.vue'
+import Lucide from '@/components/Base/Lucide'
+
+declare function route(name: string, params?: any): string
+
+defineOptions({ layout: RegistrationLayout })
 </script>
 
 <template>
     <Head title="Maximum Drivers Reached" />
-    <AuthLayout>
-        <div class="mx-auto w-full max-w-lg px-4 py-12">
-            <div class="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
-                    <Users class="size-8 text-orange-600 dark:text-orange-400" />
-                </div>
 
-                <h1 class="mt-5 text-2xl font-bold text-gray-900 dark:text-white">Maximum Drivers Reached</h1>
-                <p class="mt-3 text-gray-500 dark:text-gray-400">
-                    This carrier has reached their maximum number of allowed drivers. Please contact the carrier administrator for more information.
-                </p>
-
-                <Link
-                    :href="route('login')"
-                    class="mt-6 inline-flex rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90"
-                >
-                    Return to Home
-                </Link>
-            </div>
+    <div class="box box--stacked p-8 text-center">
+        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-warning/10">
+            <Lucide icon="Users" class="h-8 w-8 text-warning" />
         </div>
-    </AuthLayout>
+        <h2 class="mt-5 text-xl font-bold text-slate-800">Maximum Drivers Reached</h2>
+        <p class="mx-auto mt-3 max-w-md text-slate-500">
+            This carrier has reached their maximum number of allowed drivers.
+            Please contact the carrier administrator for more information.
+        </p>
+        <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link :href="route('driver.register.select')" class="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90">
+                <Lucide icon="Building2" class="h-4 w-4" /> Select Another Carrier
+            </Link>
+            <Link :href="route('home')" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                <Lucide icon="Home" class="h-4 w-4" /> Return to Home
+            </Link>
+        </div>
+    </div>
 </template>

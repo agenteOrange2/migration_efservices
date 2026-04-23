@@ -20,7 +20,9 @@ interface CarrierProp {
     slug: string
     status: number
     address?: string | null
+    city?: string | null
     state?: string | null
+    zipcode?: string | null
     dot_number?: string | null
     mc_number?: string | null
     logo_url?: string | null
@@ -165,36 +167,51 @@ const modeLabel = computed(() => props.isIndependent ? 'Independent Registration
 
     <!-- ─── Carrier Header ──────────────────────────────────────────────────── -->
     <div class="box box--stacked mb-6 overflow-hidden">
-        <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
+        <div class="flex flex-col gap-6 p-6 sm:flex-row sm:items-start sm:p-8">
+
             <!-- Logo -->
-            <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white p-2 shadow-sm dark:border-darkmode-400 dark:bg-darkmode-800">
+            <div class="flex h-28 w-28 shrink-0 items-center justify-center rounded-xl border-2 border-slate-200 bg-white p-3 shadow-sm">
                 <img v-if="carrier.logo_url" :src="carrier.logo_url" :alt="carrier.name" class="h-full w-full object-contain" />
-                <Lucide v-else icon="Truck" class="h-8 w-8 text-slate-400" />
+                <Lucide v-else icon="Truck" class="h-14 w-14 text-slate-300" />
             </div>
+
             <!-- Info -->
             <div class="flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                    <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">{{ carrier.name }}</h1>
-                    <span
-                        class="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                        :class="isIndependent ? 'bg-primary/10 text-primary' : 'bg-success/10 text-success'"
-                    >
-                        {{ modeLabel }}
+                <!-- Name + mode badge -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1 class="text-3xl font-bold text-slate-800">{{ carrier.name }}</h1>
+                    <span v-if="!isIndependent && token"
+                          class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+                        <Lucide icon="ShieldCheck" class="h-3.5 w-3.5" />
+                        Verified Invite
                     </span>
                 </div>
-                <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Driver Registration Application</p>
-                <div class="mt-2 flex flex-wrap gap-2">
-                    <span v-if="carrier.dot_number" class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-darkmode-400 dark:text-slate-300">
-                        <Lucide icon="FileText" class="h-3 w-3" /> DOT: {{ carrier.dot_number }}
+
+                <p class="mt-1 text-base text-slate-500">Driver Registration Application</p>
+
+                <!-- Address -->
+                <p v-if="carrier.address || carrier.city || carrier.state"
+                   class="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
+                    <Lucide icon="MapPin" class="h-4 w-4 shrink-0 text-slate-400" />
+                    {{ [carrier.address, carrier.city, carrier.state, carrier.zipcode].filter(Boolean).join(', ') }}
+                </p>
+
+                <!-- DOT / MC badges -->
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span v-if="carrier.dot_number"
+                          class="inline-flex items-center gap-2 rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">
+                        <Lucide icon="FileText" class="h-4 w-4" />
+                        DOT: {{ carrier.dot_number }}
                     </span>
-                    <span v-if="carrier.mc_number" class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-darkmode-400 dark:text-slate-300">
-                        <Lucide icon="FileText" class="h-3 w-3" /> MC: {{ carrier.mc_number }}
+                    <span v-if="carrier.mc_number"
+                          class="inline-flex items-center gap-2 rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">
+                        <Lucide icon="FileText" class="h-4 w-4" />
+                        MC: {{ carrier.mc_number }}
                     </span>
-                    <span v-if="carrier.state" class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-darkmode-400 dark:text-slate-300">
-                        <Lucide icon="MapPin" class="h-3 w-3" /> {{ carrier.state }}
-                    </span>
-                    <span v-if="!isIndependent && token" class="inline-flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 text-xs font-medium text-success">
-                        <Lucide icon="ShieldCheck" class="h-3 w-3" /> Verified Invite
+                    <span v-if="!carrier.dot_number && !carrier.mc_number && carrier.state"
+                          class="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+                        <Lucide icon="MapPin" class="h-3.5 w-3.5" />
+                        {{ carrier.state }}
                     </span>
                 </div>
             </div>

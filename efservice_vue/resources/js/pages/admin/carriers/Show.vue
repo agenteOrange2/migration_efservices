@@ -29,6 +29,7 @@ const page = usePage()
 const flash = computed(() => (page.props as any).flash ?? {})
 
 const activeTab = ref('overview')
+const referralCopied = ref(false)
 
 const statusMap: Record<number, { label: string; color: string; bg: string }> = {
     0: { label: 'Inactive', color: 'text-danger', bg: 'bg-danger/10' },
@@ -93,6 +94,18 @@ function regenerateDotPolicy() {
     router.post(route('admin.carriers.generate-dot-policy', props.carrier.slug), {}, {
         preserveScroll: true,
     })
+}
+
+async function copyReferralUrl() {
+    if (!props.carrier.referral_url) return
+
+    try {
+        await navigator.clipboard.writeText(props.carrier.referral_url)
+        referralCopied.value = true
+        window.setTimeout(() => { referralCopied.value = false }, 1800)
+    } catch {
+        referralCopied.value = false
+    }
 }
 
 function deleteCarrierUser(userId: number) {
@@ -336,6 +349,46 @@ function getVehicleStatus(status: string) {
                                         <dd class="text-sm font-medium text-slate-800">{{ formatDate(carrier.updated_at) }}</dd>
                                     </div>
                                 </dl>
+                            </div>
+                        </div>
+                        <div v-if="carrier.referrer_token" class="mt-6 pt-6 border-t border-slate-200">
+                            <div class="rounded-xl border border-slate-200 bg-white p-5">
+                                <div class="flex items-start gap-3">
+                                    <div class="rounded-lg bg-primary/10 p-2">
+                                        <Lucide icon="Link" class="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <h4 class="font-semibold text-slate-800">Referrer Token</h4>
+                                        <p class="mt-1 text-sm text-slate-500">Driver registration referral.</p>
+                                        <p class="text-xs text-slate-500">Use this token or its referral link when sharing the carrier registration access with drivers.</p>
+
+                                        <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                            <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Token</div>
+                                            <div class="mt-1 break-all font-mono text-sm font-medium text-slate-800">{{ carrier.referrer_token }}</div>
+                                        </div>
+
+                                        <div v-if="carrier.referral_url" class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                            <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Referral Link</div>
+                                            <p class="mt-2 text-sm text-slate-600">Copy the driver registration link and share it with the carrier.</p>
+                                            <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                                <input
+                                                    type="text"
+                                                    :value="carrier.referral_url"
+                                                    readonly
+                                                    class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                                                >
+                                                <button
+                                                    type="button"
+                                                    @click="copyReferralUrl"
+                                                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 sm:flex-shrink-0"
+                                                >
+                                                    <Lucide :icon="referralCopied ? 'Check' : 'Copy'" class="h-4 w-4" />
+                                                    {{ referralCopied ? 'Copied!' : 'Copy' }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <!-- DOT Drug & Alcohol Policy -->

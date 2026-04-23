@@ -27,11 +27,11 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::middleware('guest')->group(function () {
-    Route::get('driver-register/{carrier:slug}', [DriverRegistrationController::class, 'showRegistrationForm'])
-        ->name('driver.register');
+    Route::get('register/{carrier:slug}', [DriverRegistrationController::class, 'showRegistrationForm'])
+        ->name('register');
 
-    Route::post('driver-register/{carrier:slug}', [DriverRegistrationController::class, 'register'])
-        ->name('driver.register.submit');
+    Route::post('register/{carrier:slug}', [DriverRegistrationController::class, 'register'])
+        ->name('register.submit');
 
     Route::get('/register', [DriverRegistrationController::class, 'showIndependentCarrierSelection'])
         ->name('register.select');

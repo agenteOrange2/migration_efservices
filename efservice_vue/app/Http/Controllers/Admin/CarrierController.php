@@ -169,6 +169,9 @@ class CarrierController extends Controller
             ]);
             $carrierArray['membership'] = $carrierModel->membership?->only(['id', 'name', 'price', 'description']);
             $carrierArray['logo_url'] = $logoUrl ?: null;
+            $carrierArray['referral_url'] = $carrierModel->referrer_token
+                ? route('driver.register', [$carrierModel->slug, 'token' => $carrierModel->referrer_token])
+                : null;
 
             $userCarriers = $carrierData['userCarriers']->map(fn ($uc) => [
                 'id' => $uc->id,
@@ -290,7 +293,7 @@ class CarrierController extends Controller
         ]);
         $carrier->load('membership:id,name,price');
 
-        $referralUrl = url("/driver/register/{$carrier->slug}?token={$carrier->referrer_token}");
+        $referralUrl = route('driver.register', [$carrier->slug, 'token' => $carrier->referrer_token]);
 
         $carrierData = $carrier->only([
             'id', 'name', 'slug', 'address', 'state', 'zipcode',
