@@ -207,6 +207,7 @@ Route::middleware(['auth', 'check.driver.status'])->group(function () {
         Route::post('/{trip}/resume', [DriverTripController::class, 'resume'])->name('resume');
         Route::get('/{trip}/end', [DriverTripController::class, 'endForm'])->name('end.form');
         Route::post('/{trip}/end', [DriverTripController::class, 'end'])->name('end');
+        Route::post('/{trip}/gps', [DriverTripController::class, 'recordGpsPoint'])->name('gps.record');
         Route::post('/{trip}/documents', [DriverTripController::class, 'uploadDocuments'])->name('documents.upload');
         Route::delete('/{trip}/documents/{media}', [DriverTripController::class, 'deleteDocument'])->name('documents.delete');
         Route::get('/{trip}/documents/{media}/download', [DriverTripController::class, 'downloadDocument'])->name('documents.download');

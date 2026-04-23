@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Button from '@/components/Base/Button'
 import FormInput from '@/components/Base/Form/FormInput.vue'
 import Lucide from '@/components/Base/Lucide'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 import { Dialog } from '@/components/Base/Headless'
+import TripRouteMap from '@/components/TripRouteMap.vue'
+import { useGpsTracking } from '@/composables/useGpsTracking'
 
 declare function route(name: string, params?: any): string
 
@@ -14,6 +16,7 @@ defineOptions({ layout: RazeLayout })
 const props = defineProps<{
     driver: { id: number; full_name: string; carrier_name: string | null }
     trip: any
+    gpsRoute?: Array<{ lat: number; lng: number }>
     fmcsaStatus: any
     isOnBreak: boolean
     gpsStats: any | null
@@ -69,13 +72,26 @@ function pauseTrip() {
         onSuccess: () => {
             pauseModalOpen.value = false
             pauseForm.reset()
+            gps.stop()
         },
     })
 }
 
 function resumeTrip() {
-    router.post(route('driver.trips.resume', props.trip.id), {}, { preserveScroll: true })
+    router.post(route('driver.trips.resume', props.trip.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => { if (!gps.isTracking.value) gps.start() },
+    })
 }
+
+// GPS tracking — starts automatically when trip is in_progress, stops on pause/end
+const gps = useGpsTracking({ tripId: props.trip.id })
+
+onMounted(() => {
+    if (props.trip.status === 'in_progress') {
+        gps.start()
+    }
+})
 
 function deleteDocument(documentId: number) {
     if (!confirm('Delete this document?')) return
@@ -222,6 +238,43 @@ function uploadDocuments() {
                     <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Estimated Duration</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.estimated_duration || 'N/A' }}</p></div>
                     <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Actual Duration</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.actual_duration || 'N/A' }}</p></div>
                     <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Break Status</p><p class="mt-1 text-sm font-medium text-slate-800">{{ isOnBreak ? 'On Break' : 'Not On Break' }}</p></div>
+                </div>
+            </div>
+
+            <div v-if="trip.origin_lat || (gpsRoute && gpsRoute.length > 0)" class="box box--stacked p-6">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <Lucide icon="Map" class="h-4 w-4 text-primary" />
+                        <h2 class="text-base font-semibold text-slate-800">Route Map</h2>
+                        <span v-if="gpsRoute && gpsRoute.length > 0" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                            {{ gpsRoute.length }} GPS points
+                        </span>
+                        <span v-else class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+                            Estimated route
+                        </span>
+                    </div>
+                    <a v-if="googleMapsUrls.route" :href="googleMapsUrls.route" target="_blank" class="flex items-center gap-1 text-sm text-primary hover:underline">
+                        <Lucide icon="ExternalLink" class="h-3 w-3" />
+                        Google Maps
+                    </a>
+                </div>
+                <TripRouteMap
+                    :gps-route="gpsRoute"
+                    :origin-lat="trip.origin_lat"
+                    :origin-lng="trip.origin_lng"
+                    :destination-lat="trip.destination_lat"
+                    :destination-lng="trip.destination_lng"
+                    :origin-address="trip.origin_address"
+                    :destination-address="trip.destination_address"
+                />
+                <div class="mt-3 flex items-center gap-4 text-xs text-slate-500">
+                    <span class="flex items-center gap-1.5">
+                        <span class="inline-block h-3 w-3 rounded-full bg-green-500"></span> Start
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="inline-block h-3 w-3 rounded-full" :class="gpsRoute && gpsRoute.length > 0 ? 'bg-red-500' : 'bg-orange-500'"></span>
+                        {{ gpsRoute && gpsRoute.length > 0 ? 'End' : 'Destination' }}
+                    </span>
                 </div>
             </div>
 

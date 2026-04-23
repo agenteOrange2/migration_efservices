@@ -405,8 +405,14 @@ class CarrierTripController extends AdminTripController
 
         $tripDocuments = $trip->driver?->getTripDocuments($trip->id)?->map(fn (Media $media) => $this->mediaPayload($media, 'Trip Document'))->values() ?? collect();
 
+        $gpsRoute = $trip->gpsPoints->map(fn ($pt) => [
+            'lat' => (float) $pt->latitude,
+            'lng' => (float) $pt->longitude,
+        ])->values();
+
         return Inertia::render('carrier/trips/Show', [
             'trip' => $this->tripDetailPayload($trip),
+            'gpsRoute' => $gpsRoute,
             'gpsStats' => $gpsStats,
             'timeline' => $timeline,
             'hosEntries' => $trip->hosEntries->sortBy('start_time')->values()->map(fn (HosEntry $entry) => [

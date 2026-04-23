@@ -33,6 +33,8 @@ const props = defineProps<{
     }
 }>()
 
+import { computed } from 'vue'
+
 const filters = reactive({ ...props.filters })
 const selectedEntryIds = ref<number[]>([])
 const editOpen = ref(false)
@@ -51,6 +53,50 @@ const pickerOptions = {
     numberOfColumns: 1,
     numberOfMonths: 1,
     format: 'M/D/YYYY',
+}
+
+const allSelected = computed(() =>
+    props.entries.length > 0 && selectedEntryIds.value.length === props.entries.length
+)
+
+function toggleSelectAll() {
+    if (allSelected.value) {
+        selectedEntryIds.value = []
+    } else {
+        selectedEntryIds.value = props.entries.map((e: any) => e.id)
+    }
+}
+
+// Quick date shortcuts
+function setRange(days: number) {
+    const now = new Date()
+    const end = new Date(now)
+    const start = new Date(now)
+    start.setDate(start.getDate() - days + 1)
+    filters.end_date = formatPickerDate(end)
+    filters.start_date = formatPickerDate(start)
+    applyFilters()
+}
+
+function setLastMonth() {
+    const now = new Date()
+    const first = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const last = new Date(now.getFullYear(), now.getMonth(), 0)
+    filters.start_date = formatPickerDate(first)
+    filters.end_date = formatPickerDate(last)
+    applyFilters()
+}
+
+function setThisMonth() {
+    const now = new Date()
+    const first = new Date(now.getFullYear(), now.getMonth(), 1)
+    filters.start_date = formatPickerDate(first)
+    filters.end_date = formatPickerDate(now)
+    applyFilters()
+}
+
+function formatPickerDate(d: Date): string {
+    return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`
 }
 
 function statusTone(status: string) {
@@ -88,9 +134,7 @@ function saveEntry() {
         manual_entry_reason: editForm.manual_entry_reason || null,
     }, {
         preserveScroll: true,
-        onSuccess: () => {
-            editOpen.value = false
-        },
+        onSuccess: () => { editOpen.value = false },
     })
 }
 
@@ -101,14 +145,11 @@ function destroyEntry(id: number) {
 
 function bulkDelete() {
     if (!selectedEntryIds.value.length || !confirm(`Delete ${selectedEntryIds.value.length} selected entries?`)) return
-
     router.post(route(props.routeNames?.entryBulkDestroy ?? 'admin.hos.entries.bulk-destroy'), {
         entry_ids: selectedEntryIds.value,
     }, {
         preserveScroll: true,
-        onSuccess: () => {
-            selectedEntryIds.value = []
-        },
+        onSuccess: () => { selectedEntryIds.value = [] },
     })
 }
 </script>
@@ -155,12 +196,20 @@ function bulkDelete() {
         <div class="col-span-12">
             <div class="box box--stacked p-5">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <Litepicker v-model="filters.start_date" :options="pickerOptions" />
-                    <Litepicker v-model="filters.end_date" :options="pickerOptions" />
-                    <div class="flex gap-3">
-                        <Button variant="primary" class="w-full" @click="applyFilters">Apply</Button>
-                        <Button variant="outline-secondary" class="w-full" @click="filters.start_date=''; filters.end_date=''; applyFilters()">Reset</Button>
+                    <Litepicker v-model="filters.start_date" :options="pickerOptions" placeholder="From date" />
+                    <Litepicker v-model="filters.end_date" :options="pickerOptions" placeholder="To date" />
+                    <div class="flex gap-2">
+                        <Button variant="primary" class="flex-1" @click="applyFilters">Apply</Button>
+                        <Button variant="outline-secondary" class="flex-1" @click="filters.start_date=''; filters.end_date=''; applyFilters()">Reset</Button>
                     </div>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100" @click="setRange(7)">Last 7 days</button>
+                    <button class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100" @click="setRange(14)">Last 14 days</button>
+                    <button class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100" @click="setRange(30)">Last 30 days</button>
+                    <button class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100" @click="setThisMonth()">This month</button>
+                    <button class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100" @click="setLastMonth()">Last month</button>
+                    <button class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100" @click="setRange(90)">Last 3 months</button>
                 </div>
             </div>
         </div>
@@ -168,10 +217,13 @@ function bulkDelete() {
         <div class="col-span-12 xl:col-span-8">
             <div class="box box--stacked overflow-hidden">
                 <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-                    <h2 class="text-lg font-semibold text-slate-800">HOS Entries</h2>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-800">Detailed Entries</h2>
+                        <p class="mt-0.5 text-xs text-slate-500">{{ entries.length }} entries in selected range</p>
+                    </div>
                     <Button v-if="selectedEntryIds.length" variant="danger" class="gap-2" @click="bulkDelete">
                         <Lucide icon="Trash2" class="h-4 w-4" />
-                        Delete Selected
+                        Delete ({{ selectedEntryIds.length }})
                     </Button>
                 </div>
 
@@ -179,49 +231,60 @@ function bulkDelete() {
                     <table class="min-w-full divide-y divide-slate-200 text-sm">
                         <thead class="bg-slate-50">
                             <tr>
-                                <th class="px-5 py-3 text-left font-semibold text-slate-600"></th>
-                                <th class="px-5 py-3 text-left font-semibold text-slate-600">Status</th>
-                                <th class="px-5 py-3 text-left font-semibold text-slate-600">Time Window</th>
-                                <th class="px-5 py-3 text-left font-semibold text-slate-600">Location</th>
-                                <th class="px-5 py-3 text-left font-semibold text-slate-600">Context</th>
-                                <th class="px-5 py-3 text-right font-semibold text-slate-600">Actions</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                                    <input type="checkbox" :checked="allSelected" class="form-check-input" @change="toggleSelectAll" />
+                                </th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-600">Date</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-600">Status</th>
+                                <th class="px-4 py-3 text-center font-semibold text-slate-600">Start</th>
+                                <th class="px-4 py-3 text-center font-semibold text-slate-600">End</th>
+                                <th class="px-4 py-3 text-center font-semibold text-slate-600">Duration</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-600">Location</th>
+                                <th class="px-4 py-3 text-right font-semibold text-slate-600">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 bg-white">
-                            <tr v-for="entry in entries" :key="entry.id">
-                                <td class="px-5 py-4"><input v-model="selectedEntryIds" :value="entry.id" type="checkbox" class="form-check-input" /></td>
-                                <td class="px-5 py-4">
-                                    <div>
-                                        <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="statusTone(entry.status_label || entry.status)">{{ entry.status_label }}</span>
+                            <tr v-for="entry in entries" :key="entry.id" class="hover:bg-slate-50">
+                                <td class="px-4 py-3">
+                                    <input v-model="selectedEntryIds" :value="entry.id" type="checkbox" class="form-check-input" />
+                                </td>
+                                <td class="px-4 py-3 font-medium text-slate-800">{{ entry.date || '—' }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="statusTone(entry.status)">{{ entry.status_label }}</span>
+                                    <div v-if="entry.is_ghost_log || entry.is_manual_entry" class="mt-1 text-[11px]" :class="entry.is_ghost_log ? 'text-warning' : 'text-info'">
+                                        {{ entry.is_ghost_log ? '⚠ Ghost log' : '✎ Manual' }}
                                     </div>
-                                    <div class="mt-2 text-xs" :class="entry.is_ghost_log ? 'text-warning' : (entry.is_manual_entry ? 'text-info' : 'text-slate-500')">
-                                        {{ entry.is_ghost_log ? `Ghost log · ${entry.ghost_log_reason || 'Requires review'}` : (entry.is_manual_entry ? `Manual entry · ${entry.manual_entry_reason || 'Admin edit'}` : 'Recorded automatically') }}
-                                    </div>
                                 </td>
-                                <td class="px-5 py-4 text-slate-600">
-                                    <div>{{ entry.start_time || 'N/A' }}</div>
-                                    <div class="text-xs text-slate-500">{{ entry.end_time || 'Open entry' }} · {{ entry.duration }}</div>
+                                <td class="px-4 py-3 text-center font-medium text-slate-800">{{ entry.start_time_short || '—' }}</td>
+                                <td class="px-4 py-3 text-center text-slate-600">{{ entry.end_time_short || '—' }}</td>
+                                <td class="px-4 py-3 text-center font-medium text-slate-800">{{ entry.duration || '—' }}</td>
+                                <td class="px-4 py-3">
+                                    <a v-if="entry.maps_url" :href="entry.maps_url" target="_blank" class="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                                        <Lucide icon="MapPin" class="h-3 w-3 flex-shrink-0" />
+                                        <span class="max-w-[180px] truncate">{{ entry.formatted_address || (entry.latitude ? `${entry.latitude}, ${entry.longitude}` : 'View') }}</span>
+                                        <Lucide icon="ExternalLink" class="h-3 w-3 flex-shrink-0" />
+                                    </a>
+                                    <span v-else class="flex items-center gap-1.5 text-xs text-slate-400">
+                                        <Lucide icon="MapPin" class="h-3 w-3" />
+                                        No location
+                                    </span>
                                 </td>
-                                <td class="px-5 py-4 text-slate-600">{{ entry.location || 'N/A' }}</td>
-                                <td class="px-5 py-4 text-slate-600">
-                                    <div>{{ entry.trip_number ? `Trip ${entry.trip_number}` : 'No trip linked' }}</div>
-                                    <div class="text-xs text-slate-500">{{ entry.vehicle_label || 'Vehicle N/A' }}</div>
-                                </td>
-                                <td class="px-5 py-4 text-right">
-                                    <div class="flex justify-end gap-2">
-                                        <Button variant="outline-secondary" class="gap-2" @click="openEdit(entry)">
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex justify-end gap-1.5">
+                                        <button class="rounded-lg p-1.5 text-primary hover:bg-primary/10" title="Edit" @click="openEdit(entry)">
                                             <Lucide icon="Pencil" class="h-4 w-4" />
-                                            Edit
-                                        </Button>
-                                        <Button variant="danger" class="gap-2" @click="destroyEntry(entry.id)">
+                                        </button>
+                                        <button class="rounded-lg p-1.5 text-danger hover:bg-danger/10" title="Delete" @click="destroyEntry(entry.id)">
                                             <Lucide icon="Trash2" class="h-4 w-4" />
-                                            Delete
-                                        </Button>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
                             <tr v-if="!entries.length">
-                                <td colspan="6" class="px-5 py-10 text-center text-slate-500">No HOS entries were found in this range.</td>
+                                <td colspan="8" class="px-5 py-12 text-center">
+                                    <Lucide icon="Clock" class="mx-auto mb-3 h-10 w-10 text-slate-300" />
+                                    <p class="text-slate-500">No entries found for the selected period.</p>
+                                </td>
                             </tr>
                         </tbody>
                     </table>

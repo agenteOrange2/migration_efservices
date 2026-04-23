@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import Button from '@/components/Base/Button'
 import Lucide from '@/components/Base/Lucide'
 import RazeLayout from '@/layouts/RazeLayout.vue'
+import TripRouteMap from '@/components/TripRouteMap.vue'
 
 declare function route(name: string, params?: any): string
 
@@ -10,6 +11,7 @@ defineOptions({ layout: RazeLayout })
 
 const props = defineProps<{
     trip: any
+    gpsRoute?: Array<{ lat: number; lng: number }>
     gpsStats: null | { total_points: number; total_distance_miles: number; average_speed_mph: number; max_speed_mph: number; stationary_periods: number; duration_minutes: number | null }
     timeline: any[]
     hosEntries: any[]
@@ -148,6 +150,43 @@ function emergencyAction(routeName: string, label: string) {
                         <p v-if="trip.notes" class="mt-2 text-sm text-slate-600"><span class="font-medium text-slate-800">Admin Notes:</span> {{ trip.notes }}</p>
                         <p v-if="trip.driver_notes" class="mt-2 text-sm text-slate-600"><span class="font-medium text-slate-800">Driver Notes:</span> {{ trip.driver_notes }}</p>
                     </div>
+                </div>
+            </div>
+
+            <div v-if="trip.origin_lat || (gpsRoute && gpsRoute.length > 0)" class="box box--stacked p-6">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <Lucide icon="Map" class="h-4 w-4 text-primary" />
+                        <h2 class="text-base font-semibold text-slate-800">Route Map</h2>
+                        <span v-if="gpsRoute && gpsRoute.length > 0" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                            {{ gpsRoute.length }} GPS points
+                        </span>
+                        <span v-else class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+                            Estimated route
+                        </span>
+                    </div>
+                    <a v-if="googleMapsUrls.route" :href="googleMapsUrls.route" target="_blank" class="text-sm text-primary hover:underline flex items-center gap-1">
+                        <Lucide icon="ExternalLink" class="h-3 w-3" />
+                        Open in Google Maps
+                    </a>
+                </div>
+                <TripRouteMap
+                    :gps-route="gpsRoute"
+                    :origin-lat="trip.origin_lat"
+                    :origin-lng="trip.origin_lng"
+                    :destination-lat="trip.destination_lat"
+                    :destination-lng="trip.destination_lng"
+                    :origin-address="trip.origin_address"
+                    :destination-address="trip.destination_address"
+                />
+                <div class="mt-3 flex items-center gap-4 text-xs text-slate-500">
+                    <span class="flex items-center gap-1.5">
+                        <span class="inline-block h-3 w-3 rounded-full bg-green-500"></span> Start
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="inline-block h-3 w-3 rounded-full" :class="gpsRoute && gpsRoute.length > 0 ? 'bg-red-500' : 'bg-orange-500'"></span>
+                        {{ gpsRoute && gpsRoute.length > 0 ? 'End' : 'Destination' }}
+                    </span>
                 </div>
             </div>
 

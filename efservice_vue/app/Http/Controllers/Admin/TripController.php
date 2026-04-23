@@ -429,8 +429,14 @@ class TripController extends Controller
             );
         })->values();
 
+        $gpsRoute = $trip->gpsPoints->map(fn ($pt) => [
+            'lat' => (float) $pt->latitude,
+            'lng' => (float) $pt->longitude,
+        ])->values();
+
         return Inertia::render('admin/trips/Show', [
             'trip' => $this->tripDetailPayload($trip),
+            'gpsRoute' => $gpsRoute,
             'gpsStats' => $gpsStats,
             'timeline' => $timeline,
             'hosEntries' => $trip->hosEntries->sortBy('start_time')->values()->map(fn (HosEntry $entry) => [
@@ -708,6 +714,10 @@ class TripController extends Controller
             'can_force_pause' => $trip->isInProgress(),
             'can_force_resume' => $trip->isPaused(),
             'can_force_end' => $trip->canBeEnded(),
+            'origin_lat' => $trip->origin_latitude ? (float) $trip->origin_latitude : null,
+            'origin_lng' => $trip->origin_longitude ? (float) $trip->origin_longitude : null,
+            'destination_lat' => $trip->destination_latitude ? (float) $trip->destination_latitude : null,
+            'destination_lng' => $trip->destination_longitude ? (float) $trip->destination_longitude : null,
         ];
     }
 

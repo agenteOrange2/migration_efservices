@@ -179,13 +179,23 @@ class HosController extends Controller
                 'id' => $entry->id,
                 'status' => $entry->status,
                 'status_label' => $entry->status_name,
+                'date' => $entry->date?->format('M j'),
                 'start_time' => $entry->start_time?->format('n/j/Y g:i A'),
+                'start_time_short' => $entry->start_time?->format('H:i'),
                 'end_time' => $entry->end_time?->format('n/j/Y g:i A'),
+                'end_time_short' => $entry->end_time?->format('H:i'),
                 'edit_start_time' => $entry->start_time?->format('Y-m-d\TH:i'),
                 'edit_end_time' => $entry->end_time?->format('Y-m-d\TH:i'),
                 'duration' => $entry->formatted_duration,
                 'location' => $entry->location_display,
                 'formatted_address' => $entry->formatted_address,
+                'latitude' => $entry->latitude ? (float) $entry->latitude : null,
+                'longitude' => $entry->longitude ? (float) $entry->longitude : null,
+                'maps_url' => $entry->latitude && $entry->longitude
+                    ? "https://www.google.com/maps?q={$entry->latitude},{$entry->longitude}"
+                    : ($entry->formatted_address
+                        ? 'https://www.google.com/maps/search/?api=1&query=' . urlencode($entry->formatted_address)
+                        : null),
                 'is_manual_entry' => (bool) $entry->is_manual_entry,
                 'manual_entry_reason' => $entry->manual_entry_reason,
                 'is_ghost_log' => (bool) $entry->is_ghost_log,

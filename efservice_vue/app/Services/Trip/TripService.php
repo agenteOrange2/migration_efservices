@@ -9,6 +9,7 @@ use App\Models\UserDriverDetail;
 use App\Services\Hos\HosFMCSAService;
 use App\Services\Hos\HosWeeklyCycleService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
@@ -295,7 +296,7 @@ class TripService
      */
     public function acceptTrip(Trip $trip, int $driverId): Trip
     {
-        if ($trip->user_driver_detail_id != $driverId) {
+        if ($trip->user_driver_detail_id !== $driverId) {
             throw ValidationException::withMessages([
                 'trip' => ['This trip is not assigned to you.'],
             ]);
@@ -304,6 +305,15 @@ class TripService
         if (!$trip->isPending()) {
             throw ValidationException::withMessages([
                 'trip' => ['This trip cannot be accepted in its current state.'],
+            ]);
+        }
+
+        // Block acceptance when driver has an active blocking penalty (suspension/mandatory_rest),
+        // since those have a known end time and would prevent starting the trip regardless of when it's scheduled.
+        $penalty = $this->fmcsaService->hasBlockingPenalty($driverId);
+        if ($penalty['has_penalty']) {
+            throw ValidationException::withMessages([
+                'fmcsa' => ['You cannot accept trips while you have an active HOS penalty (' . $penalty['penalty_type'] . '). Your penalty expires at ' . $penalty['expires_at'] . '.'],
             ]);
         }
 
@@ -419,41 +429,43 @@ class TripService
             ]);
         }
 
-        // Close the current HOS driving entry
-        $this->closeDrivingEntry($driverId, $trip);
+        return DB::transaction(function () use ($trip, $driverId, $postInspection, $notes) {
+            // Close the current HOS driving entry
+            $this->closeDrivingEntry($driverId, $trip);
 
-        // Calculate actual duration
-        $actualDuration = $trip->actual_start_time
-            ? $trip->actual_start_time->diffInMinutes(now())
-            : null;
+            // Calculate actual duration
+            $actualDuration = $trip->actual_start_time
+                ? $trip->actual_start_time->diffInMinutes(now())
+                : null;
 
-        // Process inspection checklist data (use trip's has_trailer flag)
-        $inspectionData = $this->processInspectionData($postInspection, $trip->has_trailer);
-        $hasDefects = !empty($postInspection['remarks']);
+            // Process inspection checklist data (use trip's has_trailer flag)
+            $inspectionData = $this->processInspectionData($postInspection, $trip->has_trailer);
+            $hasDefects = !empty($postInspection['remarks']);
 
-        // Update trip
-        $trip->update([
-            'status' => Trip::STATUS_COMPLETED,
-            'completed_at' => now(),
-            'actual_end_time' => now(),
-            'actual_duration_minutes' => $actualDuration,
-            'post_trip_inspection_completed' => !empty($postInspection['tractor']),
-            'post_trip_inspection_at' => !empty($postInspection['tractor']) ? now() : null,
-            'post_trip_inspection_data' => $inspectionData,
-            'post_trip_remarks' => $postInspection['remarks'] ?? null,
-            'post_trip_defects_found' => $hasDefects,
-            'driver_notes' => $notes,
-            'post_trip_defects_corrected' => (bool) ($postInspection['defects_corrected'] ?? false),
-            'post_trip_defects_corrected_notes' => $postInspection['defects_corrected_notes'] ?? null,
-            'post_trip_defects_not_need_correction' => (bool) ($postInspection['defects_not_need_correction'] ?? false),
-            'post_trip_defects_not_need_correction_notes' => $postInspection['defects_not_need_correction_notes'] ?? null,
-            'post_trip_driver_signature' => $postInspection['driver_signature'] ?? null,
-        ]);
+            // Update trip
+            $trip->update([
+                'status' => Trip::STATUS_COMPLETED,
+                'completed_at' => now(),
+                'actual_end_time' => now(),
+                'actual_duration_minutes' => $actualDuration,
+                'post_trip_inspection_completed' => !empty($postInspection['tractor']),
+                'post_trip_inspection_at' => !empty($postInspection['tractor']) ? now() : null,
+                'post_trip_inspection_data' => $inspectionData,
+                'post_trip_remarks' => $postInspection['remarks'] ?? null,
+                'post_trip_defects_found' => $hasDefects,
+                'driver_notes' => $notes,
+                'post_trip_defects_corrected' => (bool) ($postInspection['defects_corrected'] ?? false),
+                'post_trip_defects_corrected_notes' => $postInspection['defects_corrected_notes'] ?? null,
+                'post_trip_defects_not_need_correction' => (bool) ($postInspection['defects_not_need_correction'] ?? false),
+                'post_trip_defects_not_need_correction_notes' => $postInspection['defects_not_need_correction_notes'] ?? null,
+                'post_trip_driver_signature' => $postInspection['driver_signature'] ?? null,
+            ]);
 
-        // Create off-duty HOS entry
-        $this->createOffDutyEntry($driverId, $trip);
+            // Create off-duty HOS entry
+            $this->createOffDutyEntry($driverId, $trip);
 
-        return $trip->fresh();
+            return $trip->fresh();
+        });
     }
 
     /**
@@ -461,7 +473,7 @@ class TripService
      */
     public function pauseTrip(Trip $trip, int $driverId, ?array $location = null, ?string $reason = null, ?int $forcedBy = null): Trip
     {
-        if ($trip->user_driver_detail_id != $driverId) {
+        if ($trip->user_driver_detail_id !== $driverId) {
             throw ValidationException::withMessages([
                 'trip' => ['This trip is not assigned to you.'],
             ]);
@@ -480,42 +492,44 @@ class TripService
             ->first();
 
         // If already on break, don't create another break entry
-        if ($currentEntry && $currentEntry->status === 'on_duty_not_driving' && $currentEntry->trip_id == $trip->id) {
+        if ($currentEntry && $currentEntry->status === 'on_duty_not_driving' && $currentEntry->trip_id === $trip->id) {
             return $trip->fresh();
         }
 
-        // Close the current driving entry
-        $this->closeDrivingEntry($driverId, $trip);
+        return DB::transaction(function () use ($trip, $driverId, $location, $reason, $forcedBy, $currentEntry) {
+            // Close the current driving entry
+            $this->closeDrivingEntry($driverId, $trip);
 
-        // Get vehicle_id from trip or driver's active assignment
-        $vehicleId = $trip->vehicle_id;
-        if (!$vehicleId) {
-            $driver = UserDriverDetail::find($driverId);
-            $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
-        }
+            // Get vehicle_id from trip or driver's active assignment
+            $vehicleId = $trip->vehicle_id;
+            if (!$vehicleId) {
+                $driver = UserDriverDetail::find($driverId);
+                $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
+            }
 
-        // Create on-duty not driving entry (for break)
-        HosEntry::create([
-            'user_driver_detail_id' => $driverId,
-            'vehicle_id' => $vehicleId,
-            'carrier_id' => $trip->carrier_id,
-            'trip_id' => $trip->id,
-            'status' => 'on_duty_not_driving',
-            'start_time' => now(),
-            'date' => today(),
-            'latitude' => $location['latitude'] ?? null,
-            'longitude' => $location['longitude'] ?? null,
-            'formatted_address' => $location['address'] ?? null,
-            'location_available' => isset($location['latitude']) && isset($location['longitude']),
-        ]);
+            // Create on-duty not driving entry (for break)
+            HosEntry::create([
+                'user_driver_detail_id' => $driverId,
+                'vehicle_id' => $vehicleId,
+                'carrier_id' => $trip->carrier_id,
+                'trip_id' => $trip->id,
+                'status' => 'on_duty_not_driving',
+                'start_time' => now(),
+                'date' => today(),
+                'latitude' => $location['latitude'] ?? null,
+                'longitude' => $location['longitude'] ?? null,
+                'formatted_address' => $location['address'] ?? null,
+                'location_available' => isset($location['latitude']) && isset($location['longitude']),
+            ]);
 
-        // Create TripPause record
-        $this->tripPauseService->createPause($trip, $location, $reason, $forcedBy);
+            // Create TripPause record
+            $this->tripPauseService->createPause($trip, $location, $reason, $forcedBy);
 
-        // Update trip status to paused
-        $trip->update(['status' => Trip::STATUS_PAUSED]);
+            // Update trip status to paused
+            $trip->update(['status' => Trip::STATUS_PAUSED]);
 
-        return $trip->fresh();
+            return $trip->fresh();
+        });
     }
 
     /**
@@ -570,52 +584,54 @@ class TripService
             $warningMessages[] = "Warning: Only {$dutyPeriod['remaining_minutes']} minutes left in your duty period.";
         }
 
-        // Close the current on-duty not driving entry
-        $currentEntry = HosEntry::where('user_driver_detail_id', $driverId)
-            ->whereNull('end_time')
-            ->latest('start_time')
-            ->first();
+        return DB::transaction(function () use ($trip, $driverId, $location, $warningMessages) {
+            // Close the current on-duty not driving entry
+            $currentEntry = HosEntry::where('user_driver_detail_id', $driverId)
+                ->whereNull('end_time')
+                ->latest('start_time')
+                ->first();
 
-        if ($currentEntry) {
-            $currentEntry->update(['end_time' => now()]);
-        }
+            if ($currentEntry) {
+                $currentEntry->update(['end_time' => now()]);
+            }
 
-        // End the active TripPause
-        $this->tripPauseService->endPause($trip);
+            // End the active TripPause
+            $this->tripPauseService->endPause($trip);
 
-        // Get vehicle_id from trip or driver's active assignment
-        $vehicleId = $trip->vehicle_id;
-        if (!$vehicleId) {
-            $driver = UserDriverDetail::find($driverId);
-            $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
-        }
+            // Get vehicle_id from trip or driver's active assignment
+            $vehicleId = $trip->vehicle_id;
+            if (!$vehicleId) {
+                $driver = UserDriverDetail::find($driverId);
+                $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
+            }
 
-        // Create new driving entry
-        HosEntry::create([
-            'user_driver_detail_id' => $driverId,
-            'vehicle_id' => $vehicleId,
-            'carrier_id' => $trip->carrier_id,
-            'trip_id' => $trip->id,
-            'status' => 'on_duty_driving',
-            'start_time' => now(),
-            'date' => today(),
-            'latitude' => $location['latitude'] ?? null,
-            'longitude' => $location['longitude'] ?? null,
-            'formatted_address' => $location['address'] ?? null,
-            'location_available' => isset($location['latitude']) && isset($location['longitude']),
-        ]);
+            // Create new driving entry
+            HosEntry::create([
+                'user_driver_detail_id' => $driverId,
+                'vehicle_id' => $vehicleId,
+                'carrier_id' => $trip->carrier_id,
+                'trip_id' => $trip->id,
+                'status' => 'on_duty_driving',
+                'start_time' => now(),
+                'date' => today(),
+                'latitude' => $location['latitude'] ?? null,
+                'longitude' => $location['longitude'] ?? null,
+                'formatted_address' => $location['address'] ?? null,
+                'location_available' => isset($location['latitude']) && isset($location['longitude']),
+            ]);
 
-        // Update trip status back to in_progress
-        $trip->update(['status' => Trip::STATUS_IN_PROGRESS]);
+            // Update trip status back to in_progress
+            $trip->update(['status' => Trip::STATUS_IN_PROGRESS]);
 
-        $result = $trip->fresh();
-        
-        // Attach warnings to session if any
-        if (!empty($warningMessages)) {
-            session()->flash('hos_warnings', $warningMessages);
-        }
+            $result = $trip->fresh();
 
-        return $result;
+            // Attach warnings to session if any
+            if (!empty($warningMessages)) {
+                session()->flash('hos_warnings', $warningMessages);
+            }
+
+            return $result;
+        });
     }
 
     /**
@@ -805,11 +821,13 @@ class TripService
             ]);
         }
 
-        // Update trip status
+        // Update trip status — inspection skipped intentionally via emergency force-start
         $trip->update([
             'status' => Trip::STATUS_IN_PROGRESS,
             'started_at' => now(),
             'actual_start_time' => now(),
+            'pre_trip_inspection_completed' => false,
+            'pre_trip_inspection_at' => null,
         ]);
 
         // Create HOS entry for driving
@@ -853,7 +871,8 @@ class TripService
             'date' => today(),
             'latitude' => null,
             'longitude' => null,
-            'location' => 'Paused trip (emergency control)',
+            'formatted_address' => 'Paused trip (emergency control)',
+            'location_available' => false,
         ]);
 
         // Create TripPause record with forced_by
@@ -907,7 +926,8 @@ class TripService
             'date' => today(),
             'latitude' => null,
             'longitude' => null,
-            'location' => 'Resumed trip (emergency control)',
+            'formatted_address' => 'Resumed trip (emergency control)',
+            'location_available' => false,
         ]);
 
         // Update trip status back to in_progress

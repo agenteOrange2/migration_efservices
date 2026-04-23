@@ -339,6 +339,11 @@ class DriverTripController extends AdminTripController
             && $currentEntry->status === HosEntry::STATUS_ON_DUTY_NOT_DRIVING
             && (int) $currentEntry->trip_id === (int) $trip->id;
 
+        $gpsRoute = $trip->gpsPoints->map(fn ($pt) => [
+            'lat' => (float) $pt->latitude,
+            'lng' => (float) $pt->longitude,
+        ])->values();
+
         return Inertia::render('driver/trips/Show', [
             'driver' => [
                 'id' => $driver->id,
@@ -363,6 +368,7 @@ class DriverTripController extends AdminTripController
             ]),
             'fmcsaStatus' => $this->fmcsaService->getDriverFMCSAStatus($driver->id, $trip->carrier_id),
             'isOnBreak' => (bool) $isOnBreak,
+            'gpsRoute' => $gpsRoute,
             'gpsStats' => $gpsStats,
             'timeline' => $timeline,
             'hosEntries' => $trip->hosEntries->sortBy('start_time')->values()->map(fn (HosEntry $entry) => [
@@ -543,6 +549,29 @@ class DriverTripController extends AdminTripController
         return redirect()
             ->route('driver.trips.show', $trip)
             ->with('success', 'Trip completed successfully.');
+    }
+
+    public function recordGpsPoint(Request $request, Trip $trip): \Illuminate\Http\JsonResponse
+    {
+        $driver = $this->resolveDriver();
+        $this->authorizeTrip($driver, $trip);
+
+        if (!$trip->isInProgress()) {
+            return response()->json(['error' => 'Trip is not in progress.'], 422);
+        }
+
+        $validated = $request->validate([
+            'latitude'          => ['required', 'numeric', 'between:-90,90'],
+            'longitude'         => ['required', 'numeric', 'between:-180,180'],
+            'speed'             => ['nullable', 'numeric', 'min:0'],
+            'heading'           => ['nullable', 'numeric', 'between:0,360'],
+            'formatted_address' => ['nullable', 'string', 'max:500'],
+            'recorded_at'       => ['nullable', 'date'],
+        ]);
+
+        $point = $this->gpsService->captureGpsPoint($trip, $validated);
+
+        return response()->json(['success' => true, 'point_id' => $point->id]);
     }
 
     public function uploadDocuments(Request $request, Trip $trip): RedirectResponse
