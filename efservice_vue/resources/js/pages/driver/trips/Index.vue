@@ -151,26 +151,26 @@ function statCards() {
 <template>
     <Head title="My Trips" />
 
-    <div class="grid grid-cols-12 gap-6">
+    <div class="grid grid-cols-12 gap-4 sm:gap-6">
         <div class="col-span-12">
-            <div class="box box--stacked p-6">
-                <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-                    <div class="flex items-start gap-4">
-                        <div class="rounded-2xl border border-primary/20 bg-primary/10 p-3">
-                            <Lucide icon="MapPinned" class="h-8 w-8 text-primary" />
+            <div class="box box--stacked p-4 sm:p-6">
+                <div class="flex flex-col gap-4 sm:gap-5 xl:flex-row xl:items-center xl:justify-between">
+                    <div class="flex items-start gap-3 sm:gap-4 min-w-0">
+                        <div class="rounded-2xl border border-primary/20 bg-primary/10 p-3 shrink-0">
+                            <Lucide icon="MapPinned" class="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
                         </div>
-                        <div>
-                            <h1 class="text-2xl font-bold text-slate-800">My Trips</h1>
-                            <p class="mt-1 text-slate-500">Review assigned trips, create quick trips, and manage the full start to finish workflow.</p>
-                            <p class="mt-2 text-sm text-slate-500">
+                        <div class="min-w-0">
+                            <h1 class="text-xl sm:text-2xl font-bold text-slate-800">My Trips</h1>
+                            <p class="mt-1 text-sm sm:text-base text-slate-500">Review assigned trips, create quick trips, and manage the full start to finish workflow.</p>
+                            <p class="mt-2 text-sm text-slate-500 break-words">
                                 Driver: <span class="font-medium text-slate-700">{{ driver.full_name }}</span>
                                 <span v-if="driver.carrier_name"> · Carrier: <span class="font-medium text-slate-700">{{ driver.carrier_name }}</span></span>
                             </p>
                         </div>
                     </div>
 
-                    <Link :href="route('driver.trips.create')">
-                        <Button variant="primary" class="gap-2">
+                    <Link :href="route('driver.trips.create')" class="w-full xl:w-auto">
+                        <Button variant="primary" class="w-full justify-center gap-2 xl:w-auto">
                             <Lucide icon="Plus" class="h-4 w-4" />
                             New Trip
                         </Button>
@@ -182,15 +182,15 @@ function statCards() {
         <div
             v-for="card in statCards()"
             :key="card.label"
-            class="col-span-12 sm:col-span-6 xl:col-span-3"
+            class="col-span-6 xl:col-span-3"
         >
-            <div class="box box--stacked p-5">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-slate-500">{{ card.label }}</p>
-                        <p class="mt-2 text-3xl font-semibold text-slate-800">{{ card.value }}</p>
+            <div class="box box--stacked p-4 sm:p-5">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-xs sm:text-sm text-slate-500 truncate">{{ card.label }}</p>
+                        <p class="mt-2 text-2xl sm:text-3xl font-semibold text-slate-800">{{ card.value }}</p>
                     </div>
-                    <div class="rounded-xl p-3" :class="card.tone">
+                    <div class="rounded-xl p-2.5 sm:p-3 shrink-0" :class="card.tone">
                         <Lucide :icon="card.icon as any" class="h-5 w-5" />
                     </div>
                 </div>
@@ -198,13 +198,13 @@ function statCards() {
         </div>
 
         <div class="col-span-12">
-            <div class="box box--stacked p-5">
-                <div class="flex flex-wrap gap-3">
+            <div class="box box--stacked p-3 sm:p-5">
+                <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:gap-3 sm:overflow-visible sm:pb-0">
                     <button
                         v-for="tab in tabs"
                         :key="tab.value"
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition"
+                        class="inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition sm:px-4"
                         :class="filters.status === tab.value ? 'border-primary bg-primary text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'"
                         @click="changeStatus(tab.value)"
                     >
@@ -219,8 +219,8 @@ function statCards() {
         </div>
 
         <div class="col-span-12">
-            <div class="box box--stacked p-5">
-                <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr),auto]">
+            <div class="box box--stacked p-4 sm:p-5">
+                <div class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr),auto] lg:gap-4">
                     <div class="relative">
                         <Lucide icon="Search" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                         <FormInput
@@ -231,12 +231,12 @@ function statCards() {
                         />
                     </div>
 
-                    <div class="flex items-center gap-3">
-                        <Button variant="primary" class="gap-2" @click="applyFilters">
+                    <div class="flex gap-2 sm:gap-3">
+                        <Button variant="primary" class="flex-1 justify-center gap-2 sm:flex-none" @click="applyFilters">
                             <Lucide icon="Filter" class="h-4 w-4" />
                             Apply
                         </Button>
-                        <Button variant="outline-secondary" class="gap-2" @click="clearFilters">
+                        <Button variant="outline-secondary" class="flex-1 justify-center gap-2 sm:flex-none" @click="clearFilters">
                             <Lucide icon="RotateCcw" class="h-4 w-4" />
                             Clear
                         </Button>
@@ -246,17 +246,17 @@ function statCards() {
         </div>
 
         <div class="col-span-12">
-            <div v-if="trips.data.length" class="grid grid-cols-12 gap-6">
+            <div v-if="trips.data.length" class="grid grid-cols-12 gap-4 sm:gap-6">
                 <div
                     v-for="trip in trips.data"
                     :key="trip.id"
                     class="col-span-12 xl:col-span-6"
                 >
-                    <div class="box box--stacked h-full border p-6 transition hover:shadow-md" :class="trip.has_violations ? 'border-slate-300 bg-slate-50/60' : 'border-slate-200 bg-white'">
+                    <div class="box box--stacked h-full border p-4 sm:p-6 transition hover:shadow-md" :class="trip.has_violations ? 'border-slate-300 bg-slate-50/60' : 'border-slate-200 bg-white'">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div class="space-y-3">
+                            <div class="space-y-3 min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <h2 class="text-lg font-semibold text-slate-800">{{ trip.trip_number }}</h2>
+                                    <h2 class="text-base sm:text-lg font-semibold text-slate-800 break-all">{{ trip.trip_number }}</h2>
                                     <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="statusTone(trip.status)">
                                         {{ trip.status_label }}
                                     </span>
@@ -269,14 +269,14 @@ function statCards() {
                                 </div>
 
                                 <div class="space-y-2 text-sm text-slate-500">
-                                    <p><span class="font-medium text-slate-700">Origin:</span> {{ trip.origin_address }}</p>
-                                    <p><span class="font-medium text-slate-700">Destination:</span> {{ trip.destination_address }}</p>
-                                    <p><span class="font-medium text-slate-700">Vehicle:</span> {{ trip.vehicle_label }}</p>
+                                    <p class="break-words"><span class="font-medium text-slate-700">Origin:</span> {{ trip.origin_address }}</p>
+                                    <p class="break-words"><span class="font-medium text-slate-700">Destination:</span> {{ trip.destination_address }}</p>
+                                    <p class="break-words"><span class="font-medium text-slate-700">Vehicle:</span> {{ trip.vehicle_label }}</p>
                                     <p><span class="font-medium text-slate-700">Scheduled:</span> {{ trip.scheduled_start || 'N/A' }}</p>
                                 </div>
                             </div>
 
-                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center sm:min-w-[120px]">
+                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center sm:min-w-[120px] shrink-0">
                                 <p class="text-xs uppercase tracking-[0.2em] text-slate-400">GPS Points</p>
                                 <p class="mt-2 text-2xl font-semibold text-slate-800">{{ trip.gps_points_count }}</p>
                             </div>
@@ -287,11 +287,11 @@ function statCards() {
                             <p class="mt-1">Missing: {{ trip.missing_fields.join(', ') }}</p>
                         </div>
 
-                        <div class="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-5">
+                        <div class="mt-5 grid grid-cols-2 gap-2 border-t border-slate-200 pt-5 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
                             <Button
                                 v-if="trip.can_accept"
                                 variant="primary"
-                                class="gap-2"
+                                class="w-full justify-center gap-2 sm:w-auto"
                                 @click="acceptTrip(trip.id)"
                             >
                                 <Lucide icon="CheckCircle2" class="h-4 w-4" />
@@ -301,29 +301,29 @@ function statCards() {
                             <Button
                                 v-if="trip.can_reject"
                                 variant="outline-secondary"
-                                class="gap-2"
+                                class="w-full justify-center gap-2 sm:w-auto"
                                 @click="openRejectModal(trip)"
                             >
                                 <Lucide icon="XCircle" class="h-4 w-4" />
                                 Reject
                             </Button>
 
-                            <Link v-if="trip.can_start" :href="route('driver.trips.start.form', trip.id)">
-                                <Button variant="primary" class="gap-2">
+                            <Link v-if="trip.can_start" :href="route('driver.trips.start.form', trip.id)" class="w-full sm:w-auto">
+                                <Button variant="primary" class="w-full justify-center gap-2 sm:w-auto">
                                     <Lucide icon="Play" class="h-4 w-4" />
                                     Start Trip
                                 </Button>
                             </Link>
 
-                            <Link v-if="trip.can_end" :href="route('driver.trips.end.form', trip.id)">
-                                <Button variant="outline-secondary" class="gap-2">
+                            <Link v-if="trip.can_end" :href="route('driver.trips.end.form', trip.id)" class="w-full sm:w-auto">
+                                <Button variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto">
                                     <Lucide icon="Square" class="h-4 w-4" />
                                     End Trip
                                 </Button>
                             </Link>
 
-                            <Link :href="route('driver.trips.show', trip.id)" class="ml-auto">
-                                <Button variant="outline-secondary" class="gap-2">
+                            <Link :href="route('driver.trips.show', trip.id)" class="col-span-2 w-full sm:col-span-1 sm:ml-auto sm:w-auto">
+                                <Button variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto">
                                     <Lucide icon="ArrowRight" class="h-4 w-4" />
                                     Open
                                 </Button>
@@ -333,7 +333,7 @@ function statCards() {
                 </div>
             </div>
 
-            <div v-else class="box box--stacked p-12 text-center">
+            <div v-else class="box box--stacked p-8 sm:p-12 text-center">
                 <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                     <Lucide icon="MapPinned" class="h-8 w-8 text-slate-400" />
                 </div>
@@ -345,18 +345,18 @@ function statCards() {
         </div>
 
         <div v-if="trips.last_page > 1" class="col-span-12">
-            <div class="box box--stacked flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="box box--stacked flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <span class="text-sm text-slate-500">{{ trips.total }} total trips</span>
-                <div class="flex flex-wrap gap-1">
+                <div class="flex gap-1 overflow-x-auto">
                     <template v-for="link in trips.links" :key="link.label">
                         <Link
                             v-if="link.url"
                             :href="link.url"
-                            class="rounded-lg px-3 py-1.5 text-sm transition"
+                            class="shrink-0 rounded-lg px-3 py-1.5 text-sm transition"
                             :class="link.active ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100'"
                             v-html="link.label"
                         />
-                        <span v-else class="px-3 py-1.5 text-sm text-slate-300" v-html="link.label" />
+                        <span v-else class="shrink-0 px-3 py-1.5 text-sm text-slate-300" v-html="link.label" />
                     </template>
                 </div>
             </div>
@@ -365,7 +365,7 @@ function statCards() {
 
     <Dialog :open="rejectModalOpen" @close="rejectModalOpen = false" size="lg">
         <Dialog.Panel class="w-full max-w-[640px] overflow-hidden">
-            <div class="p-6">
+            <div class="p-4 sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-800">Reject Trip</h3>
@@ -391,10 +391,10 @@ function statCards() {
                     </div>
 
                     <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
-                        <Button type="button" variant="outline-secondary" class="justify-center gap-2" @click="rejectModalOpen = false">
+                        <Button type="button" variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto" @click="rejectModalOpen = false">
                             Cancel
                         </Button>
-                        <Button type="submit" variant="primary" class="justify-center gap-2" :disabled="rejectForm.processing">
+                        <Button type="submit" variant="primary" class="w-full justify-center gap-2 sm:w-auto" :disabled="rejectForm.processing">
                             <Lucide icon="Send" class="h-4 w-4" />
                             {{ rejectForm.processing ? 'Saving...' : 'Reject Trip' }}
                         </Button>

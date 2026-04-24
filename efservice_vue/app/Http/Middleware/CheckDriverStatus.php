@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use App\Models\Carrier;
 use Illuminate\Http\Request;
 use App\Models\UserDriverDetail;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +29,16 @@ class CheckDriverStatus
             Auth::logout();
             return redirect()->route('login')
                 ->withErrors(['email' => 'Your account has been deactivated. Please contact support.']);
+        }
+
+        // ──────────────────────────────────────────────────────────────
+        // Carrier gate — a driver's access must mirror the parent carrier's
+        // status. If the carrier is inactive/pending/rejected or its banking
+        // has been rejected, the driver cannot reach the portal regardless
+        // of their own driver/application status.
+        // ──────────────────────────────────────────────────────────────
+        if ($carrierRedirect = $this->enforceCarrierGate($request, $user)) {
+            return $carrierRedirect;
         }
 
         // Skip validation for setup/public routes
@@ -137,6 +148,104 @@ class CheckDriverStatus
         }
 
         return $next($request);
+    }
+
+    /**
+     * Block the driver when the parent carrier is not fully operational.
+     * Allowed escape hatches: /driver/pending (to see the status),
+     * /driver/rejected, and logout.
+     */
+    private function enforceCarrierGate(Request $request, $user): ?Response
+    {
+        $driverDetail = $user->driverDetails;
+        if (!$driverDetail) {
+            return null; // no driver record yet — handled by later checks
+        }
+
+        $carrier = $driverDetail->carrier;
+        if (!$carrier) {
+            return null; // nothing to gate against
+        }
+
+        $onAllowedRoute = $request->is('driver/pending')
+            || $request->is('driver/rejected')
+            || $request->is('logout');
+
+        // CARRIER INACTIVE — fully blocked
+        if ((int) $carrier->status === Carrier::STATUS_INACTIVE) {
+            if ($onAllowedRoute) return null;
+
+            Log::warning('Driver blocked — carrier inactive', [
+                'user_id'    => $user->id,
+                'carrier_id' => $carrier->id,
+            ]);
+
+            return redirect()->route('driver.pending')
+                ->with('error', 'Your carrier account is currently inactive. You cannot access the portal until your carrier is reactivated.')
+                ->with('status_code', 'carrier_inactive');
+        }
+
+        // CARRIER REJECTED — fully blocked
+        if ((int) $carrier->status === Carrier::STATUS_REJECTED) {
+            if ($onAllowedRoute) return null;
+
+            Log::warning('Driver blocked — carrier rejected', [
+                'user_id'    => $user->id,
+                'carrier_id' => $carrier->id,
+            ]);
+
+            return redirect()->route('driver.pending')
+                ->with('error', "Your carrier's registration was rejected. Please contact support for more information.")
+                ->with('status_code', 'carrier_rejected');
+        }
+
+        // CARRIER PENDING APPROVAL / PENDING VALIDATION — blocked until activated
+        if (in_array((int) $carrier->status, [Carrier::STATUS_PENDING, Carrier::STATUS_PENDING_VALIDATION], true)) {
+            if ($onAllowedRoute) return null;
+
+            Log::info('Driver blocked — carrier pending', [
+                'user_id'       => $user->id,
+                'carrier_id'    => $carrier->id,
+                'carrier_status'=> $carrier->status,
+            ]);
+
+            return redirect()->route('driver.pending')
+                ->with('warning', 'Your carrier is pending approval. You will be able to access the portal once your carrier is activated.')
+                ->with('status_code', 'carrier_pending');
+        }
+
+        // CARRIER ACTIVE — also require approved banking before letting drivers in
+        if ((int) $carrier->status === Carrier::STATUS_ACTIVE) {
+            $banking = $carrier->bankingDetails;
+
+            if ($banking && $banking->isRejected()) {
+                if ($onAllowedRoute) return null;
+
+                Log::warning('Driver blocked — carrier banking rejected', [
+                    'user_id'    => $user->id,
+                    'carrier_id' => $carrier->id,
+                ]);
+
+                return redirect()->route('driver.pending')
+                    ->with('error', "Your carrier's payment information was rejected. Please contact your carrier administrator.")
+                    ->with('status_code', 'carrier_banking_rejected');
+            }
+
+            if ($banking && $banking->isPending()) {
+                if ($onAllowedRoute) return null;
+
+                Log::info('Driver blocked — carrier banking pending', [
+                    'user_id'    => $user->id,
+                    'carrier_id' => $carrier->id,
+                ]);
+
+                return redirect()->route('driver.pending')
+                    ->with('warning', "Your carrier's payment information is being validated. You will be able to access the portal once validation completes.")
+                    ->with('status_code', 'carrier_banking_pending');
+            }
+        }
+
+        return null;
     }
 
     /**

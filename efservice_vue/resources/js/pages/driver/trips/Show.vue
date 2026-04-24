@@ -142,55 +142,55 @@ function uploadDocuments() {
 <template>
     <Head :title="trip.trip_number" />
 
-    <div class="grid grid-cols-12 gap-6">
+    <div class="grid grid-cols-12 gap-4 sm:gap-6">
         <div class="col-span-12">
-            <div class="box box--stacked p-6">
+            <div class="box box--stacked p-4 sm:p-6">
                 <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                    <div class="space-y-4">
+                    <div class="space-y-4 min-w-0">
                         <Link :href="route('driver.trips.index')" class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary">
                             <Lucide icon="ArrowLeft" class="h-4 w-4" />
                             Back to Trips
                         </Link>
 
-                        <div class="flex flex-wrap items-center gap-3">
-                            <h1 class="text-2xl font-bold text-slate-800">{{ trip.trip_number }}</h1>
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                            <h1 class="text-xl sm:text-2xl font-bold text-slate-800 break-all">{{ trip.trip_number }}</h1>
                             <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="statusTone(trip.status)">
                                 {{ trip.status_label }}
                             </span>
                             <span v-if="trip.is_quick_trip" class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">Quick Trip</span>
                         </div>
 
-                        <p class="text-sm text-slate-500">
+                        <p class="text-sm text-slate-500 break-words">
                             Driver: <span class="font-medium text-slate-700">{{ driver.full_name }}</span>
                             <span v-if="driver.carrier_name"> · Carrier: <span class="font-medium text-slate-700">{{ driver.carrier_name }}</span></span>
                         </p>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-3">
-                        <Button v-if="trip.can_accept" variant="primary" class="gap-2" @click="acceptTrip">
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+                        <Button v-if="trip.can_accept" variant="primary" class="w-full justify-center gap-2 sm:w-auto" @click="acceptTrip">
                             <Lucide icon="CheckCircle2" class="h-4 w-4" />
                             Accept
                         </Button>
-                        <Button v-if="trip.can_reject" variant="outline-secondary" class="gap-2" @click="rejectModalOpen = true">
+                        <Button v-if="trip.can_reject" variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto" @click="rejectModalOpen = true">
                             <Lucide icon="XCircle" class="h-4 w-4" />
                             Reject
                         </Button>
-                        <Link v-if="trip.can_start" :href="route('driver.trips.start.form', trip.id)">
-                            <Button variant="primary" class="gap-2">
+                        <Link v-if="trip.can_start" :href="route('driver.trips.start.form', trip.id)" class="w-full sm:w-auto">
+                            <Button variant="primary" class="w-full justify-center gap-2 sm:w-auto">
                                 <Lucide icon="Play" class="h-4 w-4" />
                                 Start
                             </Button>
                         </Link>
-                        <Button v-if="trip.can_pause" variant="outline-secondary" class="gap-2" @click="pauseModalOpen = true">
+                        <Button v-if="trip.can_pause" variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto" @click="pauseModalOpen = true">
                             <Lucide icon="Pause" class="h-4 w-4" />
                             Pause
                         </Button>
-                        <Button v-if="trip.can_resume" variant="primary" class="gap-2" @click="resumeTrip">
+                        <Button v-if="trip.can_resume" variant="primary" class="w-full justify-center gap-2 sm:w-auto" @click="resumeTrip">
                             <Lucide icon="Play" class="h-4 w-4" />
                             Resume
                         </Button>
-                        <Link v-if="trip.can_end" :href="route('driver.trips.end.form', trip.id)">
-                            <Button variant="outline-secondary" class="gap-2">
+                        <Link v-if="trip.can_end" :href="route('driver.trips.end.form', trip.id)" class="w-full sm:w-auto">
+                            <Button variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto">
                                 <Lucide icon="Square" class="h-4 w-4" />
                                 End
                             </Button>
@@ -200,20 +200,20 @@ function uploadDocuments() {
             </div>
         </div>
 
-        <div class="col-span-12 xl:col-span-8 space-y-6">
-            <div v-if="trip.requires_completion && Object.keys(trip.missing_fields || {}).length" class="box box--stacked p-5">
+        <div class="col-span-12 xl:col-span-8 space-y-4 sm:space-y-6">
+            <div v-if="trip.requires_completion && Object.keys(trip.missing_fields || {}).length" class="box box--stacked p-4 sm:p-5">
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                     <p class="font-semibold text-slate-800">This quick trip still needs route details.</p>
                     <p class="mt-1">Missing: {{ Object.values(trip.missing_fields).join(', ') }}</p>
                 </div>
             </div>
 
-            <div class="box box--stacked p-6">
+            <div class="box box--stacked p-4 sm:p-6">
                 <h2 class="mb-4 text-base font-semibold text-slate-800">Trip Information</h2>
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div class="rounded-xl bg-slate-50 p-4">
                         <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Origin</p>
-                        <p class="mt-2 text-sm text-slate-800">{{ trip.origin_address || 'N/A' }}</p>
+                        <p class="mt-2 text-sm text-slate-800 break-words">{{ trip.origin_address || 'N/A' }}</p>
                         <a v-if="googleMapsUrls.origin" :href="googleMapsUrls.origin" target="_blank" class="mt-3 inline-flex items-center gap-2 text-xs text-primary hover:underline">
                             <Lucide icon="MapPin" class="h-3 w-3" />
                             Open in Maps
@@ -221,7 +221,7 @@ function uploadDocuments() {
                     </div>
                     <div class="rounded-xl bg-slate-50 p-4">
                         <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Destination</p>
-                        <p class="mt-2 text-sm text-slate-800">{{ trip.destination_address || 'N/A' }}</p>
+                        <p class="mt-2 text-sm text-slate-800 break-words">{{ trip.destination_address || 'N/A' }}</p>
                         <a v-if="googleMapsUrls.destination" :href="googleMapsUrls.destination" target="_blank" class="mt-3 inline-flex items-center gap-2 text-xs text-primary hover:underline">
                             <Lucide icon="Flag" class="h-3 w-3" />
                             Open in Maps
@@ -229,21 +229,21 @@ function uploadDocuments() {
                     </div>
                 </div>
 
-                <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Vehicle</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.vehicle_label }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">License Plate</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.vehicle_license_plate || 'N/A' }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Scheduled Start</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.scheduled_start || 'N/A' }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Actual Start</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.actual_start || 'N/A' }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Actual End</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.actual_end || 'N/A' }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Estimated Duration</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.estimated_duration || 'N/A' }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Actual Duration</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.actual_duration || 'N/A' }}</p></div>
-                    <div class="rounded-lg border border-slate-200 bg-white p-4"><p class="text-xs text-slate-500">Break Status</p><p class="mt-1 text-sm font-medium text-slate-800">{{ isOnBreak ? 'On Break' : 'Not On Break' }}</p></div>
+                <div class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Vehicle</p><p class="mt-1 text-sm font-medium text-slate-800 break-words">{{ trip.vehicle_label }}</p></div>
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">License Plate</p><p class="mt-1 text-sm font-medium text-slate-800 break-words">{{ trip.vehicle_license_plate || 'N/A' }}</p></div>
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Scheduled Start</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.scheduled_start || 'N/A' }}</p></div>
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Actual Start</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.actual_start || 'N/A' }}</p></div>
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Actual End</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.actual_end || 'N/A' }}</p></div>
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Estimated Duration</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.estimated_duration || 'N/A' }}</p></div>
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Actual Duration</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.actual_duration || 'N/A' }}</p></div>
+                    <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Break Status</p><p class="mt-1 text-sm font-medium text-slate-800">{{ isOnBreak ? 'On Break' : 'Not On Break' }}</p></div>
                 </div>
             </div>
 
-            <div v-if="trip.origin_lat || (gpsRoute && gpsRoute.length > 0)" class="box box--stacked p-6">
-                <div class="mb-4 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2">
+            <div v-if="trip.origin_lat || (gpsRoute && gpsRoute.length > 0)" class="box box--stacked p-4 sm:p-6">
+                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex flex-wrap items-center gap-2">
                         <Lucide icon="Map" class="h-4 w-4 text-primary" />
                         <h2 class="text-base font-semibold text-slate-800">Route Map</h2>
                         <span v-if="gpsRoute && gpsRoute.length > 0" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
@@ -253,7 +253,7 @@ function uploadDocuments() {
                             Estimated route
                         </span>
                     </div>
-                    <a v-if="googleMapsUrls.route" :href="googleMapsUrls.route" target="_blank" class="flex items-center gap-1 text-sm text-primary hover:underline">
+                    <a v-if="googleMapsUrls.route" :href="googleMapsUrls.route" target="_blank" class="inline-flex items-center gap-1 text-sm text-primary hover:underline">
                         <Lucide icon="ExternalLink" class="h-3 w-3" />
                         Google Maps
                     </a>
@@ -278,8 +278,8 @@ function uploadDocuments() {
                 </div>
             </div>
 
-            <div class="box box--stacked p-6">
-                <div class="mb-4 flex items-center justify-between gap-3">
+            <div class="box box--stacked p-4 sm:p-6">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <h2 class="text-base font-semibold text-slate-800">Timeline</h2>
                     <a v-if="googleMapsUrls.route" :href="googleMapsUrls.route" target="_blank" class="text-sm text-primary hover:underline">Open Full Route</a>
                 </div>
@@ -305,8 +305,8 @@ function uploadDocuments() {
             </div>
         </div>
 
-        <div class="col-span-12 xl:col-span-4 space-y-6">
-            <div class="box box--stacked p-6">
+        <div class="col-span-12 xl:col-span-4 space-y-4 sm:space-y-6">
+            <div class="box box--stacked p-4 sm:p-6">
                 <h2 class="text-base font-semibold text-slate-800">HOS Snapshot</h2>
                 <div class="mt-5 grid grid-cols-2 gap-3">
                     <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs text-slate-500">Driving Left</p><p class="mt-1 text-lg font-semibold text-slate-800">{{ fmcsaStatus?.driving_limit?.remaining_hours ?? 0 }}h</p></div>
@@ -326,8 +326,8 @@ function uploadDocuments() {
                 </a>
             </div>
 
-            <div class="box box--stacked p-6">
-                <div class="mb-4 flex items-center justify-between gap-3">
+            <div class="box box--stacked p-4 sm:p-6">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <h2 class="text-base font-semibold text-slate-800">Trip Documents</h2>
                     <Button v-if="trip.can_upload_documents" variant="outline-secondary" class="gap-2" @click="uploadModalOpen = true">
                         <Lucide icon="Upload" class="h-4 w-4" />
@@ -368,7 +368,7 @@ function uploadDocuments() {
                 <p v-else class="text-sm text-slate-500">No trip documents yet.</p>
             </div>
 
-            <div v-if="hosEntries.length" class="box box--stacked p-6">
+            <div v-if="hosEntries.length" class="box box--stacked p-4 sm:p-6">
                 <h2 class="mb-4 text-base font-semibold text-slate-800">HOS Entries</h2>
                 <div class="space-y-3">
                     <div v-for="entry in hosEntries" :key="entry.id" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -382,7 +382,7 @@ function uploadDocuments() {
                 </div>
             </div>
 
-            <div v-if="violations.length" class="box box--stacked p-6">
+            <div v-if="violations.length" class="box box--stacked p-4 sm:p-6">
                 <h2 class="mb-4 text-base font-semibold text-slate-800">Violations</h2>
                 <div class="space-y-3">
                     <div v-for="violation in violations" :key="violation.id" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -396,7 +396,7 @@ function uploadDocuments() {
                 </div>
             </div>
 
-            <div v-if="pauses.length" class="box box--stacked p-6">
+            <div v-if="pauses.length" class="box box--stacked p-4 sm:p-6">
                 <h2 class="mb-4 text-base font-semibold text-slate-800">Pause History</h2>
                 <div class="space-y-3">
                     <div v-for="pause in pauses" :key="pause.id" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -411,7 +411,7 @@ function uploadDocuments() {
 
     <Dialog :open="rejectModalOpen" @close="rejectModalOpen = false" size="lg">
         <Dialog.Panel class="w-full max-w-[640px] overflow-hidden">
-            <div class="p-6">
+            <div class="p-4 sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-800">Reject Trip</h3>
@@ -435,7 +435,7 @@ function uploadDocuments() {
 
     <Dialog :open="pauseModalOpen" @close="pauseModalOpen = false" size="lg">
         <Dialog.Panel class="w-full max-w-[640px] overflow-hidden">
-            <div class="p-6">
+            <div class="p-4 sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-800">Pause Trip</h3>
@@ -458,7 +458,7 @@ function uploadDocuments() {
 
     <Dialog :open="uploadModalOpen" @close="uploadModalOpen = false" size="lg">
         <Dialog.Panel class="w-full max-w-[760px] overflow-hidden">
-            <div class="p-6">
+            <div class="p-4 sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-800">Upload Trip Documents</h3>
@@ -503,14 +503,14 @@ function uploadDocuments() {
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-                        <Button type="button" variant="outline-secondary" class="gap-2" @click="addDocumentRow">
+                    <div class="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        <Button type="button" variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto" @click="addDocumentRow">
                             <Lucide icon="Plus" class="h-4 w-4" />
                             Add Another File
                         </Button>
-                        <div class="flex gap-3">
-                            <Button type="button" variant="outline-secondary" @click="uploadModalOpen = false">Cancel</Button>
-                            <Button type="submit" variant="primary" :disabled="uploadForm.processing">{{ uploadForm.processing ? 'Uploading...' : 'Upload Documents' }}</Button>
+                        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
+                            <Button type="button" variant="outline-secondary" class="w-full justify-center sm:w-auto" @click="uploadModalOpen = false">Cancel</Button>
+                            <Button type="submit" variant="primary" class="w-full justify-center sm:w-auto" :disabled="uploadForm.processing">{{ uploadForm.processing ? 'Uploading...' : 'Upload Documents' }}</Button>
                         </div>
                     </div>
                 </form>

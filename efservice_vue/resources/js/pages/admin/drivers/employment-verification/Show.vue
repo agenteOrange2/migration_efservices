@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import Button from '@/components/Base/Button'
 import Lucide from '@/components/Base/Lucide'
+import { Dialog } from '@/components/Base/Headless'
+import { FormCheck, FormInput } from '@/components/Base/Form'
+import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
+import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
+
+const lpOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 
 interface Token {
     id: number
@@ -55,9 +61,13 @@ interface Verification {
     positions_held: string | null
     employed_from: string | null
     employed_to: string | null
+    employed_from_raw: string | null
+    employed_to_raw: string | null
     subject_to_fmcsr: boolean
     safety_sensitive_function: boolean
     reason_for_leaving: string | null
+    other_reason_description: string | null
+    explanation: string | null
     attempt_count: number
     max_attempts: number
     can_send_more: boolean
@@ -167,6 +177,42 @@ const tokenStatusIcon = (token: Token) => {
 }
 
 const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
+
+// ── Edit Employment Modal ──────────────────────────────────
+const editOpen = ref(false)
+
+const editForm = useForm({
+    email: '',
+    positions_held: '',
+    employed_from: '',
+    employed_to: '',
+    subject_to_fmcsr: false as boolean,
+    safety_sensitive_function: false as boolean,
+    reason_for_leaving: '',
+    other_reason_description: '',
+    explanation: '',
+})
+
+function openEdit() {
+    editForm.email = props.verification.email ?? ''
+    editForm.positions_held = props.verification.positions_held ?? ''
+    editForm.employed_from = props.verification.employed_from_raw ?? ''
+    editForm.employed_to = props.verification.employed_to_raw ?? ''
+    editForm.subject_to_fmcsr = !!props.verification.subject_to_fmcsr
+    editForm.safety_sensitive_function = !!props.verification.safety_sensitive_function
+    editForm.reason_for_leaving = props.verification.reason_for_leaving ?? ''
+    editForm.other_reason_description = props.verification.other_reason_description ?? ''
+    editForm.explanation = props.verification.explanation ?? ''
+    editForm.clearErrors()
+    editOpen.value = true
+}
+
+function submitEdit() {
+    editForm.put(route('admin.drivers.employment-verification.update', props.verification.id), {
+        preserveScroll: true,
+        onSuccess: () => { editOpen.value = false },
+    })
+}
 </script>
 
 <template>
@@ -305,9 +351,21 @@ const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <!-- Employment Information -->
                         <div>
-                            <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                                <Lucide icon="Briefcase" class="w-4 h-4 text-primary" />
-                                Employment Information
+                            <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center justify-between gap-2">
+                                <span class="flex items-center gap-2">
+                                    <Lucide icon="Briefcase" class="w-4 h-4 text-primary" />
+                                    Employment Information
+                                </span>
+                                <Button
+                                    type="button"
+                                    variant="outline-primary"
+                                    size="sm"
+                                    class="inline-flex items-center gap-1.5"
+                                    @click="openEdit"
+                                >
+                                    <Lucide icon="Pencil" class="w-3.5 h-3.5" />
+                                    Edit
+                                </Button>
                             </h3>
                             <div class="grid grid-cols-2 gap-3">
                                 <div class="bg-slate-50 rounded-lg p-3 border border-slate-100">
@@ -822,6 +880,118 @@ const isDocumentPdf = (url: string) => url.toLowerCase().includes('.pdf')
 
             </div>
         </div>
+
+        <!-- ── Edit Employment Modal ──────────────────────────── -->
+        <Dialog :open="editOpen" size="xl" @close="editOpen = false">
+            <Dialog.Panel class="overflow-hidden">
+                <Dialog.Title class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <Lucide icon="Pencil" class="w-4 h-4 text-primary" />
+                        <h3 class="text-base font-semibold text-slate-800">Edit Employment Information</h3>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        @click="editOpen = false"
+                    >
+                        <Lucide icon="X" class="w-4 h-4" />
+                    </button>
+                </Dialog.Title>
+
+                <form @submit.prevent="submitEdit">
+                    <div class="px-5 py-5 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Contact Email</label>
+                            <FormInput v-model="editForm.email" type="email" placeholder="company@example.com" />
+                            <p v-if="editForm.errors.email" class="text-danger text-xs mt-1">{{ editForm.errors.email }}</p>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">
+                                Position(s) Held <span class="text-danger">*</span>
+                            </label>
+                            <FormInput v-model="editForm.positions_held" type="text" placeholder="Truck Driver, Dispatcher, etc." />
+                            <p v-if="editForm.errors.positions_held" class="text-danger text-xs mt-1">{{ editForm.errors.positions_held }}</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">
+                                Employed From <span class="text-danger">*</span>
+                            </label>
+                            <Litepicker v-model="editForm.employed_from" :options="lpOptions" />
+                            <p v-if="editForm.errors.employed_from" class="text-danger text-xs mt-1">{{ editForm.errors.employed_from }}</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Employed To</label>
+                            <Litepicker v-model="editForm.employed_to" :options="lpOptions" />
+                            <p v-if="editForm.errors.employed_to" class="text-danger text-xs mt-1">{{ editForm.errors.employed_to }}</p>
+                        </div>
+
+                        <div class="md:col-span-2 rounded-xl border border-slate-200 p-4 space-y-3">
+                            <label class="flex items-start gap-3 text-sm text-slate-700">
+                                <FormCheck.Input v-model="editForm.subject_to_fmcsr" type="checkbox" class="mt-0.5" />
+                                Was the driver subject to FMCSR while employed by this company?
+                            </label>
+                            <label class="flex items-start gap-3 text-sm text-slate-700">
+                                <FormCheck.Input v-model="editForm.safety_sensitive_function" type="checkbox" class="mt-0.5" />
+                                Was the job a safety-sensitive function subject to DOT drug/alcohol testing requirements?
+                            </label>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">
+                                Reason for Leaving <span class="text-danger">*</span>
+                            </label>
+                            <TomSelect v-model="editForm.reason_for_leaving">
+                                <option value="">Select reason</option>
+                                <option value="resignation">Resignation</option>
+                                <option value="termination">Termination</option>
+                                <option value="layoff">Layoff</option>
+                                <option value="retirement">Retirement</option>
+                                <option value="other">Other</option>
+                            </TomSelect>
+                            <p v-if="editForm.errors.reason_for_leaving" class="text-danger text-xs mt-1">{{ editForm.errors.reason_for_leaving }}</p>
+                        </div>
+
+                        <div v-if="editForm.reason_for_leaving === 'other'">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Other Reason</label>
+                            <FormInput v-model="editForm.other_reason_description" type="text" placeholder="Describe reason" />
+                            <p v-if="editForm.errors.other_reason_description" class="text-danger text-xs mt-1">{{ editForm.errors.other_reason_description }}</p>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Additional Notes</label>
+                            <textarea
+                                v-model="editForm.explanation"
+                                rows="3"
+                                maxlength="1000"
+                                class="form-control w-full text-sm"
+                                placeholder="Any additional details about this employment..."
+                            />
+                            <p v-if="editForm.errors.explanation" class="text-danger text-xs mt-1">{{ editForm.errors.explanation }}</p>
+                        </div>
+                    </div>
+
+                    <Dialog.Footer class="flex items-center justify-end gap-2">
+                        <Button type="button" variant="outline-secondary" size="sm" @click="editOpen = false">
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            size="sm"
+                            :disabled="editForm.processing"
+                            class="inline-flex items-center gap-2"
+                        >
+                            <Lucide v-if="editForm.processing" icon="Loader" class="w-4 h-4 animate-spin" />
+                            <Lucide v-else icon="Save" class="w-4 h-4" />
+                            {{ editForm.processing ? 'Saving…' : 'Save Changes' }}
+                        </Button>
+                    </Dialog.Footer>
+                </form>
+            </Dialog.Panel>
+        </Dialog>
 
     </div>
 </template>

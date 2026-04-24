@@ -99,25 +99,25 @@ function submitQuickTrip() {
 <template>
     <Head title="Create Trip" />
 
-    <div class="grid grid-cols-12 gap-6">
+    <div class="grid grid-cols-12 gap-4 sm:gap-6">
         <div class="col-span-12">
-            <div class="box box--stacked p-6">
-                <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-                    <div class="flex items-start gap-4">
-                        <div class="rounded-2xl border border-primary/20 bg-primary/10 p-3">
-                            <Lucide icon="Plus" class="h-8 w-8 text-primary" />
+            <div class="box box--stacked p-4 sm:p-6">
+                <div class="flex flex-col gap-4 sm:gap-5 xl:flex-row xl:items-center xl:justify-between">
+                    <div class="flex items-start gap-3 sm:gap-4 min-w-0">
+                        <div class="rounded-2xl border border-primary/20 bg-primary/10 p-3 shrink-0">
+                            <Lucide icon="Plus" class="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
                         </div>
-                        <div>
-                            <h1 class="text-2xl font-bold text-slate-800">Create New Trip</h1>
-                            <p class="mt-1 text-slate-500">Build a full trip with all route details or start a quick trip with only the essentials.</p>
-                            <p class="mt-2 text-sm text-slate-500">
+                        <div class="min-w-0">
+                            <h1 class="text-xl sm:text-2xl font-bold text-slate-800">Create New Trip</h1>
+                            <p class="mt-1 text-sm sm:text-base text-slate-500">Build a full trip with all route details or start a quick trip with only the essentials.</p>
+                            <p class="mt-2 text-sm text-slate-500 break-words">
                                 Carrier: <span class="font-medium text-slate-700">{{ carrier.name }}</span>
                             </p>
                         </div>
                     </div>
 
-                    <Link :href="route('driver.trips.index')">
-                        <Button variant="outline-secondary" class="gap-2">
+                    <Link :href="route('driver.trips.index')" class="w-full xl:w-auto">
+                        <Button variant="outline-secondary" class="w-full justify-center gap-2 xl:w-auto">
                             <Lucide icon="ArrowLeft" class="h-4 w-4" />
                             Back to Trips
                         </Button>
@@ -127,15 +127,15 @@ function submitQuickTrip() {
         </div>
 
         <div class="col-span-12 lg:col-span-4">
-                <div class="space-y-6">
-                    <div v-if="noAssignedVehicles" class="box box--stacked p-6">
+                <div class="space-y-4 sm:space-y-6">
+                    <div v-if="noAssignedVehicles" class="box box--stacked p-4 sm:p-6">
                         <h2 class="text-base font-semibold text-slate-800">No Assigned Vehicles</h2>
                         <p class="mt-2 text-sm text-slate-500">
                             You do not have any active vehicle assignment right now. Contact your carrier before creating a trip.
                         </p>
                     </div>
 
-                    <div class="box box--stacked p-6">
+                    <div class="box box--stacked p-4 sm:p-6">
                         <h2 class="text-base font-semibold text-slate-800">HOS Snapshot</h2>
                     <div class="mt-5 grid grid-cols-1 gap-4">
                         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -146,12 +146,12 @@ function submitQuickTrip() {
 
                         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                             <div class="flex items-center justify-between gap-3">
-                                <div>
+                                <div class="min-w-0">
                                     <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Weekly Cycle</p>
                                     <p class="mt-2 text-2xl font-semibold text-slate-800">{{ weeklyCycleStatus.hours_remaining }}h</p>
-                                    <p class="mt-1 text-sm text-slate-500">{{ weeklyCycleStatus.cycle_type_name }}</p>
+                                    <p class="mt-1 text-sm text-slate-500 break-words">{{ weeklyCycleStatus.cycle_type_name }}</p>
                                 </div>
-                                <span class="rounded-full px-3 py-1 text-xs font-medium" :class="statusTone">
+                                <span class="rounded-full px-3 py-1 text-xs font-medium shrink-0" :class="statusTone">
                                     {{ weeklyCycleStatus.percentage_used }}%
                                 </span>
                             </div>
@@ -162,13 +162,13 @@ function submitQuickTrip() {
 
                         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                             <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Carrier</p>
-                            <p class="mt-2 text-sm font-semibold text-slate-800">{{ carrier.name }}</p>
+                            <p class="mt-2 text-sm font-semibold text-slate-800 break-words">{{ carrier.name }}</p>
                             <p class="mt-1 text-sm text-slate-500">Trips created here are assigned directly to you.</p>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="blockingMessages.length" class="box box--stacked p-6">
+                <div v-if="blockingMessages.length" class="box box--stacked p-4 sm:p-6">
                     <h2 class="text-base font-semibold text-slate-800">Before You Create a Trip</h2>
                     <div class="mt-4 space-y-3">
                         <div
@@ -185,11 +185,11 @@ function submitQuickTrip() {
 
         <div class="col-span-12 lg:col-span-8">
             <div class="box box--stacked overflow-hidden">
-                <div class="border-b border-slate-200 bg-slate-50/80 px-6 py-4">
-                    <div class="flex flex-wrap gap-3">
+                <div class="border-b border-slate-200 bg-slate-50/80 px-4 py-3 sm:px-6 sm:py-4">
+                    <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:gap-3 sm:overflow-visible sm:pb-0">
                         <button
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition"
+                            class="inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition sm:px-4"
                             :class="activeTab === 'quick' ? 'border-primary bg-primary text-white' : 'border-slate-200 bg-white text-slate-600'"
                             @click="activeTab = 'quick'"
                         >
@@ -198,7 +198,7 @@ function submitQuickTrip() {
                         </button>
                         <button
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition"
+                            class="inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition sm:px-4"
                             :class="activeTab === 'full' ? 'border-primary bg-primary text-white' : 'border-slate-200 bg-white text-slate-600'"
                             @click="activeTab = 'full'"
                         >
@@ -208,7 +208,7 @@ function submitQuickTrip() {
                     </div>
                 </div>
 
-                <form v-if="activeTab === 'quick'" class="space-y-6 p-6" @submit.prevent="submitQuickTrip">
+                <form v-if="activeTab === 'quick'" class="space-y-5 p-4 sm:space-y-6 sm:p-6" @submit.prevent="submitQuickTrip">
                     <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                         <div class="flex items-start gap-3">
                             <div class="rounded-xl bg-primary/10 p-2">
@@ -265,17 +265,17 @@ function submitQuickTrip() {
                     </div>
 
                     <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
-                        <Link :href="route('driver.trips.index')">
+                        <Link :href="route('driver.trips.index')" class="w-full sm:w-auto">
                             <Button type="button" variant="outline-secondary" class="w-full justify-center sm:w-auto">Cancel</Button>
                         </Link>
-                        <Button type="submit" variant="primary" class="justify-center gap-2" :disabled="quickTripForm.processing || weeklyCycleStatus.is_over_limit || noAssignedVehicles">
+                        <Button type="submit" variant="primary" class="w-full justify-center gap-2 sm:w-auto" :disabled="quickTripForm.processing || weeklyCycleStatus.is_over_limit || noAssignedVehicles">
                             <Lucide icon="Zap" class="h-4 w-4" />
                             {{ quickTripForm.processing ? 'Creating...' : 'Create Quick Trip' }}
                         </Button>
                     </div>
                 </form>
 
-                <form v-else class="space-y-6 p-6" @submit.prevent="submitFullTrip">
+                <form v-else class="space-y-5 p-4 sm:space-y-6 sm:p-6" @submit.prevent="submitFullTrip">
                     <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                         <div class="md:col-span-2">
                             <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Vehicle</label>
@@ -327,10 +327,10 @@ function submitQuickTrip() {
                     </div>
 
                     <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
-                        <Link :href="route('driver.trips.index')">
+                        <Link :href="route('driver.trips.index')" class="w-full sm:w-auto">
                             <Button type="button" variant="outline-secondary" class="w-full justify-center sm:w-auto">Cancel</Button>
                         </Link>
-                        <Button type="submit" variant="primary" class="justify-center gap-2" :disabled="fullTripForm.processing || weeklyCycleStatus.is_over_limit || noAssignedVehicles">
+                        <Button type="submit" variant="primary" class="w-full justify-center gap-2 sm:w-auto" :disabled="fullTripForm.processing || weeklyCycleStatus.is_over_limit || noAssignedVehicles">
                             <Lucide icon="Save" class="h-4 w-4" />
                             {{ fullTripForm.processing ? 'Creating...' : 'Create Trip' }}
                         </Button>

@@ -182,9 +182,13 @@ class EmploymentVerificationController extends Controller
                 'positions_held'            => $company->positions_held,
                 'employed_from'             => $company->employed_from?->format('M d, Y'),
                 'employed_to'               => $company->employed_to?->format('M d, Y'),
+                'employed_from_raw'         => $company->employed_from?->format('n/j/Y'),
+                'employed_to_raw'           => $company->employed_to?->format('n/j/Y'),
                 'subject_to_fmcsr'          => $company->subject_to_fmcsr,
                 'safety_sensitive_function' => $company->safety_sensitive_function,
                 'reason_for_leaving'        => $company->reason_for_leaving,
+                'other_reason_description'  => $company->other_reason_description,
+                'explanation'               => $company->explanation,
                 'attempt_count'             => $attemptCount,
                 'max_attempts'              => $maxAttempts,
                 'can_send_more'             => $attemptCount < $maxAttempts,
@@ -310,6 +314,37 @@ class EmploymentVerificationController extends Controller
                 'general' => 'Failed to create employment verification: ' . $e->getMessage(),
             ])->withInput();
         }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'email'                     => 'nullable|email|max:255',
+            'positions_held'            => 'required|string|max:255',
+            'employed_from'             => 'required|date',
+            'employed_to'               => 'nullable|date|after_or_equal:employed_from',
+            'subject_to_fmcsr'          => 'boolean',
+            'safety_sensitive_function' => 'boolean',
+            'reason_for_leaving'        => 'required|string|max:255',
+            'other_reason_description'  => 'nullable|string|max:255',
+            'explanation'               => 'nullable|string|max:1000',
+        ]);
+
+        $company = DriverEmploymentCompany::findOrFail($id);
+
+        $company->update([
+            'email'                     => $validated['email'] ?? null,
+            'positions_held'            => $validated['positions_held'],
+            'employed_from'             => $validated['employed_from'],
+            'employed_to'               => $validated['employed_to'] ?? null,
+            'subject_to_fmcsr'          => (bool) ($validated['subject_to_fmcsr'] ?? false),
+            'safety_sensitive_function' => (bool) ($validated['safety_sensitive_function'] ?? false),
+            'reason_for_leaving'        => $validated['reason_for_leaving'],
+            'other_reason_description'  => $validated['other_reason_description'] ?? null,
+            'explanation'               => $validated['explanation'] ?? null,
+        ]);
+
+        return back()->with('success', 'Employment information updated successfully.');
     }
 
     public function resend($id)

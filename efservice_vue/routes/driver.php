@@ -19,6 +19,10 @@ use App\Http\Controllers\Driver\DriverTripController;
 use App\Http\Controllers\Driver\DriverTrainingController;
 use App\Http\Controllers\Driver\DriverVehicleController;
 use App\Http\Controllers\Driver\NotificationsController as DriverNotificationsController;
+use App\Models\Carrier;
+use App\Models\UserDriverDetail;
+use App\Models\Admin\Driver\DriverApplication;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -64,12 +68,137 @@ Route::middleware('guest')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
-    Route::get('pending', fn () => inertia('driver/registration/DriverStatus'))
-        ->name('pending');
+    Route::get('pending', function () {
+        $user = Auth::user();
+        $status = resolveDriverStatus($user);
+
+        return inertia('driver/registration/DriverStatus', [
+            'statusCode'    => $status['code'],
+            'statusMessage' => $status['message'],
+        ]);
+    })->name('pending');
 
     Route::get('complete-registration', fn () => inertia('driver/registration/Register'))
         ->name('complete_registration');
 });
+
+if (!function_exists('resolveDriverStatus')) {
+    /**
+     * Resolve the actual status to display on /driver/pending for the given user.
+     * Priority (highest first):
+     *   1. Carrier gates  (inactive / rejected / pending / banking)
+     *   2. Driver record status (inactive / pending)
+     *   3. Driver application status (rejected / under review / draft / approved)
+     *
+     * Returns [ 'code' => string, 'message' => string ].
+     */
+    function resolveDriverStatus($user): array
+    {
+        if (!$user) {
+            return [
+                'code'    => 'application_review',
+                'message' => 'Your application is being processed. Please log in to see updates.',
+            ];
+        }
+
+        $driverDetail = $user->driverDetails ?? null;
+        $carrier      = $driverDetail?->carrier;
+
+        // 1 · Carrier gates
+        if ($carrier) {
+            $carrierStatus = (int) $carrier->status;
+
+            if ($carrierStatus === Carrier::STATUS_INACTIVE) {
+                return [
+                    'code'    => 'carrier_inactive',
+                    'message' => 'Your carrier account is currently inactive. You cannot access the driver portal until your carrier is reactivated. Please contact your carrier administrator.',
+                ];
+            }
+
+            if ($carrierStatus === Carrier::STATUS_REJECTED) {
+                return [
+                    'code'    => 'carrier_rejected',
+                    'message' => "Your carrier's registration was rejected. Driver access is not available. Please contact support for more information.",
+                ];
+            }
+
+            if (in_array($carrierStatus, [Carrier::STATUS_PENDING, Carrier::STATUS_PENDING_VALIDATION], true)) {
+                return [
+                    'code'    => 'carrier_pending',
+                    'message' => 'Your carrier is pending approval. Driver access will be enabled as soon as the carrier is activated by our administrators.',
+                ];
+            }
+
+            if ($carrierStatus === Carrier::STATUS_ACTIVE) {
+                $banking = $carrier->bankingDetails;
+
+                if ($banking && $banking->isRejected()) {
+                    return [
+                        'code'    => 'carrier_banking_rejected',
+                        'message' => "Your carrier's payment information was rejected. Driver access will be restored once the carrier updates their payment method and it is approved.",
+                    ];
+                }
+
+                if ($banking && $banking->isPending()) {
+                    return [
+                        'code'    => 'carrier_banking_pending',
+                        'message' => "Your carrier's payment information is being validated. Driver access opens as soon as validation completes.",
+                    ];
+                }
+            }
+        }
+
+        // 2 · Driver record status
+        if ($driverDetail) {
+            $detailStatus = (int) $driverDetail->status;
+
+            if ($detailStatus === UserDriverDetail::STATUS_INACTIVE) {
+                return [
+                    'code'    => 'driver_inactive',
+                    'message' => 'Your driver account has been deactivated. Please contact your carrier administrator or support to request reactivation.',
+                ];
+            }
+
+            if ($detailStatus === UserDriverDetail::STATUS_PENDING) {
+                return [
+                    'code'    => 'driver_pending',
+                    'message' => 'Your driver account is awaiting approval from the carrier administrator. You will be notified as soon as it is activated.',
+                ];
+            }
+        }
+
+        // 3 · Application status
+        $application = $user->driverApplication ?? null;
+        if ($application) {
+            if ($application->status === DriverApplication::STATUS_REJECTED) {
+                return [
+                    'code'    => 'application_rejected',
+                    'message' => 'Your application has been rejected. Please contact support for more information.',
+                ];
+            }
+
+            if ($application->status === DriverApplication::STATUS_PENDING) {
+                return [
+                    'code'    => 'application_review',
+                    'message' => 'Your application has been submitted and is being reviewed. We will notify you by email as soon as it has been processed.',
+                ];
+            }
+
+            if ($application->status === DriverApplication::STATUS_APPROVED) {
+                return [
+                    'code'    => 'success',
+                    'message' => 'Your application has been approved. You can now access the driver portal.',
+                ];
+            }
+        }
+
+        // Default fallback
+        return [
+            'code'    => 'application_review',
+            'message' => 'Your application is being processed. We will notify you once your status changes.',
+        ];
+    }
+}
 
 /*
 |--------------------------------------------------------------------------

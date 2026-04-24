@@ -88,16 +88,16 @@ function submit() {
 <template>
     <Head :title="`End ${trip.trip_number}`" />
 
-    <div class="grid grid-cols-12 gap-6">
+    <div class="grid grid-cols-12 gap-4 sm:gap-6">
         <div class="col-span-12">
-            <div class="box box--stacked p-6">
+            <div class="box box--stacked p-4 sm:p-6">
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div>
                         <Link :href="route('driver.trips.show', trip.id)" class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary">
                             <Lucide icon="ArrowLeft" class="h-4 w-4" />
                             Back to Trip
                         </Link>
-                        <h1 class="mt-3 text-2xl font-bold text-slate-800">End Trip</h1>
+                        <h1 class="mt-3 text-xl sm:text-2xl font-bold text-slate-800">End Trip</h1>
                         <p class="mt-1 text-sm text-slate-500">Complete the post-trip inspection and close out the trip cleanly.</p>
                     </div>
                     <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -109,24 +109,24 @@ function submit() {
         </div>
 
         <div class="col-span-12 xl:col-span-8">
-            <form class="space-y-6" @submit.prevent="submit">
-                <div class="box box--stacked p-6">
+            <form class="space-y-4 sm:space-y-6" @submit.prevent="submit">
+                <div class="box box--stacked p-4 sm:p-6">
                     <h2 class="text-base font-semibold text-slate-800">Trip Summary</h2>
                     <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs uppercase tracking-[0.2em] text-slate-400">Started</p><p class="mt-2 text-sm text-slate-800">{{ trip.actual_start || 'N/A' }}</p></div>
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs uppercase tracking-[0.2em] text-slate-400">Vehicle</p><p class="mt-2 text-sm text-slate-800">{{ trip.vehicle_label }}</p></div>
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs uppercase tracking-[0.2em] text-slate-400">Origin</p><p class="mt-2 text-sm text-slate-800">{{ trip.origin_address || 'N/A' }}</p></div>
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs uppercase tracking-[0.2em] text-slate-400">Destination</p><p class="mt-2 text-sm text-slate-800">{{ trip.destination_address || 'N/A' }}</p></div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs uppercase tracking-[0.2em] text-slate-400">Started</p><p class="mt-2 text-sm text-slate-800 break-words">{{ trip.actual_start || 'N/A' }}</p></div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs uppercase tracking-[0.2em] text-slate-400">Vehicle</p><p class="mt-2 text-sm text-slate-800 break-words">{{ trip.vehicle_label }}</p></div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs uppercase tracking-[0.2em] text-slate-400">Origin</p><p class="mt-2 text-sm text-slate-800 break-words">{{ trip.origin_address || 'N/A' }}</p></div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs uppercase tracking-[0.2em] text-slate-400">Destination</p><p class="mt-2 text-sm text-slate-800 break-words">{{ trip.destination_address || 'N/A' }}</p></div>
                     </div>
                 </div>
 
-                <div class="box box--stacked p-6">
-                    <div class="mb-5 flex items-center justify-between gap-3">
+                <div class="box box--stacked p-4 sm:p-6">
+                    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 class="text-base font-semibold text-slate-800">Tractor / Truck Inspection</h2>
                             <p class="mt-1 text-sm text-slate-500">Review all required items before closing the trip.</p>
                         </div>
-                        <Button type="button" variant="outline-secondary" class="gap-2" @click="selectAll('tractor')">
+                        <Button type="button" variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto" @click="selectAll('tractor')">
                             <Lucide icon="CheckSquare" class="h-4 w-4" />
                             Select All
                         </Button>
@@ -152,13 +152,13 @@ function submit() {
                     <FormInput v-if="form.tractor.includes('other_tractor')" v-model="form.other_tractor" class="mt-4" placeholder="Describe the other tractor item" />
                 </div>
 
-                <div v-if="trip.has_trailer" class="box box--stacked p-6">
-                    <div class="mb-5 flex items-center justify-between gap-3">
+                <div v-if="trip.has_trailer" class="box box--stacked p-4 sm:p-6">
+                    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 class="text-base font-semibold text-slate-800">Trailer Inspection</h2>
                             <p class="mt-1 text-sm text-slate-500">Required because this trip started with a trailer.</p>
                         </div>
-                        <Button type="button" variant="outline-secondary" class="gap-2" @click="selectAll('trailer')">
+                        <Button type="button" variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto" @click="selectAll('trailer')">
                             <Lucide icon="CheckSquare" class="h-4 w-4" />
                             Select All
                         </Button>
@@ -184,7 +184,7 @@ function submit() {
                     <FormInput v-if="form.trailer.includes('other_trailer')" v-model="form.other_trailer" class="mt-4" placeholder="Describe the other trailer item" />
                 </div>
 
-                <div class="box box--stacked p-6">
+                <div class="box box--stacked p-4 sm:p-6">
                     <h2 class="text-base font-semibold text-slate-800">Condition & Closeout Notes</h2>
                     <div class="mt-5 space-y-4">
                         <FormTextarea v-model="form.remarks" rows="4" placeholder="Describe any defects or post-trip remarks..." />
@@ -208,10 +208,10 @@ function submit() {
                 </div>
 
                 <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                    <Link :href="route('driver.trips.show', trip.id)">
-                        <Button type="button" variant="outline-secondary">Cancel</Button>
+                    <Link :href="route('driver.trips.show', trip.id)" class="w-full sm:w-auto">
+                        <Button type="button" variant="outline-secondary" class="w-full justify-center sm:w-auto">Cancel</Button>
                     </Link>
-                    <Button type="submit" variant="primary" class="gap-2" :disabled="form.processing">
+                    <Button type="submit" variant="primary" class="w-full justify-center gap-2 sm:w-auto" :disabled="form.processing">
                         <Lucide icon="Square" class="h-4 w-4" />
                         {{ form.processing ? 'Ending...' : 'Complete Trip' }}
                     </Button>
@@ -220,7 +220,7 @@ function submit() {
         </div>
 
         <div class="col-span-12 xl:col-span-4">
-            <div class="box box--stacked sticky top-6 p-6">
+            <div class="box box--stacked xl:sticky xl:top-6 p-4 sm:p-6">
                 <h2 class="text-base font-semibold text-slate-800">Inspection Progress</h2>
                 <div class="mt-5 space-y-4">
                     <div>

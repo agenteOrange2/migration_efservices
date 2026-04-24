@@ -400,6 +400,7 @@ Route::prefix('drivers')->name('drivers.')->group(function () {
         Route::get('new', [EmploymentVerificationController::class, 'create'])->name('new');
         Route::post('new', [EmploymentVerificationController::class, 'store'])->name('store');
         Route::get('{id}', [EmploymentVerificationController::class, 'show'])->name('show');
+        Route::put('{id}', [EmploymentVerificationController::class, 'update'])->name('update');
         Route::post('{id}/resend', [EmploymentVerificationController::class, 'resend'])->name('resend');
         Route::post('{id}/toggle-email-flag', [EmploymentVerificationController::class, 'toggleEmailFlag'])->name('toggle-email-flag');
         Route::post('{id}/mark-verified', [EmploymentVerificationController::class, 'markVerified'])->name('mark-verified');

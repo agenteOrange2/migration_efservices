@@ -11,12 +11,14 @@ const branding = computed(() => ((page.props as any).branding ?? {}) as Record<s
 const portalName = computed(() => branding.value?.appName || (page.props as any).name || 'EF Services')
 const portalLogoUrl = computed(() => branding.value?.logoUrl || null)
 
+type ToastType = 'success' | 'error' | 'warning' | 'info'
+
 const toastVisible = ref(false)
 const toastMessage = ref('')
-const toastType = ref<'success' | 'error' | 'warning'>('success')
+const toastType = ref<ToastType>('success')
 let toastTimer: ReturnType<typeof setTimeout> | null = null
 
-function showToast(type: 'success' | 'error' | 'warning', message: string) {
+function showToast(type: ToastType, message: string) {
     toastType.value = type
     toastMessage.value = message
     toastVisible.value = true
@@ -28,17 +30,20 @@ watch(flash, (f) => {
     if (f.success) showToast('success', f.success)
     else if (f.error) showToast('error', f.error)
     else if (f.warning) showToast('warning', f.warning)
+    else if (f.info) showToast('info', f.info)
 }, { immediate: true })
 
 const toastIcon = computed(() => {
     if (toastType.value === 'success') return 'CheckCircle'
     if (toastType.value === 'error') return 'XCircle'
+    if (toastType.value === 'info') return 'Hourglass'
     return 'AlertTriangle'
 })
 
 const toastClasses = computed(() => {
-    if (toastType.value === 'success') return 'border-primary/30 bg-primary/10 text-primary'
-    if (toastType.value === 'error') return 'border-red-200 bg-red-50 text-red-700'
+    if (toastType.value === 'success') return 'border-success/30 bg-success/10 text-success'
+    if (toastType.value === 'error') return 'border-danger/30 bg-danger/10 text-danger'
+    if (toastType.value === 'info') return 'border-pending/30 bg-pending/10 text-pending'
     return 'border-warning/30 bg-warning/10 text-warning'
 })
 </script>
