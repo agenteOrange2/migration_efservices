@@ -403,7 +403,7 @@ class CarrierTripController extends AdminTripController
             return $this->mediaPayload($media, $type);
         })->values();
 
-        $tripDocuments = $trip->driver?->getTripDocuments($trip->id)?->map(fn (Media $media) => $this->mediaPayload($media, 'Trip Document'))->values() ?? collect();
+        $tripDocuments = $trip->getTripDocuments()->map(fn (Media $media) => $this->mediaPayload($media, 'Trip Document'))->values();
 
         $gpsRoute = $trip->gpsPoints->map(fn ($pt) => [
             'lat' => (float) $pt->latitude,

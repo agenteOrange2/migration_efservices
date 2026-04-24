@@ -1,385 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta charset="utf-8">
     <title>Maintenance Report - {{ $carrier->name }}</title>
     <style>
-        @page {
-            margin: 20px 25px 60px 25px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'DejaVu Sans', sans-serif;
-            font-size: 10px;
-            line-height: 1.4;
-            color: #1e293b;
-        }
-
-        /* Header */
-        .header-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-            background-color: #1e40af;
-        }
-
-        .header-table td {
-            padding: 15px 20px;
-            vertical-align: middle;
-        }
-
-        .brand-logo {
-            background-color: #ffffff;
-            color: #1e40af;
-            font-size: 22px;
-            font-weight: bold;
-            padding: 8px 12px;
-            display: inline-block;
-            letter-spacing: 2px;
-        }
-
-        .brand-title {
-            color: #ffffff;
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 8px;
-        }
-
-        .brand-subtitle {
-            color: #bfdbfe;
-            font-size: 10px;
-            margin-top: 3px;
-        }
-
-        .header-right {
-            text-align: right;
-            color: #ffffff;
-        }
-
-        .carrier-name {
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-
-        .header-date {
-            font-size: 9px;
-            color: #bfdbfe;
-        }
-
-        .header-line {
-            height: 4px;
-            background-color: #3b82f6;
-            margin-bottom: 15px;
-        }
-
-        /* Statistics */
-        .stats-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }
-
-        .stats-table td {
-            width: 20%;
-            text-align: center;
-            padding: 10px 5px;
-            border: 1px solid #e2e8f0;
-            background-color: #f8fafc;
-        }
-
-        .stat-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #1e40af;
-            display: block;
-        }
-
-        .stat-value.green {
-            color: #059669;
-        }
-
-        .stat-value.orange {
-            color: #d97706;
-        }
-
-        .stat-value.purple {
-            color: #1e40af;
-        }
-
-        .stat-label {
-            font-size: 8px;
-            color: #64748b;
-            text-transform: uppercase;
-            display: block;
-            margin-top: 3px;
-        }
-
-        /* Filters */
-        .filters-box {
-            background-color: #eff6ff;
-            border: 1px solid #bfdbfe;
-            padding: 10px 12px;
-            margin-bottom: 12px;
-        }
-
-        .filters-title {
-            color: #1e40af;
-            font-size: 10px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        .filters-box p {
-            font-size: 9px;
-            color: #475569;
-            margin: 2px 0;
-        }
-
-        /* Data Table */
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        .data-table th {
-            background-color: #1e40af;
-            color: #ffffff;
-            font-weight: bold;
-            padding: 8px 6px;
-            text-align: center;
-            font-size: 8px;
-            text-transform: uppercase;
-            border: 1px solid #1e40af;
-        }
-
-        .data-table td {
-            padding: 6px;
-            border: 1px solid #e2e8f0;
-            font-size: 8px;
-            vertical-align: middle;
-        }
-
-        .data-table tr:nth-child(even) td {
-            background-color: #f8fafc;
-        }
-
-        /* Badges */
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            font-size: 7px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .badge-completed {
-            background-color: #dcfce7;
-            color: #166534;
-        }
-
-        .badge-pending {
-            background-color: #fef3c7;
-            color: #92400e;
-        }
-
-        /* Summary Box */
-        .summary-box {
-            margin-top: 15px;
-            padding: 10px 15px;
-            background-color: #eff6ff;
-            border: 1px solid #bfdbfe;
-        }
-
-        .summary-box table {
-            width: 100%;
-        }
-
-        .summary-box td {
-            font-size: 10px;
-            color: #1e293b;
-        }
-
-        .summary-value {
-            font-weight: bold;
-            color: #1e40af;
-        }
-
-        /* Utilities */
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-left { text-align: left; }
-        .font-bold { font-weight: bold; }
-        .text-muted { color: #94a3b8; }
-
-        .vehicle-unit {
-            font-weight: bold;
-            color: #1e293b;
-        }
-
-        .vehicle-details {
-            font-size: 7px;
-            color: #64748b;
-        }
-
-        .cost-value {
-            color: #1e40af;
-            font-weight: bold;
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 30px;
-            color: #94a3b8;
-            font-size: 11px;
-        }
-
-        /* Footer */
-        .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 40px;
-            border-top: 2px solid #3b82f6;
-            padding-top: 8px;
-            background-color: #f8fafc;
-        }
-
-        .footer-table {
-            width: 100%;
-        }
-
-        .footer-brand {
-            font-size: 10px;
-            color: #1e40af;
-            font-weight: bold;
-        }
-
-        .footer-info {
-            font-size: 8px;
-            color: #64748b;
-            text-align: right;
-        }
+        body { font-family: Arial, sans-serif; font-size: 12px; color: #333; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1e40af; padding-bottom: 15px; }
+        .header h1 { margin: 0; color: #1e40af; font-size: 24px; }
+        .header p { margin: 5px 0 0; color: #666; }
+        .carrier-info { background: #f8fafc; padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .carrier-info strong { color: #1e40af; }
+        .stats-grid { display: table; width: 100%; margin-bottom: 20px; }
+        .stat-box { display: table-cell; width: 20%; text-align: center; padding: 10px; background: #f1f5f9; border: 1px solid #e2e8f0; }
+        .stat-box .value { font-size: 18px; font-weight: bold; color: #1e40af; }
+        .stat-box .label { font-size: 10px; color: #64748b; text-transform: uppercase; }
+        .stat-box.success .value { color: #16a34a; }
+        .stat-box.warning .value { color: #ca8a04; }
+        .filters { background: #fef3c7; padding: 8px 12px; margin-bottom: 15px; border-radius: 4px; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #1e40af; color: white; padding: 10px 8px; text-align: left; font-size: 11px; }
+        td { padding: 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; vertical-align: middle; }
+        tr:nth-child(even) td { background: #f8fafc; }
+        .badge { padding: 3px 8px; border-radius: 3px; font-size: 10px; font-weight: bold; }
+        .badge-completed { background: #dcfce7; color: #166534; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .cost { color: #1e40af; font-weight: bold; }
+        .summary { margin-top: 15px; background: #eff6ff; padding: 10px 15px; border: 1px solid #bfdbfe; border-radius: 4px; font-size: 11px; }
+        .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <table class="header-table">
-        <tr>
-            <td style="width: 60%;">
-                <span class="brand-logo">EFCTS</span>
-                <div class="brand-title">Maintenance Report</div>
-                <div class="brand-subtitle">Vehicle Service Management</div>
-            </td>
-            <td class="header-right" style="width: 40%;">
-                <div class="carrier-name">{{ $carrier->name }}</div>
-                <div class="header-date">Generated: {{ $generated_at }}</div>
-                <div class="header-date">Total Records: {{ $total_records }}</div>
-            </td>
-        </tr>
-    </table>
-    <div class="header-line"></div>
-
-    <!-- Statistics -->
-    <table class="stats-table">
-        <tr>
-            <td>
-                <span class="stat-value">{{ $stats['count'] ?? 0 }}</span>
-                <span class="stat-label">Total Records</span>
-            </td>
-            <td>
-                <span class="stat-value green">{{ $stats['completed'] ?? 0 }}</span>
-                <span class="stat-label">Completed</span>
-            </td>
-            <td>
-                <span class="stat-value orange">{{ $stats['pending'] ?? 0 }}</span>
-                <span class="stat-label">Pending</span>
-            </td>
-            <td>
-                <span class="stat-value purple">${{ number_format($stats['total_cost'] ?? 0, 2) }}</span>
-                <span class="stat-label">Total Cost</span>
-            </td>
-            <td>
-                <span class="stat-value purple">${{ number_format($stats['average_cost'] ?? 0, 2) }}</span>
-                <span class="stat-label">Avg. Cost</span>
-            </td>
-        </tr>
-    </table>
-
-    <!-- Applied Filters -->
-    @if(!empty($filters) && array_filter($filters))
-    <div class="filters-box">
-        <div class="filters-title">Applied Filters</div>
-        @if(!empty($filters['search']))
-            <p><strong>Search:</strong> {{ $filters['search'] }}</p>
-        @endif
-        @if(!empty($filters['status']))
-            <p><strong>Status:</strong> {{ ucfirst($filters['status']) }}</p>
-        @endif
-        @if(!empty($filters['type']))
-            <p><strong>Type:</strong> {{ $filters['type'] }}</p>
-        @endif
-        @if(!empty($filters['date_from']))
-            <p><strong>From Date:</strong> {{ $filters['date_from'] }}</p>
-        @endif
-        @if(!empty($filters['date_to']))
-            <p><strong>To Date:</strong> {{ $filters['date_to'] }}</p>
-        @endif
-        @if(empty($filters['date_from']) && empty($filters['date_to']))
-            <p><strong>Date Range:</strong> Last 30 days (default)</p>
-        @endif
+    <div class="header">
+        <h1>Maintenance Report</h1>
+        <p>Generated on {{ now()->format('F d, Y \a\t h:i A') }}</p>
     </div>
+
+    <div class="carrier-info">
+        <strong>Carrier:</strong> {{ $carrier->name }} |
+        <strong>DOT:</strong> {{ $carrier->dot_number ?? 'N/A' }} |
+        <strong>MC:</strong> {{ $carrier->mc_number ?? 'N/A' }} |
+        <strong>Total Records:</strong> {{ $total_records }}
+    </div>
+
+    @if(!empty($filters) && array_filter(array_diff_key($filters, ['per_page' => ''])))
+        <div class="filters">
+            <strong>Applied Filters:</strong>
+            @if(!empty($filters['search'])) Search: {{ $filters['search'] }}. @endif
+            @if(!empty($filters['status'])) Status: {{ ucfirst($filters['status']) }}. @endif
+            @if(!empty($filters['type'])) Type: {{ $filters['type'] }}. @endif
+            @if(!empty($filters['date_from'])) From: {{ $filters['date_from'] }}. @endif
+            @if(!empty($filters['date_to'])) To: {{ $filters['date_to'] }}. @endif
+        </div>
     @endif
 
-    <!-- Maintenance Table -->
-    <table class="data-table">
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="value">{{ $stats['count'] ?? 0 }}</div>
+            <div class="label">Total Records</div>
+        </div>
+        <div class="stat-box success">
+            <div class="value">{{ $stats['completed'] ?? 0 }}</div>
+            <div class="label">Completed</div>
+        </div>
+        <div class="stat-box warning">
+            <div class="value">{{ $stats['pending'] ?? 0 }}</div>
+            <div class="label">Pending</div>
+        </div>
+        <div class="stat-box">
+            <div class="value">${{ number_format($stats['total_cost'] ?? 0, 0) }}</div>
+            <div class="label">Total Cost</div>
+        </div>
+        <div class="stat-box">
+            <div class="value">${{ number_format($stats['average_cost'] ?? 0, 0) }}</div>
+            <div class="label">Avg. Cost</div>
+        </div>
+    </div>
+
+    <table>
         <thead>
             <tr>
-                <th style="width: 12%;">Vehicle</th>
-                <th style="width: 18%;">Service Tasks</th>
-                <th style="width: 20%;">Description</th>
-                <th style="width: 10%;">Service Date</th>
-                <th style="width: 15%;">Vendor/Mechanic</th>
-                <th style="width: 10%;">Cost</th>
-                <th style="width: 8%;">Status</th>
+                <th>Vehicle</th>
+                <th>Service Tasks</th>
+                <th>Description</th>
+                <th>Service Date</th>
+                <th>Vendor / Mechanic</th>
+                <th>Cost</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
             @forelse($maintenanceRecords as $maintenance)
             <tr>
-                <td class="text-left">
-                    <span class="vehicle-unit">{{ $maintenance->vehicle->company_unit_number ?? 'N/A' }}</span>
-                    <br><span class="vehicle-details">{{ $maintenance->vehicle->make ?? '' }} {{ $maintenance->vehicle->model ?? '' }}</span>
-                    @if($maintenance->vehicle->vin)
-                        <br><span class="vehicle-details">VIN: ...{{ substr($maintenance->vehicle->vin, -6) }}</span>
-                    @endif
+                <td>
+                    <strong>{{ $maintenance->vehicle?->company_unit_number ?? 'N/A' }}</strong>
+                    <br><small style="color:#64748b;">{{ $maintenance->vehicle?->make ?? '' }} {{ $maintenance->vehicle?->model ?? '' }}</small>
                 </td>
-                <td class="text-left font-bold">
-                    {{ $maintenance->service_tasks ?? 'N/A' }}
-                </td>
-                <td class="text-left" style="font-size: 7px;">
-                    {{ $maintenance->description ? \Illuminate\Support\Str::limit($maintenance->description, 80) : 'N/A' }}
-                </td>
-                <td class="text-center">
-                    {{ $maintenance->service_date ? $maintenance->service_date->format('m/d/Y') : 'N/A' }}
-                </td>
-                <td class="text-left">
-                    {{ $maintenance->vendor_mechanic ?? 'N/A' }}
-                </td>
-                <td class="text-right">
-                    <span class="cost-value">${{ number_format($maintenance->cost ?? 0, 2) }}</span>
-                </td>
-                <td class="text-center">
+                <td><strong>{{ $maintenance->service_tasks ?? 'N/A' }}</strong></td>
+                <td><small>{{ $maintenance->description ? \Illuminate\Support\Str::limit($maintenance->description, 80) : '—' }}</small></td>
+                <td>{{ $maintenance->service_date ? $maintenance->service_date->format('m/d/Y') : 'N/A' }}</td>
+                <td>{{ $maintenance->vendor_mechanic ?? '—' }}</td>
+                <td style="text-align:right;"><span class="cost">${{ number_format($maintenance->cost ?? 0, 2) }}</span></td>
+                <td>
                     @if($maintenance->status)
                         <span class="badge badge-completed">Completed</span>
                     @else
@@ -389,33 +110,22 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" class="no-data">
-                    No maintenance records found matching the specified filters
-                </td>
+                <td colspan="7" style="text-align: center; padding: 20px; color: #94a3b8;">No maintenance records found matching the specified filters</td>
             </tr>
             @endforelse
         </tbody>
     </table>
 
     @if($maintenanceRecords->count() > 0)
-    <div class="summary-box">
-        <table>
-            <tr>
-                <td><strong>Summary:</strong> {{ $maintenanceRecords->count() }} maintenance record(s)</td>
-                <td class="text-right"><strong>Total Cost:</strong> <span class="summary-value">${{ number_format($stats['total_cost'] ?? 0, 2) }}</span></td>
-            </tr>
-        </table>
+    <div class="summary">
+        <strong>Total Cost: <span style="color:#1e40af;">${{ number_format($stats['total_cost'] ?? 0, 2) }}</span></strong> &nbsp;&nbsp;|&nbsp;&nbsp;
+        Completed: {{ $stats['completed'] ?? 0 }} &nbsp;&nbsp;|&nbsp;&nbsp;
+        Pending: {{ $stats['pending'] ?? 0 }}
     </div>
     @endif
 
-    <!-- Footer -->
     <div class="footer">
-        <table class="footer-table">
-            <tr>
-                <td class="footer-brand">EFCTS Fleet Management</td>
-                <td class="footer-info">{{ $carrier->name }} | © {{ now()->format('Y') }} EFCTS. All rights reserved.</td>
-            </tr>
-        </table>
+        <p>{{ $carrier->name }} - Maintenance Report | &copy; {{ now()->format('Y') }} EFCTS. All rights reserved. | Confidential</p>
     </div>
 </body>
 </html>

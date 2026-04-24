@@ -617,11 +617,14 @@ class CarrierReportService
             
             $query = Vehicle::with(['driver', 'vehicleMake', 'vehicleType', 'currentDriverAssignment'])
                 ->where('carrier_id', $carrierId);
-            
+
             // Apply filters
             $query = $this->applyVehicleFilters($query, $filters);
-            $query = $this->applyDateRangeFilter($query, $filters);
-            
+
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $query = $this->applyDateRangeFilter($query, $filters);
+            }
+
             $perPage = $filters['per_page'] ?? 10;
             $vehicles = $query->orderBy('created_at', 'desc')->paginate($perPage);
             
@@ -737,11 +740,14 @@ class CarrierReportService
             // Build query with filters
             $query = Vehicle::with(['driver', 'vehicleMake', 'vehicleType', 'currentDriverAssignment'])
                 ->where('carrier_id', $carrierId);
-            
+
             // Apply filters
             $query = $this->applyVehicleFilters($query, $filters);
-            $query = $this->applyDateRangeFilter($query, $filters);
-            
+
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $query = $this->applyDateRangeFilter($query, $filters);
+            }
+
             // Get all vehicles (no pagination for PDF)
             $vehicles = $query->orderBy('created_at', 'desc')->get();
             
@@ -825,11 +831,14 @@ class CarrierReportService
                 ->whereHas('userDriverDetail', function ($q) use ($carrierId) {
                     $q->where('carrier_id', $carrierId);
                 });
-            
+
             // Apply filters
             $query = $this->applyAccidentFilters($query, $filters);
-            $query = $this->applyDateRangeFilter($query, $filters, 'accident_date');
-            
+
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $query = $this->applyDateRangeFilter($query, $filters, 'accident_date');
+            }
+
             $perPage = $filters['per_page'] ?? 10;
             $accidents = $query->orderBy('accident_date', 'desc')->paginate($perPage);
             
@@ -910,7 +919,9 @@ class CarrierReportService
             // Apply the same filters as the main report
             $filteredQuery = clone $baseQuery;
             $filteredQuery = $this->applyAccidentFilters($filteredQuery, $filters);
-            $filteredQuery = $this->applyDateRangeFilter($filteredQuery, $filters, 'accident_date');
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $filteredQuery = $this->applyDateRangeFilter($filteredQuery, $filters, 'accident_date');
+            }
             
             // Total accidents (with filters applied)
             $total = $filteredQuery->count();
@@ -969,11 +980,14 @@ class CarrierReportService
                 ->whereHas('userDriverDetail', function ($q) use ($carrierId) {
                     $q->where('carrier_id', $carrierId);
                 });
-            
+
             // Apply filters
             $query = $this->applyAccidentFilters($query, $filters);
-            $query = $this->applyDateRangeFilter($query, $filters, 'accident_date');
-            
+
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $query = $this->applyDateRangeFilter($query, $filters, 'accident_date');
+            }
+
             // Get all accidents (no pagination for PDF)
             $accidents = $query->orderBy('accident_date', 'desc')->get();
             
@@ -1598,11 +1612,14 @@ class CarrierReportService
                 ->whereHas('vehicle', function ($q) use ($carrierId) {
                     $q->where('carrier_id', $carrierId);
                 });
-            
+
             // Apply filters
             $query = $this->applyMaintenanceFilters($query, $filters);
-            $query = $this->applyDateRangeFilter($query, $filters, 'service_date');
-            
+
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $query = $this->applyDateRangeFilter($query, $filters, 'service_date');
+            }
+
             $perPage = $filters['per_page'] ?? 10;
             $maintenanceRecords = $query->orderBy('service_date', 'desc')->paginate($perPage);
             
@@ -1704,7 +1721,9 @@ class CarrierReportService
             // Apply the same filters as the main report
             $filteredQuery = clone $baseQuery;
             $filteredQuery = $this->applyMaintenanceFilters($filteredQuery, $filters);
-            $filteredQuery = $this->applyDateRangeFilter($filteredQuery, $filters, 'service_date');
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $filteredQuery = $this->applyDateRangeFilter($filteredQuery, $filters, 'service_date');
+            }
             
             // Total maintenance count (with filters applied)
             $count = $filteredQuery->count();
@@ -1761,11 +1780,14 @@ class CarrierReportService
                 ->whereHas('vehicle', function ($q) use ($carrierId) {
                     $q->where('carrier_id', $carrierId);
                 });
-            
+
             // Apply filters
             $query = $this->applyMaintenanceFilters($query, $filters);
-            $query = $this->applyDateRangeFilter($query, $filters, 'service_date');
-            
+
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $query = $this->applyDateRangeFilter($query, $filters, 'service_date');
+            }
+
             // Get all maintenance records (no pagination for PDF)
             $maintenanceRecords = $query->orderBy('service_date', 'desc')->get();
             
@@ -1843,11 +1865,14 @@ class CarrierReportService
                 ->whereHas('vehicle', function ($q) use ($carrierId) {
                     $q->where('carrier_id', $carrierId);
                 });
-            
+
             // Apply filters
             $query = $this->applyRepairFilters($query, $filters);
-            $query = $this->applyDateRangeFilter($query, $filters, 'repair_date');
-            
+
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $query = $this->applyDateRangeFilter($query, $filters, 'repair_date');
+            }
+
             $perPage = $filters['per_page'] ?? 10;
             $repairRecords = $query->orderBy('repair_date', 'desc')->paginate($perPage);
             
@@ -1951,7 +1976,9 @@ class CarrierReportService
             // Apply the same filters as the main report
             $filteredQuery = clone $baseQuery;
             $filteredQuery = $this->applyRepairFilters($filteredQuery, $filters);
-            $filteredQuery = $this->applyDateRangeFilter($filteredQuery, $filters, 'repair_date');
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $filteredQuery = $this->applyDateRangeFilter($filteredQuery, $filters, 'repair_date');
+            }
             
             // Total repair count (with filters applied)
             $count = $filteredQuery->count();
@@ -2011,11 +2038,14 @@ class CarrierReportService
                 ->whereHas('vehicle', function ($q) use ($carrierId) {
                     $q->where('carrier_id', $carrierId);
                 });
-            
+
             // Apply filters
             $query = $this->applyRepairFilters($query, $filters);
-            $query = $this->applyDateRangeFilter($query, $filters, 'repair_date');
-            
+
+            if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+                $query = $this->applyDateRangeFilter($query, $filters, 'repair_date');
+            }
+
             // Get all repair records (no pagination for PDF)
             $repairRecords = $query->orderBy('repair_date', 'desc')->get();
             

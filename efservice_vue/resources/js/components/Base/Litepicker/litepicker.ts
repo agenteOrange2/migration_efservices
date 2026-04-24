@@ -11,15 +11,8 @@ const getDateFormat = (format: string | undefined) => {
 };
 
 const setValue = (props: LitepickerProps, emit: LitepickerEmit) => {
-  const format = getDateFormat(props.options.format);
-  if (!props.modelValue.length) {
-    let date = dayjs().format(format);
-    date +=
-      !props.options.singleMode && props.options.singleMode !== undefined
-        ? " - " + dayjs().add(1, "month").format(format)
-        : "";
-    emit("update:modelValue", date);
-  }
+  // Do not auto-emit today's date when modelValue is empty.
+  // The input should remain blank until the user explicitly picks a date.
 };
 
 const init = (
