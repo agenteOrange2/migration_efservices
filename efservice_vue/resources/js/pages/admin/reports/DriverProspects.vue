@@ -54,7 +54,7 @@ function applyFilters() {
         year: filters.year || undefined,
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
-    }, { preserveState: true, preserveScroll: true, replace: true })
+    }, { preserveScroll: true, replace: true })
 }
 </script>
 

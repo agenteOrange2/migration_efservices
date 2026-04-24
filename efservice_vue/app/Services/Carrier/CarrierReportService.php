@@ -544,10 +544,18 @@ class CarrierReportService
                 $driver->has_expiring_license = $this->hasExpiringLicense($driver);
                 return $driver;
             });
-            
-            // Get statistics
-            $stats = $this->getDriverMetrics($carrierId);
-            
+
+            // Compute stats from the filtered collection so PDF reflects applied filters
+            $total = $drivers->count();
+            $active = $drivers->filter(fn($d) => (int) $d->status === UserDriverDetail::STATUS_ACTIVE)->count();
+            $stats = [
+                'total' => $total,
+                'active' => $active,
+                'inactive' => $drivers->filter(fn($d) => (int) $d->status === UserDriverDetail::STATUS_INACTIVE)->count(),
+                'recent' => $drivers->filter(fn($d) => $d->created_at && $d->created_at->gte(Carbon::now()->subDays(30)))->count(),
+                'percentage_active' => $total > 0 ? round(($active / $total) * 100, 1) : 0,
+            ];
+
             // Prepare data for PDF
             $data = [
                 'drivers' => $drivers,
@@ -555,7 +563,7 @@ class CarrierReportService
                 'filters' => $filters,
                 'stats' => $stats,
                 'generated_at' => Carbon::now()->format('m/d/Y H:i:s'),
-                'total_drivers' => $drivers->count(),
+                'total_drivers' => $total,
             ];
             
             // Generate PDF
@@ -756,10 +764,18 @@ class CarrierReportService
                 $vehicle->has_expiring_registration = $this->hasExpiringRegistration($vehicle);
                 return $vehicle;
             });
-            
-            // Get statistics
-            $stats = $this->getVehicleMetrics($carrierId);
-            
+
+            // Compute stats from the filtered collection
+            $total = $vehicles->count();
+            $active = $vehicles->filter(fn($v) => !$v->out_of_service && !$v->suspended)->count();
+            $stats = [
+                'total' => $total,
+                'active' => $active,
+                'out_of_service' => $vehicles->filter(fn($v) => $v->out_of_service)->count(),
+                'recent' => $vehicles->filter(fn($v) => $v->created_at && $v->created_at->gte(Carbon::now()->subDays(30)))->count(),
+                'percentage_active' => $total > 0 ? round(($active / $total) * 100, 1) : 0,
+            ];
+
             // Prepare data for PDF
             $data = [
                 'vehicles' => $vehicles,
@@ -1281,10 +1297,20 @@ class CarrierReportService
                 $record->is_expired = $this->isMedicalCardExpired($record);
                 return $record;
             });
-            
-            // Get statistics
-            $stats = $this->getMedicalRecordMetrics($carrierId);
-            
+
+            // Compute stats from the filtered collection
+            $total = $medicalRecords->count();
+            $expired = $medicalRecords->filter(fn($r) => $r->is_expired)->count();
+            $expiringSoon = $medicalRecords->filter(fn($r) => $r->is_expiring)->count();
+            $valid = $total - $expired;
+            $stats = [
+                'total' => $total,
+                'expiring_soon' => $expiringSoon,
+                'expired' => $expired,
+                'valid' => $valid,
+                'percentage_valid' => $total > 0 ? round(($valid / $total) * 100, 1) : 0,
+            ];
+
             // Prepare data for PDF
             $data = [
                 'medicalRecords' => $medicalRecords,
@@ -1292,7 +1318,7 @@ class CarrierReportService
                 'filters' => $filters,
                 'stats' => $stats,
                 'generated_at' => Carbon::now()->format('m/d/Y H:i:s'),
-                'total_records' => $medicalRecords->count(),
+                'total_records' => $total,
             ];
             
             // Generate PDF
@@ -1537,10 +1563,20 @@ class CarrierReportService
                 $license->is_expired = $this->isLicenseExpired($license);
                 return $license;
             });
-            
-            // Get statistics
-            $stats = $this->getLicenseMetrics($carrierId);
-            
+
+            // Compute stats from the filtered collection
+            $total = $licenses->count();
+            $expired = $licenses->filter(fn($l) => $l->is_expired)->count();
+            $expiringSoon = $licenses->filter(fn($l) => $l->is_expiring)->count();
+            $valid = $total - $expired;
+            $stats = [
+                'total' => $total,
+                'expiring_soon' => $expiringSoon,
+                'expired' => $expired,
+                'valid' => $valid,
+                'percentage_valid' => $total > 0 ? round(($valid / $total) * 100, 1) : 0,
+            ];
+
             // Prepare data for PDF
             $data = [
                 'licenses' => $licenses,
@@ -1548,7 +1584,7 @@ class CarrierReportService
                 'filters' => $filters,
                 'stats' => $stats,
                 'generated_at' => Carbon::now()->format('m/d/Y H:i:s'),
-                'total_licenses' => $licenses->count(),
+                'total_licenses' => $total,
             ];
             
             // Generate PDF

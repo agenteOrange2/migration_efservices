@@ -54,7 +54,7 @@ function applyFilters() {
         date_from: filters.date_from || undefined,
         date_to: filters.date_to || undefined,
         per_page: filters.per_page || undefined,
-    }, { preserveState: true, preserveScroll: true, replace: true })
+    }, { preserveScroll: true, replace: true })
 }
 
 function resetFilters() {

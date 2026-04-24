@@ -49,7 +49,7 @@ function applyFilters() {
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
         status: filters.status || undefined,
-    }, { preserveState: true, preserveScroll: true, replace: true })
+    }, { preserveScroll: true, replace: true })
 }
 </script>
 

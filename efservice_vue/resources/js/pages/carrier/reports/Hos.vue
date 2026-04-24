@@ -37,7 +37,7 @@ function minutesToLabel(total: number) {
 }
 
 function applyFilters() {
-    router.get(route('carrier.reports.hos'), { ...filters }, { preserveState: true, preserveScroll: true, replace: true })
+    router.get(route('carrier.reports.hos'), { ...filters }, { preserveScroll: true, replace: true })
 }
 
 function resetFilters() {

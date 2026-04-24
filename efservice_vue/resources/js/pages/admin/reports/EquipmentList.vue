@@ -53,7 +53,7 @@ function applyFilters() {
         tab: filters.tab || undefined,
         search: filters.search || undefined,
         carrier_id: filters.carrier_id || undefined,
-    }, { preserveState: true, preserveScroll: true, replace: true })
+    }, { preserveScroll: true, replace: true })
 }
 </script>
 

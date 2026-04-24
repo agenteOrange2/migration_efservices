@@ -33,7 +33,7 @@ const statCards = computed(() => [
 ])
 
 function applyFilters() {
-    router.get(route('carrier.reports.monthly'), { ...filters }, { preserveState: true, preserveScroll: true, replace: true })
+    router.get(route('carrier.reports.monthly'), { ...filters }, { preserveScroll: true, replace: true })
 }
 
 function resetFilters() {

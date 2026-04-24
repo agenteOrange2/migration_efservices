@@ -91,7 +91,12 @@ class CarrierReportsController extends Controller
                 'license_number' => $license?->license_number,
                 'license_state' => $license?->state_of_issue,
                 'license_expiration' => $this->formatDate($license?->expiration_date),
-                'status' => (string) $driver->status,
+                'status' => match((int) $driver->status) {
+                    UserDriverDetail::STATUS_ACTIVE => 'active',
+                    UserDriverDetail::STATUS_INACTIVE => 'inactive',
+                    UserDriverDetail::STATUS_PENDING => 'pending',
+                    default => 'unknown',
+                },
                 'registered_at' => $this->formatDate($driver->created_at),
                 'has_expiring_license' => (bool) ($driver->has_expiring_license ?? false),
             ];

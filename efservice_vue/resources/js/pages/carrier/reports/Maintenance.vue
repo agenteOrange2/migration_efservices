@@ -32,7 +32,7 @@ const statCards = [
 ]
 
 function applyFilters() {
-    router.get(route('carrier.reports.maintenance'), { ...filters }, { preserveState: true, preserveScroll: true, replace: true })
+    router.get(route('carrier.reports.maintenance'), { ...filters }, { preserveScroll: true, replace: true })
 }
 
 function resetFilters() {

@@ -23,7 +23,7 @@ const statCards = computed(() => [
     { label: 'In Progress', value: props.stats.in_progress, icon: 'LoaderCircle', tone: 'info' },
     { label: 'Completed', value: props.stats.completed, icon: 'BadgeCheck', tone: 'success' },
 ])
-function applyFilters() { router.get(route('admin.reports.emergency-repairs'), { search: filters.search || undefined, carrier_id: filters.carrier_id || undefined, status: filters.status || undefined, date_from: filters.date_from || undefined, date_to: filters.date_to || undefined }, { preserveState: true, preserveScroll: true, replace: true }) }
+function applyFilters() { router.get(route('admin.reports.emergency-repairs'), { search: filters.search || undefined, carrier_id: filters.carrier_id || undefined, status: filters.status || undefined, date_from: filters.date_from || undefined, date_to: filters.date_to || undefined }, { preserveScroll: true, replace: true }) }
 </script>
 
 <template>
