@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('carrier_id')->nullable()->constrained('carriers');
             $table->date('test_date');
             $table->string('test_type'); // e.g., Drug, Alcohol, Skills, Knowledge
-            $table->string('test_result'); // e.g., Pass, Fail, Pending
+            $table->string('test_result')->nullable(); // e.g., Pass, Fail, Pending
             $table->string('status')->default('pending');
             $table->string('administered_by')->nullable();            
             $table->string('mro')->nullable();

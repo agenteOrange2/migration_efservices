@@ -21,8 +21,8 @@ return new class extends Migration
             $table->date('suspension_date')->nullable();
             $table->boolean('is_terminated')->default(false);
             $table->date('termination_date')->nullable();
-            $table->string('medical_examiner_name');
-            $table->string('medical_examiner_registry_number');
+            $table->string('medical_examiner_name')->nullable();
+            $table->string('medical_examiner_registry_number')->nullable();
             $table->date('medical_card_expiration_date');
             $table->timestamps();
 

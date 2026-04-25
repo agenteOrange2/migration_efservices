@@ -37,7 +37,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained('users');
             $table->foreignId('membership_id')->nullable()->constrained('memberships');
             $table->unsignedTinyInteger('status')->default(2)->index();
-            $table->enum('document_status', ['pending', 'in_progress', 'skipped'])
+            $table->enum('document_status', ['pending', 'in_progress', 'completed', 'skipped'])
             ->default('pending')
             ->nullable();
             $table->boolean('documents_completed')->default(false);
