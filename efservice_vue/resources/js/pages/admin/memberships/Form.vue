@@ -12,6 +12,7 @@ interface MembershipPayload {
     name: string
     description: string
     pricing_type: string
+    billing_period: string
     price: number | null
     carrier_price: number | null
     driver_price: number | null
@@ -35,6 +36,7 @@ const form = useForm({
     name: props.membership?.name ?? '',
     description: props.membership?.description ?? '',
     pricing_type: props.membership?.pricing_type ?? 'plan',
+    billing_period: props.membership?.billing_period ?? 'monthly',
     price: props.membership?.price ?? '',
     carrier_price: props.membership?.carrier_price ?? '',
     driver_price: props.membership?.driver_price ?? '',
@@ -176,6 +178,16 @@ function submit() {
                                 <option value="plan">Plan</option>
                                 <option value="individual">Individual</option>
                             </FormSelect>
+                        </div>
+
+                        <div>
+                            <FormLabel>Billing Period <span class="text-red-500">*</span></FormLabel>
+                            <FormSelect v-model="form.billing_period" :class="form.errors.billing_period ? 'border-red-400' : ''">
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="yearly">Yearly</option>
+                            </FormSelect>
+                            <p v-if="form.errors.billing_period" class="text-red-500 text-xs mt-1">{{ form.errors.billing_period }}</p>
                         </div>
                     </div>
                 </div>

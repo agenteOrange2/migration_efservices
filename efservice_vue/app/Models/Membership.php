@@ -17,6 +17,7 @@ class Membership extends Model implements HasMedia
         'description',
         'price',
         'pricing_type',
+        'billing_period',
         'carrier_price',
         'driver_price',
         'vehicle_price',

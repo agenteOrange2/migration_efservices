@@ -98,25 +98,25 @@ function exportPdfUrl() {
         <div class="col-span-12">
 
             <!-- Header -->
-            <div class="box box--stacked p-6 mb-6">
+            <div class="box box--stacked mb-6 border border-slate-200/70 bg-white p-6 dark:border-darkmode-400/70 dark:bg-darkmode-600/95">
                 <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
-                        <div class="p-3 bg-primary/10 rounded-xl border border-primary/20">
-                            <Lucide icon="FolderCheck" class="w-8 h-8 text-primary" />
+                        <div class="rounded-xl border border-primary/20 bg-primary/10 p-3 dark:border-sky-400/30 dark:bg-sky-400/10">
+                            <Lucide icon="FolderCheck" class="h-8 w-8 text-primary dark:text-sky-300" />
                         </div>
                         <div>
-                            <h1 class="text-2xl font-bold text-slate-800">Carriers Documents</h1>
-                            <p class="text-slate-500 text-sm">Review and manage document compliance for all carriers</p>
+                            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Carriers Documents</h1>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Review and manage document compliance for all carriers</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <a :href="exportPdfUrl()" target="_blank"
-                            class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90">
-                            <Lucide icon="FileDown" class="w-4 h-4" /> Export PDF
+                            class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-500">
+                            <Lucide icon="FileDown" class="h-4 w-4" /> Export PDF
                         </a>
                         <Link :href="route('admin.carriers.index')"
-                            class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition text-sm">
-                            <Lucide icon="ArrowLeft" class="w-4 h-4" /> Back to Carriers
+                            class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-500/70 dark:text-slate-300 dark:hover:bg-darkmode-400">
+                            <Lucide icon="ArrowLeft" class="h-4 w-4" /> Back to Carriers
                         </Link>
                     </div>
                 </div>

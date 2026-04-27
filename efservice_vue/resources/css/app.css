@@ -81,3 +81,416 @@
   --color-sidebar-border: rgb(255 255 255 / 0.15);
   --color-sidebar-ring: rgb(255 255 255 / 0.3);
 }
+
+/*
+ |--------------------------------------------------------------------------
+ | Registration Layout Dark Mode
+ |--------------------------------------------------------------------------
+ */
+:is(.dark .registration-layout) {
+  color: rgb(203 213 225);
+  color-scheme: dark;
+}
+
+:is(.dark .registration-layout) .box {
+  background-color: rgb(27 37 59 / 0.96);
+  border-color: rgb(74 90 121 / 0.45);
+  box-shadow: 0 14px 34px rgb(2 6 23 / 0.18);
+}
+
+:is(.dark .registration-layout) .box.box--stacked:before {
+  background-color: rgb(35 45 69 / 0.72);
+  border-color: rgb(74 90 121 / 0.38);
+}
+
+:is(.dark .registration-layout) :is(.bg-white, .bg-slate-50, .bg-slate-100) {
+  background-color: rgb(35 45 69 / 0.86) !important;
+}
+
+:is(.dark .registration-layout) :is(.bg-slate-200, .bg-slate-200\/70) {
+  background-color: rgb(48 61 93 / 0.82) !important;
+}
+
+:is(.dark .registration-layout) :is(.border-slate-100, .border-slate-200, .border-slate-200\/60, .border-slate-300) {
+  border-color: rgb(74 90 121 / 0.48) !important;
+}
+
+:is(.dark .registration-layout) :is(.text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600) {
+  color: rgb(226 232 240) !important;
+}
+
+:is(.dark .registration-layout) :is(.text-slate-500, .text-slate-400) {
+  color: rgb(148 163 184) !important;
+}
+
+:is(.dark .registration-layout) :is(.text-primary, .text-theme-1, .hover\:text-primary:hover, a.text-primary) {
+  color: rgb(56 189 248) !important;
+}
+
+:is(.dark .registration-layout) .fill-primary\/10 {
+  fill: rgb(56 189 248 / 0.16) !important;
+}
+
+:is(.dark .registration-layout) .bg-primary {
+  background-color: #0C4A6E !important;
+}
+
+:is(.dark .registration-layout) :is(.bg-primary\/5, .bg-primary\/10, .bg-primary\/20, .hover\:bg-primary\/10:hover, .hover\:bg-primary\/20:hover) {
+  background-color: rgb(56 189 248 / 0.14) !important;
+}
+
+:is(.dark .registration-layout) :is(.border-primary, .border-primary\/20, .border-primary\/30, .focus\:border-primary\/40:focus) {
+  border-color: rgb(56 189 248 / 0.4) !important;
+}
+
+:is(.dark .registration-layout) :is(input, select, textarea) {
+  background-color: rgb(27 37 59) !important;
+  border-color: rgb(74 90 121 / 0.55) !important;
+  color: rgb(226 232 240) !important;
+}
+
+:is(.dark .registration-layout) :is(input, textarea)::placeholder {
+  color: rgb(148 163 184) !important;
+}
+
+:is(.dark .registration-layout) :is(input[type="checkbox"], input[type="radio"]) {
+  background-color: rgb(27 37 59) !important;
+  border-color: rgb(100 116 139 / 0.65) !important;
+}
+
+:is(.dark .registration-layout) :is(input[type="checkbox"]:checked, input[type="radio"]:checked) {
+  background-color: rgb(37 99 235) !important;
+  border-color: rgb(37 99 235) !important;
+}
+
+:is(.dark .registration-layout) :is(table, tbody, tr, td, th) {
+  border-color: rgb(74 90 121 / 0.45) !important;
+}
+
+:is(.dark .registration-layout) :is(thead, .bg-slate-50\/80) {
+  background-color: rgb(35 45 69 / 0.95) !important;
+}
+
+:is(.dark .registration-layout) :is(.hover\:bg-slate-50:hover, .hover\:bg-slate-50\/80:hover) {
+  background-color: rgb(48 61 93 / 0.68) !important;
+}
+
+:is(.dark .registration-layout) .ts-wrapper,
+:is(.dark .registration-layout) .ts-control,
+:is(.dark .registration-layout) .ts-wrapper.single .ts-control,
+:is(.dark .registration-layout) .ts-wrapper.multi .ts-control {
+  background: rgb(27 37 59) !important;
+  border-color: rgb(74 90 121 / 0.55) !important;
+  color: rgb(226 232 240) !important;
+  box-shadow: none !important;
+}
+
+:is(.dark .registration-layout) .ts-control,
+:is(.dark .registration-layout) .ts-control input,
+:is(.dark .registration-layout) .ts-control > input {
+  color: rgb(226 232 240) !important;
+}
+
+:is(.dark .registration-layout) .ts-control input::placeholder {
+  color: rgb(148 163 184) !important;
+}
+
+:is(.dark .registration-layout) .ts-wrapper.focus .ts-control,
+:is(.dark .registration-layout) .ts-wrapper.dropdown-active .ts-control {
+  border-color: rgb(56 189 248 / 0.55) !important;
+  box-shadow: 0 0 0 3px rgb(56 189 248 / 0.14) !important;
+}
+
+:is(.dark .registration-layout) .ts-dropdown {
+  background: rgb(27 37 59) !important;
+  border-color: rgb(74 90 121 / 0.55) !important;
+  color: rgb(203 213 225) !important;
+  box-shadow: 0 18px 40px rgb(2 6 23 / 0.35) !important;
+}
+
+:is(.dark .registration-layout) .ts-dropdown .option,
+:is(.dark .registration-layout) .ts-dropdown .optgroup-header,
+:is(.dark .registration-layout) .ts-dropdown .no-results,
+:is(.dark .registration-layout) .ts-dropdown .create {
+  color: rgb(203 213 225) !important;
+}
+
+:is(.dark .registration-layout) .ts-dropdown .active,
+:is(.dark .registration-layout) .ts-dropdown .option:hover {
+  background: rgb(56 189 248 / 0.14) !important;
+  color: rgb(240 249 255) !important;
+}
+
+:is(.dark .registration-layout) .ts-wrapper.multi .ts-control > div {
+  background: rgb(56 189 248 / 0.14) !important;
+  color: rgb(240 249 255) !important;
+  border-color: rgb(56 189 248 / 0.24) !important;
+}
+
+/*
+ |--------------------------------------------------------------------------
+ | Carrier Wizard Dark Mode
+ |--------------------------------------------------------------------------
+ */
+:is(.dark .carrier-wizard) {
+  color: rgb(203 213 225);
+  color-scheme: dark;
+}
+
+:is(.dark .carrier-wizard.bg-white),
+:is(.dark .carrier-wizard) :is(.bg-white, .bg-white\/80, .bg-slate-50, .bg-slate-100) {
+  background-color: rgb(27 37 59 / 0.94) !important;
+}
+
+:is(.dark .carrier-wizard) :is(.bg-slate-200, .bg-slate-200\/70) {
+  background-color: rgb(48 61 93 / 0.82) !important;
+}
+
+:is(.dark .carrier-wizard)[class*="before:bg-white"]::before,
+:is(.dark .carrier-wizard) [class*="before:bg-white"]::before {
+  background-color: rgb(35 45 69 / 0.58) !important;
+}
+
+:is(.dark .carrier-wizard)[class*="after:bg-white"]::after,
+:is(.dark .carrier-wizard) [class*="after:bg-white"]::after {
+  background-color: rgb(27 37 59) !important;
+  --tw-gradient-from: rgb(27 37 59) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(15 23 42 / 0.92) var(--tw-gradient-to-position) !important;
+}
+
+:is(.dark .carrier-wizard) :is(.border-slate-100, .border-slate-200, .border-slate-200\/80, .border-slate-300, .border-slate-300\/80) {
+  border-color: rgb(74 90 121 / 0.5) !important;
+}
+
+:is(.dark .carrier-wizard) :is(.text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600) {
+  color: rgb(226 232 240) !important;
+}
+
+:is(.dark .carrier-wizard) :is(.text-slate-500, .text-slate-400) {
+  color: rgb(148 163 184) !important;
+}
+
+:is(.dark .carrier-wizard) :is(.text-primary, .text-theme-1, .hover\:text-primary:hover, a.text-primary) {
+  color: rgb(56 189 248) !important;
+}
+
+:is(.dark .carrier-wizard) .bg-primary {
+  background-color: rgb(37 99 235) !important;
+}
+
+:is(.dark .carrier-wizard) :is(.bg-primary\/5, .bg-primary\/10, .bg-primary\/20, .bg-primary\/\[0\.04\], .bg-primary\/\[0\.06\]) {
+  background-color: rgb(56 189 248 / 0.14) !important;
+}
+
+:is(.dark .carrier-wizard) :is(.border-primary, .border-primary\/15, .border-primary\/20, .border-primary\/30) {
+  border-color: rgb(56 189 248 / 0.38) !important;
+}
+
+:is(.dark .carrier-wizard) :is(input, select, textarea) {
+  background-color: rgb(27 37 59) !important;
+  border-color: rgb(74 90 121 / 0.55) !important;
+  color: rgb(226 232 240) !important;
+}
+
+:is(.dark .carrier-wizard) :is(input, textarea)::placeholder {
+  color: rgb(148 163 184) !important;
+}
+
+:is(.dark .carrier-wizard) :is(input[type="checkbox"], input[type="radio"]) {
+  background-color: rgb(27 37 59) !important;
+  border-color: rgb(100 116 139 / 0.65) !important;
+}
+
+:is(.dark .carrier-wizard) :is(input[type="checkbox"]:checked, input[type="radio"]:checked) {
+  background-color: rgb(37 99 235) !important;
+  border-color: rgb(37 99 235) !important;
+}
+
+:is(.dark .carrier-wizard) .ts-wrapper,
+:is(.dark .carrier-wizard) .ts-control,
+:is(.dark .carrier-wizard) .ts-wrapper.single .ts-control,
+:is(.dark .carrier-wizard) .ts-wrapper.multi .ts-control {
+  background: rgb(27 37 59) !important;
+  border-color: rgb(74 90 121 / 0.55) !important;
+  color: rgb(226 232 240) !important;
+  box-shadow: none !important;
+}
+
+:is(.dark .carrier-wizard) .ts-control,
+:is(.dark .carrier-wizard) .ts-control input,
+:is(.dark .carrier-wizard) .ts-control > input {
+  color: rgb(226 232 240) !important;
+}
+
+:is(.dark .carrier-wizard) .ts-wrapper.focus .ts-control,
+:is(.dark .carrier-wizard) .ts-wrapper.dropdown-active .ts-control {
+  border-color: rgb(56 189 248 / 0.55) !important;
+  box-shadow: 0 0 0 3px rgb(56 189 248 / 0.14) !important;
+}
+
+:is(.dark .carrier-wizard) .ts-dropdown {
+  background: rgb(27 37 59) !important;
+  border-color: rgb(74 90 121 / 0.55) !important;
+  color: rgb(203 213 225) !important;
+  box-shadow: 0 18px 40px rgb(2 6 23 / 0.35) !important;
+}
+
+:is(.dark .carrier-wizard) .ts-dropdown .option,
+:is(.dark .carrier-wizard) .ts-dropdown .optgroup-header,
+:is(.dark .carrier-wizard) .ts-dropdown .no-results,
+:is(.dark .carrier-wizard) .ts-dropdown .create {
+  color: rgb(203 213 225) !important;
+}
+
+:is(.dark .carrier-wizard) .ts-dropdown .active,
+:is(.dark .carrier-wizard) .ts-dropdown .option:hover {
+  background: rgb(56 189 248 / 0.14) !important;
+  color: rgb(240 249 255) !important;
+}
+
+/*
+ |--------------------------------------------------------------------------
+ | Login Dark Mode
+ |--------------------------------------------------------------------------
+ */
+:is(.dark .auth-login) {
+  color: rgb(203 213 225);
+  color-scheme: dark;
+}
+
+:is(.dark .auth-login.bg-white),
+:is(.dark .auth-login) :is(.bg-white, .bg-white\/80, .bg-slate-50, .bg-slate-100) {
+  background-color: rgb(27 37 59 / 0.94) !important;
+}
+
+:is(.dark .auth-login)[class*="before:bg-white"]::before,
+:is(.dark .auth-login) [class*="before:bg-white"]::before {
+  background-color: rgb(35 45 69 / 0.58) !important;
+}
+
+:is(.dark .auth-login)[class*="after:bg-white"]::after,
+:is(.dark .auth-login) [class*="after:bg-white"]::after {
+  background-color: rgb(27 37 59) !important;
+  --tw-gradient-from: rgb(27 37 59) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(15 23 42 / 0.92) var(--tw-gradient-to-position) !important;
+}
+
+:is(.dark .auth-login) :is(.border-slate-100, .border-slate-200, .border-slate-300, .border-slate-300\/80) {
+  border-color: rgb(74 90 121 / 0.5) !important;
+}
+
+:is(.dark .auth-login) :is(.text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600) {
+  color: rgb(226 232 240) !important;
+}
+
+:is(.dark .auth-login) :is(.text-slate-500, .text-slate-400) {
+  color: rgb(148 163 184) !important;
+}
+
+:is(.dark .auth-login) :is(.text-primary, .text-theme-1, .hover\:text-primary:hover, a.text-primary) {
+  color: rgb(56 189 248) !important;
+}
+
+:is(.dark .auth-login) :is(input, select, textarea) {
+  background-color: rgb(27 37 59) !important;
+  border-color: rgb(74 90 121 / 0.55) !important;
+  color: rgb(226 232 240) !important;
+}
+
+:is(.dark .auth-login) :is(input, textarea)::placeholder {
+  color: rgb(148 163 184) !important;
+}
+
+:is(.dark .auth-login) :is(input[type="checkbox"], input[type="radio"]) {
+  background-color: rgb(27 37 59) !important;
+  border-color: rgb(100 116 139 / 0.65) !important;
+}
+
+:is(.dark .auth-login) :is(input[type="checkbox"]:checked, input[type="radio"]:checked) {
+  background-color: rgb(37 99 235) !important;
+  border-color: rgb(37 99 235) !important;
+}
+
+/*
+ |--------------------------------------------------------------------------
+ | Driver Status Dark Mode
+ |--------------------------------------------------------------------------
+ */
+:is(.dark .driver-status) {
+  color: rgb(203 213 225);
+  color-scheme: dark;
+}
+
+:is(.dark .driver-status.bg-white),
+:is(.dark .driver-status) :is(.bg-white, .bg-white\/80, .bg-slate-50, .bg-slate-100) {
+  background-color: rgb(27 37 59 / 0.94) !important;
+}
+
+:is(.dark .driver-status)[class*="before:bg-white"]::before,
+:is(.dark .driver-status) [class*="before:bg-white"]::before {
+  background-color: rgb(35 45 69 / 0.58) !important;
+}
+
+:is(.dark .driver-status)[class*="after:bg-white"]::after,
+:is(.dark .driver-status) [class*="after:bg-white"]::after {
+  background-color: rgb(27 37 59) !important;
+  --tw-gradient-from: rgb(27 37 59) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(15 23 42 / 0.92) var(--tw-gradient-to-position) !important;
+}
+
+:is(.dark .driver-status) :is(.border-slate-100, .border-slate-200, .border-slate-300, .border-slate-300\/80) {
+  border-color: rgb(74 90 121 / 0.5) !important;
+}
+
+:is(.dark .driver-status) :is(.text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600) {
+  color: rgb(226 232 240) !important;
+}
+
+:is(.dark .driver-status) :is(.text-slate-500, .text-slate-400) {
+  color: rgb(148 163 184) !important;
+}
+
+:is(.dark .driver-status) :is(.text-primary, .text-theme-1, a.text-primary) {
+  color: rgb(56 189 248) !important;
+}
+
+:is(.dark .driver-status) :is(.bg-green-50) {
+  background-color: rgb(20 83 45 / 0.24) !important;
+}
+
+:is(.dark .driver-status) :is(.text-green-600, .text-green-800) {
+  color: rgb(134 239 172) !important;
+}
+
+:is(.dark .driver-status) :is(.bg-yellow-50) {
+  background-color: rgb(113 63 18 / 0.26) !important;
+}
+
+:is(.dark .driver-status) :is(.text-yellow-600, .text-yellow-800) {
+  color: rgb(253 224 71) !important;
+}
+
+:is(.dark .driver-status) :is(.bg-red-50) {
+  background-color: rgb(127 29 29 / 0.28) !important;
+}
+
+:is(.dark .driver-status) :is(.text-red-600, .text-red-800) {
+  color: rgb(252 165 165) !important;
+}
+
+:is(.dark .driver-status) .bg-blue-50 {
+  background-color: rgb(14 116 144 / 0.18) !important;
+  border: 1px solid rgb(56 189 248 / 0.22);
+}
+
+:is(.dark .driver-status) :is(.text-blue-600, .text-blue-800\/80, .text-blue-900) {
+  color: rgb(125 211 252) !important;
+}
+
+:is(.dark .driver-status) :is(.hover\:bg-slate-50:hover) {
+  background-color: rgb(48 61 93 / 0.68) !important;
+}
+
+:is(.dark .driver-status) :is(.hover\:text-slate-700:hover) {
+  color: rgb(226 232 240) !important;
+}

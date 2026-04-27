@@ -663,6 +663,7 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 }
 
 onMounted(() => {
+  updateAppearance('dark');
   syncFullscreenState();
   document.addEventListener('fullscreenchange', syncFullscreenState);
   document.addEventListener('keydown', handleGlobalKeydown);
@@ -679,7 +680,7 @@ onBeforeUnmount(() => {
   <div
     :class="[
       'raze',
-      'before:content-[\'\'] before:bg-linear-to-b before:from-slate-100 before:to-slate-50 dark:before:from-darkmode-800 dark:before:to-darkmode-800 before:h-screen before:w-full before:fixed before:top-0',
+      'before:content-[\'\'] before:bg-linear-to-b before:from-slate-100 before:to-slate-50 dark:before:from-darkmode-900 dark:before:via-darkmode-800 dark:before:to-darkmode-700 before:h-screen before:w-full before:fixed before:top-0',
     ]"
   >
     <div
@@ -739,7 +740,7 @@ onBeforeUnmount(() => {
           </a>
         </div>
 
-        <div class="w-full h-full z-20 px-5 overflow-y-auto overflow-x-hidden pb-3">
+        <div class="w-full h-full z-20 px-5 overflow-y-auto overflow-x-hidden pb-3 scrollbar-sidebar-raze">
           <ul class="scrollable">
             <template v-for="(item, index) in menu" :key="index">
               <li v-if="typeof item === 'string'" class="side-menu__divider">
@@ -1230,7 +1231,7 @@ onBeforeUnmount(() => {
       >
         <div v-if="toastVisible" class="fixed bottom-6 right-6 z-[9999] max-w-sm w-full">
           <div
-            class="rounded-xl shadow-lg border px-5 py-4 flex items-start gap-3"
+            class="rounded-xl shadow-lg border px-5 py-4 flex items-start gap-3 dark:bg-darkmode-600"
             :class="{
               'bg-white border-emerald-200': toastType === 'success',
               'bg-white border-red-200': toastType === 'error',
@@ -1257,7 +1258,7 @@ onBeforeUnmount(() => {
                 {{ toastMessage }}
               </p>
             </div>
-            <button class="flex-shrink-0 rounded p-0.5 transition hover:bg-slate-100" @click="toastVisible = false">
+            <button class="flex-shrink-0 rounded p-0.5 transition hover:bg-slate-100 dark:hover:bg-darkmode-400" @click="toastVisible = false">
               <Lucide icon="X" class="w-4 h-4 text-slate-400" />
             </button>
           </div>

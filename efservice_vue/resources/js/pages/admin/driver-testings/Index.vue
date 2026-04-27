@@ -4,11 +4,14 @@ import { reactive, ref } from 'vue'
 import Lucide from '@/components/Base/Lucide'
 import { FormInput, FormSelect } from '@/components/Base/Form'
 import { Dialog } from '@/components/Base/Headless'
+import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import RazeLayout from '@/layouts/RazeLayout.vue'
 
 declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
+
+const pickerOptions = { singleMode: true, format: 'M/D/YYYY', autoApply: true }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PaginationLink {
@@ -268,10 +271,10 @@ function statusBadge(status: string | null) {
                     </FormSelect>
 
                     <!-- Date from -->
-                    <FormInput v-model="filters.date_from" type="date" />
+                    <Litepicker v-model="filters.date_from" :options="pickerOptions" />
 
                     <!-- Date to -->
-                    <FormInput v-model="filters.date_to" type="date" />
+                    <Litepicker v-model="filters.date_to" :options="pickerOptions" />
 
                     <!-- Buttons -->
                     <div class="flex gap-2">

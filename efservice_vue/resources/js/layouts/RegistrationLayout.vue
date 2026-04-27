@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AppLogoIcon from '@/components/AppLogoIcon.vue'
 import Lucide from '@/components/Base/Lucide'
+import { useAppearance } from '@/composables/useAppearance'
 
 const page = usePage()
 const flash = computed(() => (page.props as any).flash ?? {})
 const branding = computed(() => ((page.props as any).branding ?? {}) as Record<string, any>)
+const authUser = computed(() => ((page.props as any).auth?.user) ?? null)
 
 const portalName = computed(() => branding.value?.appName || (page.props as any).name || 'EF Services')
 const portalLogoUrl = computed(() => branding.value?.logoUrl || null)
+const { resolvedAppearance, updateAppearance } = useAppearance()
+
+function toggleDarkMode() {
+    updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark')
+}
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -46,12 +53,16 @@ const toastClasses = computed(() => {
     if (toastType.value === 'info') return 'border-pending/30 bg-pending/10 text-pending'
     return 'border-warning/30 bg-warning/10 text-warning'
 })
+
+onMounted(() => {
+    updateAppearance('dark')
+})
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 dark:bg-darkmode-700">
+    <div class="registration-layout min-h-screen bg-slate-50 dark:bg-darkmode-900">
         <header class="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm dark:border-darkmode-400 dark:bg-darkmode-600/95">
-            <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+            <div class="mx-auto flex h-16 max-w-full items-center justify-between px-4 sm:px-6">
                 <Link href="/" class="flex items-center gap-2.5">
                     <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary/10">
                         <img
@@ -68,11 +79,22 @@ const toastClasses = computed(() => {
                     </span>
                 </Link>
                 <Link
+                    v-if="!authUser"
                     :href="route('login')"
                     class="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-primary dark:text-slate-400"
                 >
                     <Lucide icon="LogIn" class="h-4 w-4" />
                     Sign In
+                </Link>
+                <Link
+                    v-else
+                    :href="route('logout')"
+                    method="post"
+                    as="button"
+                    class="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-danger dark:text-slate-400"
+                >
+                    <Lucide icon="LogOut" class="h-4 w-4" />
+                    Sign Out
                 </Link>
             </div>
         </header>
@@ -99,6 +121,16 @@ const toastClasses = computed(() => {
             </div>
         </footer>
     </div>
+
+    <!-- Dark mode toggle -->
+    <button
+        @click="toggleDarkMode"
+        class="fixed bottom-6 left-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/60 bg-white shadow-md transition hover:bg-slate-50 dark:border-darkmode-400 dark:bg-darkmode-600 dark:hover:bg-darkmode-500"
+        :title="resolvedAppearance === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+    >
+        <Lucide v-if="resolvedAppearance === 'dark'" icon="Sun" class="h-4 w-4 text-warning" />
+        <Lucide v-else icon="Moon" class="h-4 w-4 text-slate-500" />
+    </button>
 
     <Transition
         enter-active-class="transition duration-300 ease-out"

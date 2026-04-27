@@ -18,6 +18,7 @@ class MembershipController extends Controller
             'name' => $m->name,
             'description' => $m->description,
             'pricing_type' => $m->pricing_type,
+            'billing_period' => $m->billing_period ?? 'monthly',
             'price' => $m->price,
             'carrier_price' => $m->carrier_price,
             'driver_price' => $m->driver_price,
@@ -47,6 +48,7 @@ class MembershipController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string|max:300',
             'pricing_type' => 'required|string|in:plan,individual',
+            'billing_period' => 'required|string|in:weekly,monthly,yearly',
             'max_carrier' => 'required|integer|min:1',
             'max_drivers' => 'required|integer|min:1',
             'max_vehicles' => 'required|integer|min:1',
@@ -112,11 +114,12 @@ class MembershipController extends Controller
             ]);
 
         $membershipData = $membership->only([
-            'id', 'name', 'description', 'pricing_type', 'price',
+            'id', 'name', 'description', 'pricing_type', 'billing_period', 'price',
             'carrier_price', 'driver_price', 'vehicle_price',
             'max_carrier', 'max_drivers', 'max_vehicles',
             'status', 'show_in_register', 'created_at', 'updated_at',
         ]);
+        $membershipData['billing_period'] = $membershipData['billing_period'] ?? 'monthly';
         $membershipData['image_url'] = $membership->getFirstMediaUrl('image_membership') ?: null;
 
         return Inertia::render('admin/memberships/Show', [
@@ -129,11 +132,12 @@ class MembershipController extends Controller
     public function edit(Membership $membership): Response
     {
         $membershipData = $membership->only([
-            'id', 'name', 'description', 'pricing_type', 'price',
+            'id', 'name', 'description', 'pricing_type', 'billing_period', 'price',
             'carrier_price', 'driver_price', 'vehicle_price',
             'max_carrier', 'max_drivers', 'max_vehicles',
             'status', 'show_in_register', 'created_at', 'updated_at',
         ]);
+        $membershipData['billing_period'] = $membershipData['billing_period'] ?? 'monthly';
         $membershipData['image_url'] = $membership->getFirstMediaUrl('image_membership') ?: null;
 
         return Inertia::render('admin/memberships/Edit', [
@@ -147,6 +151,7 @@ class MembershipController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string|max:300',
             'pricing_type' => 'required|string|in:plan,individual',
+            'billing_period' => 'required|string|in:weekly,monthly,yearly',
             'max_carrier' => 'required|integer|min:1',
             'max_drivers' => 'required|integer|min:1',
             'max_vehicles' => 'required|integer|min:1',

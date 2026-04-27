@@ -8,6 +8,7 @@ import InputError from '@/components/InputError.vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import { Building2, CheckCircle2, Menu, Phone, User, X } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref, toRefs, watch } from 'vue'
+import { useAppearance } from '@/composables/useAppearance'
 
 type Locale = 'en' | 'es'
 type PlatformTabKey = 'general' | 'drivers' | 'testing'
@@ -18,6 +19,7 @@ interface LandingPlan {
     description: string | null
     price: number
     pricing_type: string
+    billing_period: string
     max_users: number
     max_drivers: number
     max_vehicles: number
@@ -616,6 +618,17 @@ const planForm = useForm({
     plan_price: null as number | null,
 })
 
+const billingPeriodLabel = computed(() => ({
+    weekly:  locale.value === 'es' ? '/semana' : '/week',
+    monthly: locale.value === 'es' ? '/mes'    : '/month',
+    yearly:  locale.value === 'es' ? '/año'    : '/year',
+}))
+
+function planPeriodLabel(plan: LandingPlan): string {
+    return billingPeriodLabel.value[plan.billing_period as keyof typeof billingPeriodLabel.value]
+        ?? billingPeriodLabel.value.monthly
+}
+
 const pricingCards = computed(() => {
     const descriptors = [t.value.pricing.beginner, t.value.pricing.intermediate, t.value.pricing.pro]
 
@@ -685,7 +698,8 @@ const closePlanModal = () => {
 const planSubtitle = computed(() => {
     if (!selectedPlan.value) return ''
     if (selectedPlan.value.name.toLowerCase() === 'custom') return t.value.modal.customSubtitle
-    return `${selectedPlan.value.name} Plan — ${formatCurrency(selectedPlan.value.price)}${t.value.pricing.month}`
+    const period = planPeriodLabel(selectedPlan.value as LandingPlan)
+    return `${selectedPlan.value.name} Plan — ${formatCurrency(selectedPlan.value.price)}${period}`
 })
 
 const submitContact = () => {
@@ -735,6 +749,12 @@ watch(locale, (value) => {
         document.documentElement.lang = value
     }
 })
+
+const { resolvedAppearance, updateAppearance } = useAppearance()
+
+function toggleDarkMode() {
+    updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark')
+}
 
 onMounted(() => {
     if (typeof window === 'undefined') return
@@ -922,7 +942,7 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section class="w-full bg-white py-20 text-black md:py-24">
+        <section class="w-full bg-white py-20 text-black dark:bg-[#0b0f1a] dark:text-white md:py-24">
             <div class="container mx-auto px-4 md:px-6">
                 <div class="mb-16 flex flex-col items-center justify-center space-y-4 text-center">
                     <span class="inline-flex items-center rounded-md bg-success px-3 py-1.5 text-sm font-medium text-white">
@@ -932,76 +952,76 @@ onBeforeUnmount(() => {
                     <h2 class="max-w-3xl text-3xl font-bold tracking-tight text-primary md:text-4xl lg:text-5xl">
                         {{ t.stats.title }}
                     </h2>
-                    <p class="max-w-[800px] text-xl text-gray-600">
+                    <p class="max-w-[800px] text-xl text-gray-600 dark:text-slate-400">
                         {{ t.stats.subtitle }}
                     </p>
                 </div>
 
                 <div class="mb-16 grid grid-cols-1 gap-8 md:grid-cols-4">
-                    <div class="rounded-2xl border border-primary p-8 text-center transition-all hover:shadow-xl">
+                    <div class="rounded-2xl border border-primary p-8 text-center transition-all hover:shadow-xl dark:bg-white/[0.03]">
                         <div class="mb-2 text-5xl font-bold text-primary">{{ numberLabel(stats.activeCarriers) }}+</div>
-                        <div class="font-medium text-gray-700">{{ t.stats.carriers }}</div>
-                        <div class="mt-2 text-sm text-gray-600">{{ t.stats.carriersSub }}</div>
+                        <div class="font-medium text-gray-700 dark:text-slate-300">{{ t.stats.carriers }}</div>
+                        <div class="mt-2 text-sm text-gray-600 dark:text-slate-400">{{ t.stats.carriersSub }}</div>
                     </div>
-                    <div class="rounded-2xl border border-success p-8 text-center transition-all hover:shadow-xl">
+                    <div class="rounded-2xl border border-success p-8 text-center transition-all hover:shadow-xl dark:bg-white/[0.03]">
                         <div class="mb-2 text-5xl font-bold text-success">{{ numberLabel(stats.registeredDrivers) }}+</div>
-                        <div class="font-medium text-gray-700">{{ t.stats.drivers }}</div>
-                        <div class="mt-2 text-sm text-gray-600">{{ t.stats.driversSub }}</div>
+                        <div class="font-medium text-gray-700 dark:text-slate-300">{{ t.stats.drivers }}</div>
+                        <div class="mt-2 text-sm text-gray-600 dark:text-slate-400">{{ t.stats.driversSub }}</div>
                     </div>
-                    <div class="rounded-2xl border border-warning p-8 text-center transition-all hover:shadow-xl">
+                    <div class="rounded-2xl border border-warning p-8 text-center transition-all hover:shadow-xl dark:bg-white/[0.03]">
                         <div class="mb-2 text-5xl font-bold text-warning">{{ numberLabel(stats.documentsManaged) }}+</div>
-                        <div class="font-medium text-gray-700">{{ t.stats.docs }}</div>
-                        <div class="mt-2 text-sm text-gray-600">{{ t.stats.docsSub }}</div>
+                        <div class="font-medium text-gray-700 dark:text-slate-300">{{ t.stats.docs }}</div>
+                        <div class="mt-2 text-sm text-gray-600 dark:text-slate-400">{{ t.stats.docsSub }}</div>
                     </div>
-                    <div class="rounded-2xl border border-success p-8 text-center transition-all hover:shadow-xl">
+                    <div class="rounded-2xl border border-success p-8 text-center transition-all hover:shadow-xl dark:bg-white/[0.03]">
                         <div class="mb-2 text-5xl font-bold text-success">{{ stats.complianceRate }}%</div>
-                        <div class="font-medium text-gray-700">{{ t.stats.compliance }}</div>
-                        <div class="mt-2 text-sm text-gray-600">{{ t.stats.complianceSub }}</div>
+                        <div class="font-medium text-gray-700 dark:text-slate-300">{{ t.stats.compliance }}</div>
+                        <div class="mt-2 text-sm text-gray-600 dark:text-slate-400">{{ t.stats.complianceSub }}</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="bg-slate-50 py-24 text-black">
+        <section class="bg-slate-50 py-24 text-black dark:bg-[#0a0f1e] dark:text-white">
             <div class="mx-auto grid max-w-7xl items-center gap-10 px-8 lg:grid-cols-[0.88fr_1.12fr]">
                 <div class="fade-up">
-                    <div class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <div class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                         <Lucide icon="LayoutDashboard" class="h-4 w-4 text-primary" />
                         Platform Preview
                     </div>
-                    <h2 class="mt-5 text-4xl font-extrabold tracking-tighter text-[#050505] md:text-5xl">
+                    <h2 class="mt-5 text-4xl font-extrabold tracking-tighter text-[#050505] dark:text-white md:text-5xl">
                         {{ t.tabs.title }}
                     </h2>
-                    <p class="mt-6 max-w-xl text-lg leading-8 text-slate-600">
+                    <p class="mt-6 max-w-xl text-lg leading-8 text-slate-600 dark:text-slate-400">
                         {{ t.tabs.subtitle }}
                     </p>
 
                     <div class="mt-8 space-y-3">
-                        <div class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                        <div class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
                             <div class="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary">
                                 <Lucide icon="Users" class="h-4 w-4" />
                             </div>
                             <div>
-                                <p class="text-sm font-semibold text-slate-800">Driver workflows in one place</p>
-                                <p class="text-sm text-slate-500">Documents, qualifications, alerts, and history without jumping between tools.</p>
+                                <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Driver workflows in one place</p>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Documents, qualifications, alerts, and history without jumping between tools.</p>
                             </div>
                         </div>
-                        <div class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                        <div class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
                             <div class="mt-0.5 rounded-lg bg-success/10 p-2 text-success">
                                 <Lucide icon="ShieldCheck" class="h-4 w-4" />
                             </div>
                             <div>
-                                <p class="text-sm font-semibold text-slate-800">Compliance visibility</p>
-                                <p class="text-sm text-slate-500">See expiring items, safety requirements, and action points from the same dashboard.</p>
+                                <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Compliance visibility</p>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">See expiring items, safety requirements, and action points from the same dashboard.</p>
                             </div>
                         </div>
-                        <div class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                        <div class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
                             <div class="mt-0.5 rounded-lg bg-info/10 p-2 text-info">
                                 <Lucide icon="Truck" class="h-4 w-4" />
                             </div>
                             <div>
-                                <p class="text-sm font-semibold text-slate-800">Fleet operations with context</p>
-                                <p class="text-sm text-slate-500">Vehicles, maintenance, inspections, testing, and records tied together the way carriers actually work.</p>
+                                <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Fleet operations with context</p>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Vehicles, maintenance, inspections, testing, and records tied together the way carriers actually work.</p>
                             </div>
                         </div>
                     </div>
@@ -1015,7 +1035,7 @@ onBeforeUnmount(() => {
                             :class="
                                 selectedTab === tab.key
                                     ? 'border-primary bg-primary text-white'
-                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/20'
                             "
                             @click="selectedTab = tab.key"
                         >
@@ -1025,8 +1045,8 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="fade-up">
-                    <div class="box box--stacked overflow-hidden border border-slate-200 bg-white p-0">
-                        <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
+                    <div class="box box--stacked overflow-hidden border border-slate-200 bg-white p-0 dark:border-white/10 dark:bg-[#0d1321]">
+                        <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]">
                             <div class="flex items-center gap-2">
                                 <span class="h-2.5 w-2.5 rounded-full bg-rose-400"></span>
                                 <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
@@ -1037,14 +1057,14 @@ onBeforeUnmount(() => {
                                 {{ activeTab.label }}
                             </div>
                         </div>
-                        <div class="border-b border-slate-200 bg-white p-4">
+                        <div class="border-b border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#0d1321]">
                             <img
                                 :src="activeTab.image"
                                 :alt="activeTab.label"
-                                class="h-full w-full rounded-xl border border-slate-200 object-cover transition-all duration-700"
+                                class="h-full w-full rounded-xl border border-slate-200 object-cover transition-all duration-700 dark:border-white/10"
                             />
                         </div>
-                        <div class="grid gap-3 bg-white p-4 sm:grid-cols-3">
+                        <div class="grid gap-3 bg-white p-4 dark:bg-[#0d1321] sm:grid-cols-3">
                             <div
                                 v-for="tab in platformTabs"
                                 :key="`${tab.key}-meta`"
@@ -1052,13 +1072,13 @@ onBeforeUnmount(() => {
                                 :class="
                                     selectedTab === tab.key
                                         ? 'border-primary bg-primary/5'
-                                        : 'border-slate-200 bg-slate-50/70'
+                                        : 'border-slate-200 bg-slate-50/70 dark:border-white/10 dark:bg-white/[0.03]'
                                 "
                             >
-                                <div class="text-[11px] font-bold uppercase tracking-[0.18em]" :class="selectedTab === tab.key ? 'text-primary' : 'text-slate-500'">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.18em]" :class="selectedTab === tab.key ? 'text-primary' : 'text-slate-500 dark:text-slate-400'">
                                     {{ tab.label }}
                                 </div>
-                                <div class="mt-2 text-sm text-slate-600">
+                                <div class="mt-2 text-sm text-slate-600 dark:text-slate-400">
                                     {{ tab.key === 'general' ? 'Overview and compliance metrics' : tab.key === 'drivers' ? 'Driver records and workflows' : 'Testing, safety, and support files' }}
                                 </div>
                             </div>
@@ -1068,8 +1088,8 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section class="bg-slate-50 px-8 pb-24">
-            <div class="fade-up mx-auto grid max-w-7xl gap-6 rounded-2xl border border-slate-200 bg-[#071024] px-8 py-8 text-white lg:grid-cols-[1fr_auto] lg:items-center">
+        <section class="bg-slate-50 px-8 pb-24 dark:bg-[#0a0f1e]">
+            <div class="fade-up mx-auto grid max-w-7xl gap-6 rounded-2xl border border-slate-200 bg-[#071024] px-8 py-8 text-white dark:border-white/10 lg:grid-cols-[1fr_auto] lg:items-center">
                 <div class="max-w-3xl">
                     <div class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
                         <Lucide icon="Rocket" class="h-4 w-4 text-primary" />
@@ -1148,19 +1168,19 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section id="pricing" class="bg-white px-8 py-32 text-black">
+        <section id="pricing" class="bg-white px-8 py-32 text-black dark:bg-[#0b0f1a] dark:text-white">
             <div class="mx-auto max-w-7xl">
                 <div class="fade-up mb-16 text-center">
-                    <h2 class="mb-4 text-4xl font-extrabold uppercase tracking-tighter text-[#050505] md:text-5xl" v-html="t.pricing.title" />
-                    <p class="mx-auto max-w-xl text-gray-500">{{ t.pricing.subtitle }}</p>
+                    <h2 class="mb-4 text-4xl font-extrabold uppercase tracking-tighter text-[#050505] dark:text-white md:text-5xl" v-html="t.pricing.title" />
+                    <p class="mx-auto max-w-xl text-gray-500 dark:text-slate-400">{{ t.pricing.subtitle }}</p>
                 </div>
 
                 <div class="fade-up grid gap-8 md:grid-cols-3">
                     <div
                         v-for="(plan, index) in pricingCards"
                         :key="plan.id"
-                        class="group relative border p-8 transition-all"
-                        :class="plan.is_popular ? 'border-2 border-brand' : 'border-gray-200 hover:border-brand/40'"
+                        class="group relative border p-8 transition-all dark:bg-white/[0.02]"
+                        :class="plan.is_popular ? 'border-2 border-brand' : 'border-gray-200 hover:border-brand/40 dark:border-white/10 dark:hover:border-brand/40'"
                     >
                         <div
                             v-if="plan.is_popular"
@@ -1169,21 +1189,21 @@ onBeforeUnmount(() => {
                             {{ t.pricing.popular }}
                         </div>
                         <div :class="plan.is_popular ? 'pt-4' : ''">
-                            <h3 class="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                            <h3 class="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500">
                                 {{ plan.name }}
                             </h3>
-                            <p class="mb-4 text-sm text-gray-500">{{ plan.caption }}</p>
+                            <p class="mb-4 text-sm text-gray-500 dark:text-slate-400">{{ plan.caption }}</p>
                             <div class="mb-6 flex items-baseline">
-                                <span class="text-5xl font-extrabold" :class="plan.is_popular ? 'text-brand' : 'text-[#050505]'">
+                                <span class="text-5xl font-extrabold" :class="plan.is_popular ? 'text-brand' : 'text-[#050505] dark:text-white'">
                                     {{ formatCurrency(plan.price) }}
                                 </span>
-                                <span class="ml-1 text-sm text-gray-400">{{ t.pricing.month }}</span>
+                                <span class="ml-1 text-sm text-gray-400 dark:text-slate-500">{{ planPeriodLabel(plan) }}</span>
                             </div>
                             <ul class="mb-8 space-y-3">
                                 <li
                                     v-for="feature in planFeatures(plan)"
                                     :key="feature"
-                                    class="flex items-center gap-3 text-sm text-gray-600"
+                                    class="flex items-center gap-3 text-sm text-gray-600 dark:text-slate-400"
                                 >
                                     <span class="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand"></span>
                                     <span>{{ feature }}</span>
@@ -1195,7 +1215,7 @@ onBeforeUnmount(() => {
                                 :class="
                                     plan.is_popular
                                         ? 'btn-brand text-white'
-                                        : 'border-2 border-[#050505] text-[#050505] hover:bg-[#050505] hover:text-white'
+                                        : 'border-2 border-[#050505] text-[#050505] hover:bg-[#050505] hover:text-white dark:border-white/30 dark:text-white dark:hover:bg-white/10'
                                 "
                                 @click="openPlanModal(plan)"
                             >
@@ -1205,12 +1225,12 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div class="fade-up mt-16 flex flex-col items-center gap-8 border border-gray-200 p-8 md:flex-row">
+                <div class="fade-up mt-16 flex flex-col items-center gap-8 border border-gray-200 p-8 dark:border-white/10 dark:bg-white/[0.02] md:flex-row">
                     <div class="md:w-2/3">
-                        <h3 class="mb-2 text-xl font-extrabold uppercase tracking-tighter text-[#050505]">
+                        <h3 class="mb-2 text-xl font-extrabold uppercase tracking-tighter text-[#050505] dark:text-white">
                             {{ t.pricing.customTitle }}
                         </h3>
-                        <p class="text-sm text-gray-500">{{ t.pricing.customDescription }}</p>
+                        <p class="text-sm text-gray-500 dark:text-slate-400">{{ t.pricing.customDescription }}</p>
                     </div>
                     <div class="flex justify-center md:w-1/3">
                         <button
@@ -1361,26 +1381,26 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section id="contact" class="bg-white px-8 py-32 text-black">
+        <section id="contact" class="bg-white px-8 py-32 text-black dark:bg-[#0b0f1a] dark:text-white">
             <div class="fade-up mx-auto max-w-7xl">
                 <div class="mb-12 text-center">
-                    <h2 class="text-5xl font-extrabold uppercase tracking-tighter text-[#050505]">
+                    <h2 class="text-5xl font-extrabold uppercase tracking-tighter text-[#050505] dark:text-white">
                         {{ t.contact.title }}
                     </h2>
-                    <p class="mx-auto mt-6 max-w-2xl text-gray-500">
+                    <p class="mx-auto mt-6 max-w-2xl text-gray-500 dark:text-slate-400">
                         {{ t.contact.subtitle }}
                     </p>
                 </div>
 
                 <div
                     v-if="flash.success"
-                    class="mb-8 rounded border border-green-200 bg-green-50 p-6 text-center text-sm font-medium text-green-800"
+                    class="mb-8 rounded border border-green-200 bg-green-50 p-6 text-center text-sm font-medium text-green-800 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-400"
                 >
                     {{ flash.success }}
                 </div>
 
                 <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-                    <div class="box box--stacked border border-slate-200 bg-white p-8 md:p-10">
+                    <div class="box box--stacked border border-slate-200 bg-white p-8 dark:border-white/10 dark:bg-[#0d1321] md:p-10">
                         <form class="grid grid-cols-1 gap-8 md:grid-cols-2" @submit.prevent="submitContact">
                             <div class="flex flex-col gap-2">
                                 <FormLabel class="text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -1389,7 +1409,7 @@ onBeforeUnmount(() => {
                                 <FormInput
                                     v-model="contactForm.full_name"
                                     :placeholder="t.contact.placeholders.name"
-                                    class="bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f]"
+                                    class="bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f] dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                                 />
                                 <InputError :message="contactForm.errors.full_name" />
                             </div>
@@ -1400,7 +1420,7 @@ onBeforeUnmount(() => {
                                 <FormInput
                                     v-model="contactForm.company"
                                     :placeholder="t.contact.placeholders.company"
-                                    class="bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f]"
+                                    class="bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f] dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                                 />
                                 <InputError :message="contactForm.errors.company" />
                             </div>
@@ -1412,7 +1432,7 @@ onBeforeUnmount(() => {
                                     v-model="contactForm.email"
                                     type="email"
                                     placeholder="email@company.com"
-                                    class="bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f]"
+                                    class="bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f] dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                                 />
                                 <InputError :message="contactForm.errors.email" />
                             </div>
@@ -1424,7 +1444,7 @@ onBeforeUnmount(() => {
                                     v-model="contactForm.phone"
                                     type="tel"
                                     placeholder="(000) 000-0000"
-                                    class="bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f]"
+                                    class="bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f] dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                                 />
                                 <InputError :message="contactForm.errors.phone" />
                             </div>
@@ -1436,7 +1456,7 @@ onBeforeUnmount(() => {
                                     v-model="contactForm.message"
                                     rows="5"
                                     :placeholder="t.contact.placeholders.message"
-                                    class="h-32 bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f]"
+                                    class="h-32 bg-gray-50 p-4 text-sm text-gray-900 focus:border-[#08459f] dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                                 />
                                 <InputError :message="contactForm.errors.message" />
                             </div>
@@ -1451,36 +1471,36 @@ onBeforeUnmount(() => {
                         </form>
                     </div>
 
-                    <div class="box box--stacked border border-slate-200 bg-white p-8 text-slate-800 md:p-10">
+                    <div class="box box--stacked border border-slate-200 bg-white p-8 text-slate-800 dark:border-white/10 dark:bg-[#0d1321] dark:text-slate-200 md:p-10">
                         <div class="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
                             <Lucide icon="MessagesSquare" class="h-4 w-4" />
                             Contact EFCTS
                         </div>
-                        <h3 class="mt-5 text-3xl font-extrabold tracking-tighter text-slate-900">{{ contactSide.title }}</h3>
-                        <p class="mt-5 text-base leading-8 text-slate-500">
+                        <h3 class="mt-5 text-3xl font-extrabold tracking-tighter text-slate-900 dark:text-white">{{ contactSide.title }}</h3>
+                        <p class="mt-5 text-base leading-8 text-slate-500 dark:text-slate-400">
                             {{ contactSide.description }}
                         </p>
 
                         <div class="mt-10 space-y-6">
-                            <a href="tel:+14328535493" class="block rounded-xl border border-slate-200 bg-slate-50 p-5 transition hover:border-primary/30 hover:bg-slate-50/80">
+                            <a href="tel:+14328535493" class="block rounded-xl border border-slate-200 bg-slate-50 p-5 transition hover:border-primary/30 hover:bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-primary/30 dark:hover:bg-white/[0.05]">
                                 <div class="flex items-start gap-4">
                                     <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                                         <Lucide icon="Phone" class="h-5 w-5" />
                                     </div>
                                     <div>
                                         <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400">{{ t.contact.labels.phone }}</div>
-                                        <div class="mt-2 text-lg font-bold text-slate-900">{{ contact.phone }}</div>
+                                        <div class="mt-2 text-lg font-bold text-slate-900 dark:text-white">{{ contact.phone }}</div>
                                     </div>
                                 </div>
                             </a>
-                            <a href="mailto:support@efcts.com" class="block rounded-xl border border-slate-200 bg-slate-50 p-5 transition hover:border-primary/30 hover:bg-slate-50/80">
+                            <a href="mailto:support@efcts.com" class="block rounded-xl border border-slate-200 bg-slate-50 p-5 transition hover:border-primary/30 hover:bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-primary/30 dark:hover:bg-white/[0.05]">
                                 <div class="flex items-start gap-4">
                                     <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                                         <Lucide icon="Mail" class="h-5 w-5" />
                                     </div>
                                     <div>
                                         <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400">{{ t.contact.labels.email }}</div>
-                                        <div class="mt-2 text-lg font-bold text-slate-900">{{ contact.email }}</div>
+                                        <div class="mt-2 text-lg font-bold text-slate-900 dark:text-white">{{ contact.email }}</div>
                                     </div>
                                 </div>
                             </a>
@@ -1488,7 +1508,7 @@ onBeforeUnmount(() => {
                                 :href="contact.whatsapp_url"
                                 target="_blank"
                                 rel="noreferrer"
-                                class="block rounded-xl border border-primary/30 bg-primary/5 p-5 transition hover:bg-primary/10"
+                                class="block rounded-xl border border-primary/30 bg-primary/5 p-5 transition hover:bg-primary/10 dark:border-primary/20 dark:bg-primary/10 dark:hover:bg-primary/15"
                             >
                                 <div class="flex items-start gap-4">
                                     <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
@@ -1496,13 +1516,13 @@ onBeforeUnmount(() => {
                                     </div>
                                     <div>
                                         <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400">WhatsApp</div>
-                                        <div class="mt-2 text-lg font-bold text-slate-900">{{ t.contact.labels.whatsapp }}</div>
+                                        <div class="mt-2 text-lg font-bold text-slate-900 dark:text-white">{{ t.contact.labels.whatsapp }}</div>
                                     </div>
                                 </div>
                             </a>
                         </div>
 
-                        <div class="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-600">
+                        <div class="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400">
                             <div class="flex items-start gap-4">
                                 <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                                     <Lucide icon="MapPin" class="h-5 w-5" />
@@ -1525,18 +1545,18 @@ onBeforeUnmount(() => {
             class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
             @click.self="closePlanModal"
         >
-            <div class="relative max-h-[90vh] w-full max-w-lg overflow-y-auto bg-white p-8 text-black">
+            <div class="relative max-h-[90vh] w-full max-w-lg overflow-y-auto bg-white p-8 text-black dark:bg-[#0d1321] dark:text-white">
                 <button
                     type="button"
-                    class="absolute right-4 top-4 text-2xl leading-none text-gray-400 transition hover:text-gray-700"
+                    class="absolute right-4 top-4 text-2xl leading-none text-gray-400 transition hover:text-gray-700 dark:hover:text-white"
                     @click="closePlanModal"
                 >
                     &times;
                 </button>
-                <h3 class="mb-1 text-xl font-extrabold uppercase tracking-tighter text-[#050505]">
+                <h3 class="mb-1 text-xl font-extrabold uppercase tracking-tighter text-[#050505] dark:text-white">
                     {{ t.modal.title }}
                 </h3>
-                <p class="mb-6 text-sm text-gray-500">{{ planSubtitle }}</p>
+                <p class="mb-6 text-sm text-gray-500 dark:text-slate-400">{{ planSubtitle }}</p>
 
                 <form class="space-y-4" @submit.prevent="submitPlanRequest">
                     <input type="hidden" v-model="planForm.plan_name" />
@@ -1549,7 +1569,7 @@ onBeforeUnmount(() => {
                         <FormInput
                             v-model="planForm.full_name"
                             :placeholder="t.modal.placeholders.name"
-                            class="mt-1 w-full bg-gray-50 p-3 text-sm text-gray-900 focus:border-[#08459f]"
+                            class="mt-1 w-full bg-gray-50 p-3 text-sm text-gray-900 focus:border-[#08459f] dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                         />
                         <InputError class="mt-2" :message="planForm.errors.full_name" />
                     </div>
@@ -1561,7 +1581,7 @@ onBeforeUnmount(() => {
                             v-model="planForm.email"
                             type="email"
                             placeholder="email@company.com"
-                            class="mt-1 w-full bg-gray-50 p-3 text-sm text-gray-900 focus:border-[#08459f]"
+                            class="mt-1 w-full bg-gray-50 p-3 text-sm text-gray-900 focus:border-[#08459f] dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                         />
                         <InputError class="mt-2" :message="planForm.errors.email" />
                     </div>
@@ -1572,7 +1592,7 @@ onBeforeUnmount(() => {
                         <FormInput
                             v-model="planForm.company"
                             :placeholder="t.modal.placeholders.company"
-                            class="mt-1 w-full bg-gray-50 p-3 text-sm text-gray-900 focus:border-[#08459f]"
+                            class="mt-1 w-full bg-gray-50 p-3 text-sm text-gray-900 focus:border-[#08459f] dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                         />
                         <InputError class="mt-2" :message="planForm.errors.company" />
                     </div>
@@ -1584,7 +1604,7 @@ onBeforeUnmount(() => {
                             v-model="planForm.phone"
                             type="tel"
                             placeholder="(000) 000-0000"
-                            class="mt-1 w-full bg-gray-50 p-3 text-sm text-gray-900 focus:border-[#08459f]"
+                            class="mt-1 w-full bg-gray-50 p-3 text-sm text-gray-900 focus:border-[#08459f] dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-slate-500"
                         />
                         <InputError class="mt-2" :message="planForm.errors.phone" />
                     </div>
@@ -1605,6 +1625,16 @@ onBeforeUnmount(() => {
             </p>
         </footer>
     </div>
+
+    <!-- Dark mode toggle -->
+    <button
+        @click="toggleDarkMode"
+        class="fixed bottom-6 left-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/60 bg-white shadow-md transition hover:bg-slate-50 dark:border-darkmode-400 dark:bg-darkmode-600 dark:hover:bg-darkmode-500"
+        :title="resolvedAppearance === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+    >
+        <Lucide v-if="resolvedAppearance === 'dark'" icon="Sun" class="h-4 w-4 text-warning" />
+        <Lucide v-else icon="Moon" class="h-4 w-4 text-slate-500" />
+    </button>
 </template>
 
 <style scoped>

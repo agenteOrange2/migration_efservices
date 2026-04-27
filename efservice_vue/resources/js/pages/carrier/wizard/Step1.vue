@@ -4,8 +4,9 @@ import Button from '@/components/Base/Button'
 import { FormInput, FormLabel } from '@/components/Base/Form'
 import Lucide from '@/components/Base/Lucide'
 import TomSelect from '@/components/Base/TomSelect/TomSelect.vue'
+import { useAppearance } from '@/composables/useAppearance'
 import axios from 'axios'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 const form = useForm({
     full_name: '',
@@ -18,6 +19,12 @@ const form = useForm({
     terms_accepted: false,
     marketing_consent: false,
 })
+
+const { resolvedAppearance, updateAppearance } = useAppearance()
+
+function toggleDarkMode() {
+    updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark')
+}
 
 const countryOptions = [
     { value: 'US', label: '+1 United States' },
@@ -230,11 +237,15 @@ function submit() {
     normalizeEmail()
     form.post(route('carrier.wizard.step1.process'), { preserveScroll: true })
 }
+
+onMounted(() => {
+    updateAppearance('dark')
+})
 </script>
 
 <template>
     <Head title="Carrier Registration - Step 1" />
-    <div class="container grid lg:h-screen grid-cols-12 lg:max-w-[1550px] 2xl:max-w-[1750px] py-10 px-5 sm:py-14 sm:px-10 md:px-36 lg:py-0 lg:pl-14 lg:pr-12 xl:px-24">
+    <div class="carrier-wizard container grid lg:h-screen grid-cols-12 lg:max-w-[1550px] 2xl:max-w-[1750px] py-10 px-5 sm:py-14 sm:px-10 md:px-36 lg:py-0 lg:pl-14 lg:pr-12 xl:px-24">
         <div :class="[
             'relative z-50 h-full col-span-12 p-7 sm:p-14 bg-white rounded-2xl lg:bg-transparent lg:pr-10 lg:col-span-5 xl:pr-24 2xl:col-span-4 lg:p-0',
             'before:content-[\'\'] before:absolute before:inset-0 before:-mb-3.5 before:bg-white/40 before:rounded-2xl before:mx-5',
@@ -469,7 +480,7 @@ function submit() {
         </div>
     </div>
     <!-- Background -->
-    <div class="fixed container grid w-screen inset-0 h-screen grid-cols-12 lg:max-w-[1550px] 2xl:max-w-[1750px] pl-14 pr-12 xl:px-24">
+    <div class="carrier-wizard fixed container grid w-screen inset-0 h-screen grid-cols-12 lg:max-w-[1550px] 2xl:max-w-[1750px] pl-14 pr-12 xl:px-24">
         <div :class="[
             'relative h-screen col-span-12 lg:col-span-5 2xl:col-span-4 z-20',
             'after:bg-white after:hidden after:lg:block after:content-[\'\'] after:absolute after:right-0 after:inset-y-0 after:bg-linear-to-b after:from-white after:to-slate-100/80 after:w-[800%] after:rounded-[0_1.2rem_1.2rem_0/0_1.7rem_1.7rem_0]',
@@ -520,4 +531,14 @@ function submit() {
             </div>
         </div>
     </div>
+
+    <!-- Dark mode toggle -->
+    <button
+        @click="toggleDarkMode"
+        class="fixed bottom-6 left-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/60 bg-white shadow-md transition hover:bg-slate-50 dark:border-darkmode-400 dark:bg-darkmode-600 dark:hover:bg-darkmode-500"
+        :title="resolvedAppearance === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+    >
+        <Lucide v-if="resolvedAppearance === 'dark'" icon="Sun" class="h-4 w-4 text-warning" />
+        <Lucide v-else icon="Moon" class="h-4 w-4 text-slate-500" />
+    </button>
 </template>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import Lucide from '@/components/Base/Lucide'
+import { useAppearance } from '@/composables/useAppearance'
 
 declare function route(name: string, params?: any): string
 
@@ -37,6 +38,7 @@ const props = defineProps<Props>()
 
 const page = usePage()
 const flash = computed<FlashShape>(() => ((page.props as any).flash ?? {}) as FlashShape)
+const { updateAppearance } = useAppearance()
 
 // Server-computed props win. Flash is kept as a fallback for redirects from
 // elsewhere that may flash a one-shot message.
@@ -297,12 +299,16 @@ function stepClasses(tone: 'success' | 'pending' | 'danger') {
 function logout() {
     router.post(route('logout'))
 }
+
+onMounted(() => {
+    updateAppearance('dark')
+})
 </script>
 
 <template>
     <Head :title="statusMeta.headTitle" />
 
-    <div class="container grid lg:h-screen grid-cols-12 lg:max-w-[1550px] 2xl:max-w-[1750px] py-10 px-5 sm:py-14 sm:px-10 md:px-36 lg:py-0 lg:pl-14 lg:pr-12 xl:px-24">
+    <div class="driver-status container grid lg:h-screen grid-cols-12 lg:max-w-[1550px] 2xl:max-w-[1750px] py-10 px-5 sm:py-14 sm:px-10 md:px-36 lg:py-0 lg:pl-14 lg:pr-12 xl:px-24">
         <div :class="[
             'relative z-50 h-full col-span-12 p-7 sm:p-14 bg-white rounded-2xl lg:bg-transparent lg:pr-10 lg:col-span-5 xl:pr-24 2xl:col-span-4 lg:p-0',
             'before:content-[\'\'] before:absolute before:inset-0 before:-mb-3.5 before:bg-white/40 before:rounded-2xl before:mx-5',
@@ -367,7 +373,7 @@ function logout() {
     </div>
 
     <!-- Background -->
-    <div class="fixed container grid w-screen inset-0 h-screen grid-cols-12 lg:max-w-[1550px] 2xl:max-w-[1750px] pl-14 pr-12 xl:px-24">
+    <div class="driver-status fixed container grid w-screen inset-0 h-screen grid-cols-12 lg:max-w-[1550px] 2xl:max-w-[1750px] pl-14 pr-12 xl:px-24">
         <div :class="[
             'relative h-screen col-span-12 lg:col-span-5 2xl:col-span-4 z-20',
             'after:bg-white after:hidden after:lg:block after:content-[\'\'] after:absolute after:right-0 after:inset-y-0 after:bg-linear-to-b after:from-white after:to-slate-100/80 after:w-[800%] after:rounded-[0_1.2rem_1.2rem_0/0_1.7rem_1.7rem_0]',

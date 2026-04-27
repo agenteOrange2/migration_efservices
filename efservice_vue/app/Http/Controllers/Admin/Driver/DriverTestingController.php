@@ -61,11 +61,11 @@ class DriverTestingController extends Controller
         }
 
         if ($filters['date_from'] !== '') {
-            $query->whereDate('test_date', '>=', $filters['date_from']);
+            $query->whereDate('test_date', '>=', $this->toDbDate($filters['date_from']));
         }
 
         if ($filters['date_to'] !== '') {
-            $query->whereDate('test_date', '<=', $filters['date_to']);
+            $query->whereDate('test_date', '<=', $this->toDbDate($filters['date_to']));
         }
 
         $testTypes = DriverTesting::getTestTypes();
@@ -614,5 +614,22 @@ class DriverTestingController extends Controller
         return redirect()
             ->route('admin.drivers.show', $driver)
             ->with('success', 'Test record deleted successfully.');
+    }
+
+    protected function toDbDate(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
+            return $value;
+        }
+
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $value, $matches) === 1) {
+            return sprintf('%04d-%02d-%02d', (int) $matches[3], (int) $matches[1], (int) $matches[2]);
+        }
+
+        return $value;
     }
 }

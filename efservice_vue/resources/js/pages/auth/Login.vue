@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useForm, Head, Link, usePage } from '@inertiajs/vue3';
 import Button from '@/components/Base/Button';
 import { FormCheck, FormInput, FormLabel } from '@/components/Base/Form';
 import Lucide from '@/components/Base/Lucide';
+import { useAppearance } from '@/composables/useAppearance';
 
 defineProps<{
   canResetPassword?: boolean;
@@ -23,6 +24,7 @@ type BrandingProps = {
 
 const page = usePage();
 const branding = computed(() => (page.props.branding as BrandingProps | undefined) ?? {});
+const { updateAppearance } = useAppearance();
 
 const form = useForm({
   email: '',
@@ -37,13 +39,17 @@ const submit = () => {
     },
   });
 };
+
+onMounted(() => {
+  updateAppearance('dark');
+});
 </script>
 
 <template>
   <Head :title="`${branding.appName ?? 'EF Services'} Login`" />
 
   <div
-    class="grid min-h-screen grid-cols-12 py-10 pl-5 pr-0 sm:py-14 sm:pl-10 sm:pr-0 md:pl-16 md:pr-0 lg:py-0 lg:pl-10 lg:pr-0 xl:pl-12 xl:pr-0 2xl:pl-14 2xl:pr-0"
+    class="auth-login grid min-h-screen grid-cols-12 py-10 pl-5 pr-0 sm:py-14 sm:pl-10 sm:pr-0 md:pl-16 md:pr-0 lg:py-0 lg:pl-10 lg:pr-0 xl:pl-12 xl:pr-0 2xl:pl-14 2xl:pr-0"
   >
     <div
       :class="[
@@ -147,7 +153,7 @@ const submit = () => {
     </div>
   </div>
 
-  <div class="fixed inset-0 grid h-screen w-screen grid-cols-12 pl-5 pr-0 sm:pl-10 sm:pr-0 md:pl-16 md:pr-0 lg:pl-10 lg:pr-0 xl:pl-12 xl:pr-0 2xl:pl-14 2xl:pr-0">
+  <div class="auth-login fixed inset-0 grid h-screen w-screen grid-cols-12 pl-5 pr-0 sm:pl-10 sm:pr-0 md:pl-16 md:pr-0 lg:pl-10 lg:pr-0 xl:pl-12 xl:pr-0 2xl:pl-14 2xl:pr-0">
     <div
       :class="[
         'relative h-screen col-span-12 lg:col-span-5 2xl:col-span-4 z-20',

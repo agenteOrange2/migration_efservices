@@ -11,6 +11,7 @@ interface Membership {
     name: string
     description: string
     pricing_type: string
+    billing_period: string
     price: number | null
     carrier_price: number | null
     driver_price: number | null
@@ -23,6 +24,12 @@ interface Membership {
     carriers_count: number
     created_at?: string
     image_url?: string | null
+}
+
+const billingPeriodLabel: Record<string, string> = {
+    weekly: '/week',
+    monthly: '/month',
+    yearly: '/year',
 }
 
 const props = defineProps<{
@@ -136,6 +143,7 @@ function confirmDelete() {
                             <tr class="bg-slate-50/80">
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Name</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Type</th>
+                                <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Billing</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Price</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Limits</th>
                                 <th class="px-5 py-3 text-xs font-medium text-slate-500 uppercase">Carriers</th>
@@ -163,9 +171,20 @@ function confirmDelete() {
                                         {{ m.pricing_type === 'plan' ? 'Plan' : 'Individual' }}
                                     </span>
                                 </td>
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize"
+                                        :class="{
+                                            'bg-info/10 text-info': m.billing_period === 'weekly',
+                                            'bg-primary/10 text-primary': m.billing_period === 'monthly',
+                                            'bg-success/10 text-success': m.billing_period === 'yearly',
+                                        }">
+                                        {{ m.billing_period ?? 'monthly' }}
+                                    </span>
+                                </td>
                                 <td class="px-5 py-4 text-sm">
                                     <template v-if="m.pricing_type === 'plan'">
                                         <span class="font-semibold text-slate-700">{{ formatPrice(m.price) }}</span>
+                                        <span class="text-xs text-slate-400 ml-1">{{ billingPeriodLabel[m.billing_period ?? 'monthly'] }}</span>
                                     </template>
                                     <template v-else>
                                         <div class="text-xs space-y-0.5">
@@ -208,7 +227,7 @@ function confirmDelete() {
                                 </td>
                             </tr>
                             <tr v-if="filteredMemberships.length === 0">
-                                <td colspan="8" class="px-5 py-12 text-center text-slate-400">
+                                <td colspan="9" class="px-5 py-12 text-center text-slate-400">
                                     <Lucide icon="Inbox" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
                                     <p>No memberships found</p>
                                 </td>
