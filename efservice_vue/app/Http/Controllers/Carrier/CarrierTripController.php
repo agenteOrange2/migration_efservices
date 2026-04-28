@@ -485,7 +485,11 @@ class CarrierTripController extends AdminTripController
         try {
             $callback();
         } catch (\Throwable $exception) {
-            return back()->with('error', $exception->getMessage());
+            $message = $exception instanceof ValidationException
+                ? (collect($exception->errors())->flatten()->first() ?? $exception->getMessage())
+                : $exception->getMessage();
+
+            return back()->with('error', $message);
         }
 
         return redirect()

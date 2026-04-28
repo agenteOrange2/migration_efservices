@@ -202,7 +202,13 @@ function submit() {
                             <span>Above defects do not need correction for safe operation.</span>
                         </label>
                         <FormTextarea v-if="form.defects_not_need_correction" v-model="form.defects_not_need_correction_notes" rows="3" placeholder="Explain why the defects do not affect safe operation..." />
-                        <FormInput v-model="form.driver_signature" placeholder="Type your full name as your driver signature" />
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">
+                                Driver Signature <span class="text-danger">*</span>
+                            </label>
+                            <FormInput v-model="form.driver_signature" placeholder="Type your full name as your driver signature" />
+                            <p v-if="form.errors.driver_signature" class="mt-1 text-sm text-danger">{{ form.errors.driver_signature }}</p>
+                        </div>
                         <FormTextarea v-model="form.notes" rows="4" placeholder="Any final notes, delays, or delivery comments..." />
                     </div>
                 </div>

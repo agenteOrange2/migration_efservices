@@ -490,7 +490,7 @@ class DriverTripController extends AdminTripController
         try {
             $this->tripService->pauseTrip($trip, $driver->id, $this->optionalLocationPayload($request), trim((string) $request->input('reason', '')) ?: null);
         } catch (\Throwable $exception) {
-            return back()->with('error', $exception->getMessage());
+            return back()->with('error', $this->extractErrorMessage($exception));
         }
 
         return redirect()
@@ -506,7 +506,7 @@ class DriverTripController extends AdminTripController
         try {
             $this->tripService->resumeTrip($trip, $driver->id, $this->optionalLocationPayload($request));
         } catch (\Throwable $exception) {
-            return back()->with('error', $exception->getMessage());
+            return back()->with('error', $this->extractErrorMessage($exception));
         }
 
         return redirect()
@@ -790,7 +790,7 @@ class DriverTripController extends AdminTripController
             'defects_corrected_notes' => ['nullable', 'string', 'max:1000'],
             'defects_not_need_correction' => ['nullable', 'boolean'],
             'defects_not_need_correction_notes' => ['nullable', 'string', 'max:1000'],
-            'driver_signature' => ['nullable', 'string'],
+            'driver_signature' => ['required', 'string', 'min:2'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
 
@@ -850,5 +850,15 @@ class DriverTripController extends AdminTripController
             'longitude' => $request->input('longitude'),
             'address' => $request->input('address'),
         ];
+    }
+
+    protected function extractErrorMessage(\Throwable $exception): string
+    {
+        if ($exception instanceof ValidationException) {
+            $first = collect($exception->errors())->flatten()->first();
+            return $first ?? $exception->getMessage();
+        }
+
+        return $exception->getMessage();
     }
 }
