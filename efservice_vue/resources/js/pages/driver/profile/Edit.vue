@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import Button from '@/components/Base/Button/Button.vue'
 import { FormInput, FormLabel } from '@/components/Base/Form'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
 import Lucide from '@/components/Base/Lucide'
 import RazeLayout from '@/layouts/RazeLayout.vue'
+
+declare function route(name: string, params?: any): string
 
 interface Props {
     driver: {
@@ -35,6 +37,12 @@ const props = defineProps<Props>()
 const defaultPhotoUrl = '/build/default_profile.png'
 const previewUrl = ref(props.driver.photo_url || defaultPhotoUrl)
 const photoInput = ref<HTMLInputElement | null>(null)
+const photoUploading = ref(false)
+const photoError = ref('')
+
+watch(() => props.driver.photo_url, (newUrl) => {
+    if (newUrl) previewUrl.value = newUrl
+})
 
 const lpOptions = {
     autoApply: true,
@@ -63,12 +71,6 @@ const passwordForm = useForm({
     password_confirmation: '',
 })
 
-const photoForm = useForm<{
-    profile_photo: File | null
-}>({
-    profile_photo: null,
-})
-
 function submitProfile() {
     profileForm.put(route('driver.profile.update'), {
         preserveScroll: true,
@@ -90,17 +92,29 @@ function triggerPhotoUpload() {
 function handlePhotoChange(event: Event) {
     const target = event.target as HTMLInputElement
     const file = target.files?.[0]
-
     if (!file) return
 
+    photoError.value = ''
     previewUrl.value = URL.createObjectURL(file)
-    photoForm.profile_photo = file
-    photoForm.post(route('driver.profile.update-photo'), {
-        forceFormData: true,
+
+    // Use raw FormData + router.post so the File object is never proxied by Vue reactivity
+    const formData = new FormData()
+    formData.append('profile_photo', file)
+
+    photoUploading.value = true
+    router.post(route('driver.profile.update-photo'), formData, {
         preserveScroll: true,
-        onSuccess: () => {
-            photoForm.reset()
+        onSuccess: (page) => {
             target.value = ''
+            const newUrl = (page.props as any)?.driver?.photo_url
+            if (newUrl) previewUrl.value = newUrl
+        },
+        onError: (errors) => {
+            photoError.value = errors.profile_photo ?? 'Upload failed. Please try again.'
+            previewUrl.value = props.driver.photo_url || defaultPhotoUrl
+        },
+        onFinish: () => {
+            photoUploading.value = false
         },
     })
 }
@@ -237,9 +251,9 @@ function removePhoto() {
                             <img :src="previewUrl" :alt="driver.full_name" class="h-32 w-32 rounded-full border-4 border-white object-cover shadow-lg" />
                             <input ref="photoInput" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden" @change="handlePhotoChange" />
                             <div class="flex w-full flex-col gap-3">
-                                <Button variant="primary" type="button" class="w-full gap-2" :disabled="photoForm.processing" @click="triggerPhotoUpload">
+                                <Button variant="primary" type="button" class="w-full gap-2" :disabled="photoUploading" @click="triggerPhotoUpload">
                                     <Lucide icon="Upload" class="h-4 w-4" />
-                                    Upload New Photo
+                                    {{ photoUploading ? 'Uploading...' : 'Upload New Photo' }}
                                 </Button>
                                 <Button
                                     v-if="driver.has_custom_photo"
@@ -252,7 +266,7 @@ function removePhoto() {
                                     Remove Photo
                                 </Button>
                             </div>
-                            <div v-if="photoForm.errors.profile_photo" class="text-xs text-danger">{{ photoForm.errors.profile_photo }}</div>
+                            <div v-if="photoError" class="text-xs text-danger">{{ photoError }}</div>
                         </div>
                     </div>
 

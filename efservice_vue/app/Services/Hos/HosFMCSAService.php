@@ -83,7 +83,7 @@ class HosFMCSAService
     /**
      * Check driving time limit (12 hours).
      */
-    public function checkDrivingLimit(int $driverId, int $carrierId): array
+    public function checkDrivingLimit(int $driverId, int $carrierId, bool $record = true): array
     {
         $config = HosConfiguration::getForCarrier($carrierId);
         $maxDrivingMinutes = $config->max_driving_hours * 60; // 12 hours = 720 minutes
@@ -112,8 +112,8 @@ class HosFMCSAService
             'is_exceeded' => $result['is_exceeded'],
         ]);
 
-        // Create violation if exceeded
-        if ($result['is_exceeded']) {
+        // Only create violation during actual HOS state transitions, not read-only display calls
+        if ($record && $result['is_exceeded']) {
             $this->createViolation($driverId, $carrierId, [
                 'type' => HosViolation::TYPE_DRIVING_LIMIT_EXCEEDED,
                 'severity' => HosViolation::SEVERITY_CRITICAL,
@@ -130,7 +130,7 @@ class HosFMCSAService
     /**
      * Check duty period (14-hour window).
      */
-    public function checkDutyPeriod(int $driverId, int $carrierId): array
+    public function checkDutyPeriod(int $driverId, int $carrierId, bool $record = true): array
     {
         $dailyLog = HosDailyLog::forDriver($driverId)
             ->whereDate('date', today())
@@ -160,8 +160,8 @@ class HosFMCSAService
             'is_critical_warning' => $elapsedMinutes >= (13 * 60) && $elapsedMinutes < $maxDutyMinutes,
         ];
 
-        // Create violation if exceeded
-        if ($result['is_exceeded']) {
+        // Only create violation during actual HOS state transitions, not read-only display calls
+        if ($record && $result['is_exceeded']) {
             $this->createViolation($driverId, $carrierId, [
                 'type' => HosViolation::TYPE_DUTY_PERIOD_EXCEEDED,
                 'severity' => HosViolation::SEVERITY_CRITICAL,
@@ -178,7 +178,7 @@ class HosFMCSAService
     /**
      * Check 30-minute break requirement (after 8 hours driving).
      */
-    public function checkBreakRequirement(int $driverId, int $carrierId): array
+    public function checkBreakRequirement(int $driverId, int $carrierId, bool $record = true): array
     {
         $config = HosConfiguration::getForCarrier($carrierId);
         
@@ -207,8 +207,8 @@ class HosFMCSAService
             'minutes_until_break_required' => max(0, $breakAfterMinutes - $continuousDriving),
         ];
 
-        // Create violation if exceeded
-        if ($result['is_violated']) {
+        // Only create violation during actual HOS state transitions, not read-only display calls
+        if ($record && $result['is_violated']) {
             $this->createViolation($driverId, $carrierId, [
                 'type' => HosViolation::TYPE_MISSING_REQUIRED_BREAK,
                 'severity' => HosViolation::SEVERITY_MODERATE,
@@ -225,11 +225,11 @@ class HosFMCSAService
     /**
      * Check weekly cycle limits.
      */
-    public function checkWeeklyCycle(int $driverId, int $carrierId): array
+    public function checkWeeklyCycle(int $driverId, int $carrierId, bool $record = true): array
     {
         $weeklyStatus = $this->weeklyCycleService->getWeeklyCycleStatus($driverId);
 
-        if ($weeklyStatus['is_over_limit']) {
+        if ($record && $weeklyStatus['is_over_limit']) {
             $this->createViolation($driverId, $carrierId, [
                 'type' => HosViolation::TYPE_WEEKLY_CYCLE_EXCEEDED,
                 'severity' => HosViolation::SEVERITY_CRITICAL,
@@ -296,28 +296,29 @@ class HosFMCSAService
     }
 
     /**
-     * Get comprehensive FMCSA status for a driver.
+     * Get comprehensive FMCSA status for display purposes only — does NOT create violations.
+     * Use the individual check methods with $record = true only during trip state transitions.
      */
     public function getDriverFMCSAStatus(int $driverId, int $carrierId): array
     {
         return [
-            'driving_limit' => $this->checkDrivingLimit($driverId, $carrierId),
-            'duty_period' => $this->checkDutyPeriod($driverId, $carrierId),
-            'break_requirement' => $this->checkBreakRequirement($driverId, $carrierId),
-            'weekly_cycle' => $this->checkWeeklyCycle($driverId, $carrierId),
+            'driving_limit' => $this->checkDrivingLimit($driverId, $carrierId, false),
+            'duty_period' => $this->checkDutyPeriod($driverId, $carrierId, false),
+            'break_requirement' => $this->checkBreakRequirement($driverId, $carrierId, false),
+            'weekly_cycle' => $this->checkWeeklyCycle($driverId, $carrierId, false),
             'penalty_status' => $this->hasBlockingPenalty($driverId),
             'can_drive' => $this->canDriverOperate($driverId, $carrierId),
         ];
     }
 
     /**
-     * Check if driver can currently operate.
+     * Check if driver can currently operate (read-only, no violation recording).
      */
     public function canDriverOperate(int $driverId, int $carrierId): array
     {
-        $drivingLimit = $this->checkDrivingLimit($driverId, $carrierId);
-        $dutyPeriod = $this->checkDutyPeriod($driverId, $carrierId);
-        $weeklyCycle = $this->checkWeeklyCycle($driverId, $carrierId);
+        $drivingLimit = $this->checkDrivingLimit($driverId, $carrierId, false);
+        $dutyPeriod = $this->checkDutyPeriod($driverId, $carrierId, false);
+        $weeklyCycle = $this->checkWeeklyCycle($driverId, $carrierId, false);
         $penalty = $this->hasBlockingPenalty($driverId);
 
         $canOperate = !$drivingLimit['is_exceeded'] 

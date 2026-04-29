@@ -448,12 +448,12 @@ class UserDriverDetail extends Model implements HasMedia
 
     public function registerMediaConversions(Media $media = null): void
     {
-        // Deshabilitar conversiones temporalmente para evitar errores
-        // Solo aplicar conversiones a fotos de perfil, no a licencias
         if ($media && $media->collection_name === 'profile_photo_driver') {
-            $this->addMediaConversion('webp')
-                ->format('webp')
-                ->keepOriginalImageFormat();
+            $this->addMediaConversion('thumb')
+                ->width(300)
+                ->height(300)
+                ->sharpen(5)
+                ->nonQueued();
         }
     }
 

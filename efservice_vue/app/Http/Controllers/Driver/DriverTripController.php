@@ -455,9 +455,19 @@ class DriverTripController extends AdminTripController
                 ->with('error', 'This trip cannot be started.');
         }
 
+        $validation = $this->fmcsaService->validateTripStart($driver->id, $trip->carrier_id);
+
+        if (! $validation['valid']) {
+            \Illuminate\Support\Facades\Log::warning('Trip start blocked by FMCSA validation', [
+                'driver_id' => $driver->id,
+                'trip_id'   => $trip->id,
+                'errors'    => array_map(fn ($e) => $e['message'], $validation['errors']),
+            ]);
+        }
+
         return Inertia::render('driver/trips/Start', [
-            'trip' => $this->inspectionTripPayload($trip),
-            'validation' => $this->fmcsaService->validateTripStart($driver->id, $trip->carrier_id),
+            'trip'       => $this->inspectionTripPayload($trip),
+            'validation' => $validation,
             'inspection' => $this->inspectionConfigPayload(),
         ]);
     }
