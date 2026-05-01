@@ -129,6 +129,20 @@ function deleteDriver(driverId: number) {
     }
 }
 
+function toggleDriverStatus(driver: any) {
+    const isActive = Number(driver.status) === 1
+    const action = isActive ? 'deactivate' : 'activate'
+    const message = isActive
+        ? 'Are you sure you want to deactivate this driver?'
+        : 'Are you sure you want to activate this driver?'
+
+    if (!confirm(message)) return
+
+    router.put(route(`admin.drivers.${action}`, driver.id), {}, {
+        preserveScroll: true,
+    })
+}
+
 function deleteVehicle(vehicleId: number) {
     if (confirm('Are you sure you want to delete this vehicle? This action cannot be undone.')) {
         router.delete(route('admin.vehicles.destroy', vehicleId), {
@@ -156,6 +170,17 @@ const vehicleStatusMap: Record<string, { label: string; color: string; bg: strin
 
 function getVehicleStatus(status: string) {
     return vehicleStatusMap[status] ?? { label: status ?? 'Unknown', color: 'text-slate-500', bg: 'bg-slate-100' }
+}
+
+const driverStatusMap: Record<number, { label: string; color: string; bg: string }> = {
+    0: { label: 'Inactive', color: 'text-slate-500', bg: 'bg-slate-100' },
+    1: { label: 'Active',   color: 'text-success',  bg: 'bg-success/10' },
+    2: { label: 'Pending',  color: 'text-warning',  bg: 'bg-warning/10' },
+}
+
+function getDriverStatus(status: number | string | null | undefined) {
+    const key = Number(status)
+    return driverStatusMap[key] ?? { label: 'Unknown', color: 'text-slate-500', bg: 'bg-slate-100' }
 }
 
 const docStatusMap: Record<string, { label: string; color: string; bg: string }> = {
@@ -789,29 +814,60 @@ function getDocStatus(status: string | null) {
                                         <td>
                                             <span :class="[
                                                 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                                                driver.status == 1 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning',
+                                                getDriverStatus(driver.status).bg,
+                                                getDriverStatus(driver.status).color,
                                             ]">
-                                                {{ driver.status == 1 ? 'Active' : 'Pending' }}
+                                                {{ getDriverStatus(driver.status).label }}
                                             </span>
                                         </td>
                                         <td class="text-sm text-slate-500">{{ formatDate(driver.created_at) }}</td>
                                         <td>
-                                            <div class="flex items-center gap-2">
+                                            <div class="flex items-center gap-1">
                                                 <Link
                                                     v-if="driver.id"
                                                     :href="route('admin.drivers.show', driver.id)"
-                                                    class="text-xs text-primary hover:underline"
+                                                    class="p-1.5 rounded hover:bg-primary/10 text-primary"
+                                                    title="View driver"
                                                 >
-                                                    View
+                                                    <Lucide icon="Eye" class="w-4 h-4" />
                                                 </Link>
                                                 <Link
                                                     v-if="driver.id"
                                                     :href="route('admin.drivers.wizard.edit', driver.id)"
-                                                    class="text-xs text-warning hover:underline"
+                                                    class="p-1.5 rounded hover:bg-warning/10 text-warning"
+                                                    title="Edit driver"
                                                 >
-                                                    Edit
+                                                    <Lucide icon="Pencil" class="w-4 h-4" />
                                                 </Link>
-                                                <button @click="deleteDriver(driver.id)" class="p-1 rounded hover:bg-danger/10 text-danger" title="Delete driver">
+                                                <button
+                                                    v-if="Number(driver.status) === 1"
+                                                    @click="toggleDriverStatus(driver)"
+                                                    class="p-1.5 rounded hover:bg-slate-200/70 text-slate-500"
+                                                    title="Deactivate driver"
+                                                >
+                                                    <Lucide icon="UserX" class="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    v-else
+                                                    @click="toggleDriverStatus(driver)"
+                                                    class="p-1.5 rounded hover:bg-success/10 text-success"
+                                                    title="Activate driver"
+                                                >
+                                                    <Lucide icon="UserCheck" class="w-4 h-4" />
+                                                </button>
+                                                <Link
+                                                    v-if="driver.id"
+                                                    :href="route('admin.drivers.migration.wizard', driver.id)"
+                                                    class="p-1.5 rounded hover:bg-info/10 text-info"
+                                                    title="Migrate driver to another carrier"
+                                                >
+                                                    <Lucide icon="ArrowRightLeft" class="w-4 h-4" />
+                                                </Link>
+                                                <button
+                                                    @click="deleteDriver(driver.id)"
+                                                    class="p-1.5 rounded hover:bg-danger/10 text-danger"
+                                                    title="Delete driver"
+                                                >
                                                     <Lucide icon="Trash2" class="w-4 h-4" />
                                                 </button>
                                             </div>

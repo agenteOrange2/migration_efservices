@@ -387,6 +387,7 @@ Route::prefix('drivers')->name('drivers.')->group(function () {
     Route::post('wizard', [DriverAdminWizardController::class, 'store'])->name('wizard.store');
     Route::get('{driver}/wizard', [DriverAdminWizardController::class, 'edit'])->name('wizard.edit');
     Route::put('{driver}/wizard/{step}', [DriverAdminWizardController::class, 'updateStep'])->name('wizard.update-step');
+    Route::post('{driver}/wizard/w9/regenerate', [DriverAdminWizardController::class, 'regenerateW9'])->name('wizard.w9.regenerate');
 
     // Employment verification (wizard-level, per driver)
     Route::get('employment/search-companies', [DriverEmploymentController::class, 'searchCompanies'])->name('employment.search-companies');

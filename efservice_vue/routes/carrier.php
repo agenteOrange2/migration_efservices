@@ -122,6 +122,7 @@ Route::middleware(['auth', 'check.carrier.status'])->group(function () {
         Route::get('/{driver}/documents/download', [CarrierDriverController::class, 'downloadDocuments'])->name('documents.download');
         Route::get('/{driver}/edit', [DriverAdminWizardController::class, 'edit'])->name('edit');
         Route::put('/{driver}/wizard/{step}', [DriverAdminWizardController::class, 'updateStep'])->name('wizard.update-step');
+        Route::post('/{driver}/wizard/w9/regenerate', [DriverAdminWizardController::class, 'regenerateW9'])->name('wizard.w9.regenerate');
         Route::put('/{driver}/activate', [CarrierDriverController::class, 'activate'])->name('activate');
         Route::put('/{driver}/deactivate', [CarrierDriverController::class, 'deactivate'])->name('deactivate');
         Route::get('/{driver}', [CarrierDriverController::class, 'show'])->name('show');

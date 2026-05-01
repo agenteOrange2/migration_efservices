@@ -289,6 +289,43 @@ class DriverAdminWizardController extends Controller
             ->with('success', "Step {$step} saved successfully.");
     }
 
+    // -------------------------------------------------------------------------
+    // POST admin/drivers/{driver}/wizard/w9/regenerate
+    // -------------------------------------------------------------------------
+    public function regenerateW9(Request $request, UserDriverDetail $driver)
+    {
+        if ($this->isCarrierContext($request)) {
+            abort_unless((int) $driver->carrier_id === (int) $this->resolveCarrierId(), 403);
+        }
+
+        $w9 = $driver->w9Form;
+        if (!$w9) {
+            return back()->with('error', 'Save the W-9 form first before regenerating the PDF.');
+        }
+
+        try {
+            $pdfService = app(W9PdfService::class);
+            $pdfPath = $pdfService->generate($w9);
+            $w9->update(['pdf_path' => $pdfPath]);
+
+            if (file_exists($pdfPath)) {
+                $driver->clearMediaCollection('w9_documents');
+                $driver->addMedia($pdfPath)
+                    ->preservingOriginal()
+                    ->usingFileName('W9_' . str_replace(' ', '_', $w9->name) . '_' . now()->format('Y-m-d') . '.pdf')
+                    ->toMediaCollection('w9_documents');
+            }
+
+            return back()->with('success', 'W-9 PDF regenerated successfully.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('W9 PDF manual regeneration failed', [
+                'driver' => $driver->id,
+                'error'  => $e->getMessage(),
+            ]);
+            return back()->with('error', 'Failed to regenerate W-9 PDF: ' . $e->getMessage());
+        }
+    }
+
     protected function isCarrierContext(Request $request): bool
     {
         return str_starts_with((string) $request->route()?->getName(), 'carrier.');
@@ -310,6 +347,7 @@ class DriverAdminWizardController extends Controller
                 'store' => 'carrier.drivers.store',
                 'edit' => 'carrier.drivers.edit',
                 'updateStep' => 'carrier.drivers.wizard.update-step',
+                'regenerateW9' => 'carrier.drivers.wizard.w9.regenerate',
                 'employmentSearchCompanies' => 'carrier.drivers.employment.search-companies',
                 'employmentSendEmail' => 'carrier.drivers.employment.send-email',
                 'employmentResendEmail' => 'carrier.drivers.employment.resend-email',
@@ -323,6 +361,7 @@ class DriverAdminWizardController extends Controller
             'store' => 'admin.drivers.wizard.store',
             'edit' => 'admin.drivers.wizard.edit',
             'updateStep' => 'admin.drivers.wizard.update-step',
+            'regenerateW9' => 'admin.drivers.wizard.w9.regenerate',
             'employmentSearchCompanies' => 'admin.drivers.employment.search-companies',
             'employmentSendEmail' => 'admin.drivers.employment.send-email',
             'employmentResendEmail' => 'admin.drivers.employment.resend-email',
@@ -1146,6 +1185,7 @@ class DriverAdminWizardController extends Controller
     {
         $request->validate([
             'companies'                                => 'nullable|array',
+            'companies.*.id'                           => 'nullable|integer',
             'companies.*.company_name'                 => 'required|string|max:255',
             'companies.*.address'                      => 'nullable|string|max:255',
             'companies.*.city'                         => 'nullable|string|max:100',
@@ -1164,10 +1204,12 @@ class DriverAdminWizardController extends Controller
             'companies.*.subject_to_fmcsr'             => 'boolean',
             'companies.*.safety_sensitive_function'    => 'boolean',
             'unemployment_periods'                     => 'nullable|array',
+            'unemployment_periods.*.id'                => 'nullable|integer',
             'unemployment_periods.*.start_date'        => 'required|date',
             'unemployment_periods.*.end_date'          => 'nullable|date',
             'unemployment_periods.*.comments'          => 'nullable|string|max:255',
             'related_employments'                      => 'nullable|array',
+            'related_employments.*.id'                 => 'nullable|integer',
             'related_employments.*.start_date'         => 'required|date',
             'related_employments.*.end_date'           => 'nullable|date',
             'related_employments.*.position'           => 'nullable|string|max:255',
@@ -1175,7 +1217,16 @@ class DriverAdminWizardController extends Controller
             'has_correct_information'                  => 'boolean',
         ]);
 
-        $driver->employmentCompanies()->delete();
+        // ── Employment companies ──────────────────────────────────────────
+        // Upsert by id so verification fields (email_sent, verification_status,
+        // verification_date, verification_notes) survive editing the row.
+        // Delete only the rows the driver explicitly removed.
+        $incomingCompanyIds = collect($request->companies ?? [])
+            ->pluck('id')->filter()->values()->toArray();
+        $driver->employmentCompanies()
+            ->whereNotIn('id', $incomingCompanyIds)
+            ->delete();
+
         foreach ($request->companies ?? [] as $c) {
             if (empty($c['company_name'])) continue;
 
@@ -1193,8 +1244,7 @@ class DriverAdminWizardController extends Controller
                 ]
             );
 
-            DriverEmploymentCompany::create([
-                'user_driver_detail_id'    => $driver->id,
+            $payload = [
                 'master_company_id'        => $masterCompany->id,
                 'employed_from'            => $this->toDbDate($c['employed_from'] ?? null),
                 'employed_to'              => $this->toDbDate($c['employed_to'] ?? null),
@@ -1205,18 +1255,43 @@ class DriverAdminWizardController extends Controller
                 'subject_to_fmcsr'         => (bool)($c['subject_to_fmcsr'] ?? false),
                 'safety_sensitive_function'=> (bool)($c['safety_sensitive_function'] ?? false),
                 'email'                    => $c['email'] ?? null,
-            ]);
+            ];
+
+            if (!empty($c['id'])) {
+                DriverEmploymentCompany::where('id', $c['id'])
+                    ->where('user_driver_detail_id', $driver->id)
+                    ->update($payload);
+            } else {
+                DriverEmploymentCompany::create($payload + [
+                    'user_driver_detail_id' => $driver->id,
+                ]);
+            }
         }
 
-        $driver->unemploymentPeriods()->delete();
+        // ── Unemployment periods (upsert by id) ───────────────────────────
+        $incomingUnemploymentIds = collect($request->unemployment_periods ?? [])
+            ->pluck('id')->filter()->values()->toArray();
+        $driver->unemploymentPeriods()
+            ->whereNotIn('id', $incomingUnemploymentIds)
+            ->delete();
+
         foreach ($request->unemployment_periods ?? [] as $u) {
             if (empty($u['start_date'])) continue;
-            DriverUnemploymentPeriod::create([
-                'user_driver_detail_id' => $driver->id,
-                'start_date'            => $this->toDbDate($u['start_date']),
-                'end_date'              => $this->toDbDate($u['end_date'] ?? null),
-                'comments'              => $u['comments'] ?? null,
-            ]);
+            $payload = [
+                'start_date' => $this->toDbDate($u['start_date']),
+                'end_date'   => $this->toDbDate($u['end_date'] ?? null),
+                'comments'   => $u['comments'] ?? null,
+            ];
+
+            if (!empty($u['id'])) {
+                DriverUnemploymentPeriod::where('id', $u['id'])
+                    ->where('user_driver_detail_id', $driver->id)
+                    ->update($payload);
+            } else {
+                DriverUnemploymentPeriod::create($payload + [
+                    'user_driver_detail_id' => $driver->id,
+                ]);
+            }
         }
 
         // Save confirmation flag on the driver record
@@ -1224,16 +1299,31 @@ class DriverAdminWizardController extends Controller
             $driver->update(['has_completed_employment_history' => $request->boolean('has_correct_information')]);
         }
 
-        $driver->relatedEmployments()->delete();
+        // ── Related employments (upsert by id) ────────────────────────────
+        $incomingRelatedIds = collect($request->related_employments ?? [])
+            ->pluck('id')->filter()->values()->toArray();
+        $driver->relatedEmployments()
+            ->whereNotIn('id', $incomingRelatedIds)
+            ->delete();
+
         foreach ($request->related_employments ?? [] as $r) {
             if (empty($r['start_date'])) continue;
-            \App\Models\Admin\Driver\DriverRelatedEmployment::create([
-                'user_driver_detail_id' => $driver->id,
-                'start_date'            => $this->toDbDate($r['start_date']),
-                'end_date'              => $this->toDbDate($r['end_date'] ?? null),
-                'position'              => $r['position'] ?? null,
-                'comments'              => $r['comments'] ?? null,
-            ]);
+            $payload = [
+                'start_date' => $this->toDbDate($r['start_date']),
+                'end_date'   => $this->toDbDate($r['end_date'] ?? null),
+                'position'   => $r['position'] ?? null,
+                'comments'   => $r['comments'] ?? null,
+            ];
+
+            if (!empty($r['id'])) {
+                \App\Models\Admin\Driver\DriverRelatedEmployment::where('id', $r['id'])
+                    ->where('user_driver_detail_id', $driver->id)
+                    ->update($payload);
+            } else {
+                \App\Models\Admin\Driver\DriverRelatedEmployment::create($payload + [
+                    'user_driver_detail_id' => $driver->id,
+                ]);
+            }
         }
     }
 
@@ -1350,6 +1440,9 @@ class DriverAdminWizardController extends Controller
                 'w9_id'  => $w9->id,
                 'driver' => $driver->id,
             ]);
+            // Surface the failure to the user — they need to know the PDF
+            // wasn't generated so they can retry or contact support.
+            session()->flash('warning', 'W-9 data saved, but PDF generation failed: ' . $e->getMessage());
         }
     }
 

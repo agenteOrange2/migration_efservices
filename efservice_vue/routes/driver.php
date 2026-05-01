@@ -232,6 +232,10 @@ Route::middleware(['auth', 'check.driver.status'])->group(function () {
         Route::match(['put', 'post'], 'wizard/{driver}/{step}', [DriverApplicationWizardController::class, 'updateStep'])
             ->name('wizard.update-step');
 
+        // POST – regenerate the W-9 PDF from saved data without re-saving the form
+        Route::post('wizard/{driver}/w9/regenerate', [DriverApplicationWizardController::class, 'regenerateW9'])
+            ->name('wizard.w9.regenerate');
+
         // Employment verification helpers
         Route::prefix('employment')->name('employment.')->group(function () {
             Route::get('search-companies', [DriverApplicationWizardController::class, 'employmentSearchCompanies'])

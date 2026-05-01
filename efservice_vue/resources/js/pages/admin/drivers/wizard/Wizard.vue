@@ -70,6 +70,7 @@ interface WizardRouteNames {
     store: string;
     edit: string;
     updateStep: string;
+    regenerateW9: string;
     employmentSearchCompanies: string;
     employmentSendEmail: string;
     employmentResendEmail: string;
@@ -108,6 +109,7 @@ const props = withDefaults(
             store: 'admin.drivers.wizard.store',
             edit: 'admin.drivers.wizard.edit',
             updateStep: 'admin.drivers.wizard.update-step',
+            regenerateW9: 'admin.drivers.wizard.w9.regenerate',
             employmentSearchCompanies:
                 'admin.drivers.employment.search-companies',
             employmentSendEmail: 'admin.drivers.employment.send-email',
@@ -120,6 +122,21 @@ const props = withDefaults(
 
 const page = usePage();
 const errors = computed(() => (page.props as any).errors ?? {});
+const globalErrorRef = ref<HTMLDivElement | null>(null);
+
+watch(
+    () => Object.keys(errors.value).length,
+    (count, prev) => {
+        if (count > 0 && count !== prev) {
+            nextTick(() => {
+                globalErrorRef.value?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            });
+        }
+    },
+);
 
 function namedRoute(name: keyof WizardRouteNames, params?: any) {
     return route(props.routeNames[name], params);
@@ -1547,6 +1564,23 @@ function submitStep13() {
     );
 }
 
+const regeneratingW9 = ref(false);
+
+function regenerateW9() {
+    if (!props.driver?.id) return;
+    regeneratingW9.value = true;
+    router.post(
+        namedRoute('regenerateW9', { driver: props.driver.id }),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                regeneratingW9.value = false;
+            },
+        },
+    );
+}
+
 function onTinInput(e: Event) {
     const digits = (e.target as HTMLInputElement).value
         .replace(/\D/g, '')
@@ -1770,6 +1804,35 @@ function submitStep15() {
                         />
                         {{ step.label }}
                     </button>
+                </div>
+            </div>
+
+            <!-- Global server validation errors (visible on every step) -->
+            <div
+                v-if="Object.keys(errors).length"
+                ref="globalErrorRef"
+                class="mb-4 rounded-xl border border-danger/30 bg-danger/10 p-4"
+            >
+                <div class="flex gap-3">
+                    <Lucide
+                        icon="AlertCircle"
+                        class="mt-0.5 h-5 w-5 shrink-0 text-danger"
+                    />
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-danger">
+                            We couldn't save this step. Please review:
+                        </p>
+                        <ul
+                            class="mt-2 list-disc space-y-1 pl-5 text-sm text-danger"
+                        >
+                            <li
+                                v-for="(msg, field) in errors"
+                                :key="field"
+                            >
+                                {{ msg }}
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -4943,8 +5006,7 @@ function submitStep15() {
                                                     v-if="
                                                         item.type ===
                                                             'employed' &&
-                                                        item.email &&
-                                                        item.id
+                                                        item.email
                                                     "
                                                 >
                                                     <button
@@ -4958,9 +5020,14 @@ function submitStep15() {
                                                             )
                                                         "
                                                         :disabled="
-                                                            emailLoading[
+                                                            !!emailLoading[
                                                                 item.id
                                                             ]
+                                                        "
+                                                        :title="
+                                                            !item.id
+                                                                ? 'Save the application first to enable verification email.'
+                                                                : ''
                                                         "
                                                         class="flex items-center gap-1 rounded border border-purple-400 px-2 py-1 text-xs text-purple-600 hover:opacity-70 disabled:opacity-50"
                                                     >
@@ -4991,7 +5058,7 @@ function submitStep15() {
                                                             )
                                                         "
                                                         :disabled="
-                                                            emailLoading[
+                                                            !!emailLoading[
                                                                 item.id
                                                             ]
                                                         "
@@ -5014,7 +5081,10 @@ function submitStep15() {
                                                         >
                                                     </button>
                                                     <button
-                                                        v-if="item.email_sent"
+                                                        v-if="
+                                                            item.email_sent &&
+                                                            item.id
+                                                        "
                                                         @click="
                                                             toggleEmailSent(
                                                                 step10
@@ -5034,7 +5104,7 @@ function submitStep15() {
                                                         Unsent
                                                     </button>
                                                     <button
-                                                        v-else
+                                                        v-else-if="item.id"
                                                         @click="
                                                             toggleEmailSent(
                                                                 step10
@@ -5162,8 +5232,7 @@ function submitStep15() {
                                     <template
                                         v-if="
                                             item.type === 'employed' &&
-                                            item.email &&
-                                            item.id
+                                            item.email
                                         "
                                     >
                                         <button
@@ -5173,7 +5242,12 @@ function submitStep15() {
                                                     step10.companies[item.idx],
                                                 )
                                             "
-                                            :disabled="emailLoading[item.id]"
+                                            :disabled="!!emailLoading[item.id]"
+                                            :title="
+                                                !item.id
+                                                    ? 'Save the application first to enable verification email.'
+                                                    : ''
+                                            "
                                             class="flex items-center gap-1 rounded border border-purple-400 px-2 py-1 text-xs text-purple-600 hover:opacity-70 disabled:opacity-50"
                                         >
                                             <Lucide
@@ -5192,7 +5266,7 @@ function submitStep15() {
                                                     step10.companies[item.idx],
                                                 )
                                             "
-                                            :disabled="emailLoading[item.id]"
+                                            :disabled="!!emailLoading[item.id]"
                                             class="flex items-center gap-1 rounded border border-green-500 px-2 py-1 text-xs text-green-600 hover:opacity-70 disabled:opacity-50"
                                         >
                                             <Lucide
@@ -5205,7 +5279,7 @@ function submitStep15() {
                                             <span v-else>Resend</span>
                                         </button>
                                         <button
-                                            v-if="item.email_sent"
+                                            v-if="item.email_sent && item.id"
                                             @click="
                                                 toggleEmailSent(
                                                     step10.companies[item.idx],
@@ -5219,7 +5293,7 @@ function submitStep15() {
                                             Unsent
                                         </button>
                                         <button
-                                            v-else
+                                            v-else-if="item.id"
                                             @click="
                                                 toggleEmailSent(
                                                     step10.companies[item.idx],
@@ -6921,7 +6995,7 @@ function submitStep15() {
                     <!-- PDF generated banner -->
                     <div
                         v-if="step13.pdf_url"
-                        class="mb-6 flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 p-4"
+                        class="mb-6 flex flex-col items-stretch gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div class="flex items-center gap-3">
                             <Lucide
@@ -6932,14 +7006,75 @@ function submitStep15() {
                                 >W-9 PDF generated successfully</span
                             >
                         </div>
-                        <a
-                            :href="step13.pdf_url"
-                            target="_blank"
-                            class="inline-flex flex-shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                        <div class="flex flex-wrap gap-2">
+                            <a
+                                :href="step13.pdf_url"
+                                target="_blank"
+                                class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                            >
+                                <Lucide icon="Download" class="h-4 w-4" />
+                                Download W-9 PDF
+                            </a>
+                            <button
+                                type="button"
+                                :disabled="regeneratingW9"
+                                @click="regenerateW9"
+                                class="inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:opacity-60"
+                            >
+                                <Lucide
+                                    :icon="
+                                        regeneratingW9
+                                            ? ('Loader' as any)
+                                            : ('RefreshCw' as any)
+                                    "
+                                    class="h-4 w-4"
+                                    :class="regeneratingW9 ? 'animate-spin' : ''"
+                                />
+                                {{
+                                    regeneratingW9
+                                        ? 'Regenerating…'
+                                        : 'Regenerate PDF'
+                                }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- No PDF yet — manual generate fallback (only after data is saved) -->
+                    <div
+                        v-else-if="completedStep >= 13"
+                        class="mb-6 flex flex-col items-stretch gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <div class="flex items-center gap-3">
+                            <Lucide
+                                icon="AlertTriangle"
+                                class="h-5 w-5 flex-shrink-0 text-amber-600"
+                            />
+                            <span class="text-sm font-medium text-amber-800">
+                                W-9 data is saved, but the PDF wasn't generated
+                                yet. Click below to try again.
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            :disabled="regeneratingW9"
+                            @click="regenerateW9"
+                            class="inline-flex flex-shrink-0 items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
                         >
-                            <Lucide icon="Download" class="h-4 w-4" />
-                            Download W-9 PDF
-                        </a>
+                            <Lucide
+                                :icon="
+                                    regeneratingW9
+                                        ? ('Loader' as any)
+                                        : ('FileText' as any)
+                                "
+                                class="h-4 w-4"
+                                :class="regeneratingW9 ? 'animate-spin' : ''"
+                            />
+                            {{
+                                regeneratingW9
+                                    ? 'Generating…'
+                                    : 'Generate W-9 PDF'
+                            }}
+                        </button>
                     </div>
 
                     <!-- Line 1: Name -->

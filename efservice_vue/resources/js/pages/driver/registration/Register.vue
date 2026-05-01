@@ -137,14 +137,32 @@ function goBack() {
 
 // ─── Submit ───────────────────────────────────────────────────────────────────
 
+const STEP_FIELDS: Record<1 | 2, string[]> = {
+    1: ['name', 'middle_name', 'last_name'],
+    2: ['email', 'phone', 'date_of_birth', 'license_number', 'password', 'password_confirmation'],
+}
+
+function jumpToFirstStepWithErrors(errors: Record<string, string>) {
+    if (STEP_FIELDS[1].some(f => errors[f])) {
+        currentStep.value = 1
+    } else if (STEP_FIELDS[2].some(f => errors[f])) {
+        currentStep.value = 2
+    }
+}
+
 function submit() {
     if (!form.terms_accepted) return
 
-    if (props.isIndependent) {
-        form.post(route('driver.register.independent'), { preserveScroll: true })
-    } else {
-        form.post(route('driver.register.submit', { carrier: props.carrier.slug }), { preserveScroll: true })
-    }
+    const url = props.isIndependent
+        ? route('driver.register.independent')
+        : route('driver.register.submit', { carrier: props.carrier.slug })
+
+    form.post(url, {
+        preserveScroll: true,
+        onError: (errors) => {
+            jumpToFirstStepWithErrors(errors as Record<string, string>)
+        },
+    })
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -160,6 +178,8 @@ const fullName = computed(() => {
 })
 
 const modeLabel = computed(() => props.isIndependent ? 'Independent Registration' : 'Referred by Carrier')
+
+const hasServerErrors = computed(() => Object.keys(form.errors).length > 0)
 </script>
 
 <template>
@@ -630,11 +650,18 @@ const modeLabel = computed(() => props.isIndependent ? 'Independent Registration
                         </FormHelp>
                     </div>
 
-                    <!-- Server error -->
-                    <div v-if="form.errors.error" class="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-4">
+                    <!-- Server errors (general + field validation from any step) -->
+                    <div v-if="hasServerErrors" class="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-4">
                         <div class="flex gap-3">
-                            <Lucide icon="AlertCircle" class="h-5 w-5 shrink-0 text-danger" />
-                            <p class="text-sm text-danger">{{ form.errors.error }}</p>
+                            <Lucide icon="AlertCircle" class="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+                            <div class="flex-1">
+                                <p class="text-sm font-semibold text-danger">
+                                    We couldn't submit your registration. Please review:
+                                </p>
+                                <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-danger">
+                                    <li v-for="(msg, field) in form.errors" :key="field">{{ msg }}</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>

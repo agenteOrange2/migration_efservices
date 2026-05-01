@@ -55,6 +55,7 @@ class DriverApplicationWizardController extends DriverAdminWizardController
             'store'                     => 'driver.application.wizard',
             'edit'                      => 'driver.application.wizard',
             'updateStep'                => 'driver.application.wizard.update-step',
+            'regenerateW9'              => 'driver.application.wizard.w9.regenerate',
             'employmentSearchCompanies' => 'driver.application.employment.search-companies',
             'employmentSendEmail'       => 'driver.application.employment.send-email',
             'employmentResendEmail'     => 'driver.application.employment.resend-email',
@@ -98,6 +99,12 @@ class DriverApplicationWizardController extends DriverAdminWizardController
         $maxAllowed  = ($driver->current_step ?? 0) + 1;
         $requested   = $request->integer('step', $driver->current_step ?? 1);
         $initialStep = max(1, min($requested, $maxAllowed, 15));
+
+        // If the user explicitly requested a step they can't reach, send them
+        // to the highest step they CAN access so the URL matches what's shown.
+        if ($request->has('step') && $requested !== $initialStep) {
+            return redirect()->route('driver.application.wizard', ['step' => $initialStep]);
+        }
 
         return Inertia::render($this->wizardPage($request), [
             'driver'          => $this->formatDriverBase($driver),
@@ -188,6 +195,16 @@ class DriverApplicationWizardController extends DriverAdminWizardController
         return redirect()
             ->route('driver.application.wizard', ['step' => $nextStep])
             ->with('success', "Step {$step} saved. Continue to step {$nextStep}.");
+    }
+
+    /**
+     * Override the inherited regenerateW9 to enforce driver ownership instead
+     * of the admin/carrier context check used by the parent.
+     */
+    public function regenerateW9(Request $request, UserDriverDetail $driver)
+    {
+        $this->guardOwnership($driver);
+        return parent::regenerateW9($request, $driver);
     }
 
     // =========================================================================

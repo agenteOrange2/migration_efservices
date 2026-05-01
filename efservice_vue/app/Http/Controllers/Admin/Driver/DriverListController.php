@@ -146,8 +146,7 @@ class DriverListController extends Controller
         $driver->status = UserDriverDetail::STATUS_ACTIVE;
         $driver->save();
 
-        return redirect()->route('admin.drivers.show', $driver)
-            ->with('success', 'Driver has been activated.');
+        return back()->with('success', 'Driver has been activated.');
     }
 
     public function deactivate(UserDriverDetail $driver)
@@ -155,8 +154,7 @@ class DriverListController extends Controller
         $driver->status = UserDriverDetail::STATUS_INACTIVE;
         $driver->save();
 
-        return redirect()->route('admin.drivers.show', $driver)
-            ->with('success', 'Driver has been deactivated.');
+        return back()->with('success', 'Driver has been deactivated.');
     }
 
     public function downloadDocuments(UserDriverDetail $driver): \Symfony\Component\HttpFoundation\BinaryFileResponse|StreamedResponse|\Illuminate\Http\RedirectResponse
