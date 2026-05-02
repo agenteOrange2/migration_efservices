@@ -1073,6 +1073,53 @@ const step10 = reactive({
         props.stepData?.step10?.has_correct_information ?? false,
 });
 
+// Sync server-assigned ids and verification flags into step10 after a save.
+// New rows arrive without an id; the controller assigns one and returns it
+// in props.stepData on the next Inertia visit. Without this watcher the
+// "Send Email" / "Mark Sent" buttons stay disabled because they depend on
+// item.id, and email_sent / verification_status from the server never
+// overwrite the locally-stale values.
+watch(
+    () => props.stepData?.step10,
+    (fresh) => {
+        if (!fresh) return;
+
+        const matchCompany = (c: any) => (s: any) =>
+            (s.id && c.id && s.id === c.id) ||
+            (!s.id &&
+                !c.id &&
+                s.company_name === c.company_name &&
+                s.employed_from === toUsDate(c.employed_from));
+        for (const fc of (fresh.companies ?? []) as any[]) {
+            const local = step10.companies.find(matchCompany(fc));
+            if (local) {
+                if (!local.id && fc.id) local.id = fc.id;
+                local.email_sent = fc.email_sent;
+                local.verification_status = fc.verification_status;
+            }
+        }
+
+        for (const fu of (fresh.unemployment_periods ?? []) as any[]) {
+            const local = step10.unemployment_periods.find(
+                (u: any) =>
+                    (u.id && fu.id && u.id === fu.id) ||
+                    (!u.id && u.start_date === toUsDate(fu.start_date)),
+            );
+            if (local && !local.id && fu.id) local.id = fu.id;
+        }
+
+        for (const fr of (fresh.related_employments ?? []) as any[]) {
+            const local = step10.related_employments.find(
+                (r: any) =>
+                    (r.id && fr.id && r.id === fr.id) ||
+                    (!r.id && r.start_date === toUsDate(fr.start_date)),
+            );
+            if (local && !local.id && fr.id) local.id = fr.id;
+        }
+    },
+    { deep: true },
+);
+
 // --- Company modal ---
 const showCompanyModal = ref(false);
 const editingCompanyIdx = ref<number | null>(null);
@@ -1691,17 +1738,24 @@ function submitStep14() {
 // ------------------------------------------------------------------
 // Step 15 – Clearinghouse / Finalize
 // ------------------------------------------------------------------
-const step15 = reactive({
+// IMPORTANT: must be a `computed`, not `reactive`. The clearinghouse step
+// shows server-derived data (which steps are missing, total %). Inertia
+// reuses this component across step navigations and only updates `props`,
+// it does not re-run `setup()`. A `reactive(props.stepData?.step15...)`
+// would freeze the values from the first mount, so reaching step 15 would
+// always show the state of the wizard at the moment the user first opened
+// it — exactly the bug reported (steps appearing missing even after saved).
+const step15 = computed(() => ({
     application_completed:
         props.stepData?.step15?.application_completed ?? false,
     total_percentage: props.stepData?.step15?.total_percentage ?? 0,
     steps_needing_attention:
         props.stepData?.step15?.steps_needing_attention ?? [],
     is_complete: props.stepData?.step15?.is_complete ?? false,
-});
+}));
 
 function submitStep15() {
-    if (!step15.is_complete) return;
+    if (!step15.value.is_complete) return;
     router.put(
         namedRoute('updateStep', { driver: props.driver!.id, step: 15 }),
         {},

@@ -204,14 +204,14 @@ class AuthenticationService
 
     /**
      * Determine redirect URL for driver users.
-     * 
+     *
      * @param User $user
      * @return string
      */
     private function getDriverRedirect(User $user): string
     {
         $driverDetails = $user->driverDetails;
-        
+
         // No driver details - needs to complete registration
         if (!$driverDetails) {
             Log::info('AUTH_REDIRECT', [
@@ -221,10 +221,10 @@ class AuthenticationService
             ]);
             return route('driver.complete_registration');
         }
-        
+
         // Check if driver has an active carrier
         $carrier = $driverDetails->carrier;
-        
+
         if ($carrier && $carrier->status == Carrier::STATUS_ACTIVE) {
             // Check driver's own status
             if ($driverDetails->status == \App\Models\UserDriverDetail::STATUS_ACTIVE) {
@@ -237,7 +237,34 @@ class AuthenticationService
                 return route('driver.dashboard');
             }
         }
-        
+
+        // Application still in DRAFT and not yet submitted by the driver:
+        // resume the wizard at the step they left off, instead of dumping
+        // them on the pending page where they have no way to keep filling.
+        $application = $user->driverApplication;
+        $isDraftIncomplete =
+            (!$application || $application->status === \App\Models\Admin\Driver\DriverApplication::STATUS_DRAFT)
+            && !$driverDetails->application_completed;
+
+        $carrierBlocksAccess =
+            !$carrier
+            || (int) $carrier->status !== Carrier::STATUS_ACTIVE
+            || ($carrier->bankingDetails && (
+                $carrier->bankingDetails->isRejected() || $carrier->bankingDetails->isPending()
+            ));
+
+        if ($isDraftIncomplete && !$carrierBlocksAccess) {
+            $step = $driverDetails->current_step ?? 1;
+            Log::info('AUTH_REDIRECT', [
+                'user_id'    => $user->id,
+                'driver_id'  => $driverDetails->id,
+                'destination'=> 'driver_application_wizard',
+                'reason'     => 'application_draft_incomplete',
+                'step'       => $step,
+            ]);
+            return route('driver.application.wizard', ['step' => $step]);
+        }
+
         // Driver pending or carrier not active
         Log::info('AUTH_REDIRECT', [
             'user_id' => $user->id,
