@@ -18,6 +18,7 @@ use App\Models\UserDriverDetail;
 use App\Models\UserCarrierDetail;
 use App\Models\Carrier;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
@@ -54,11 +55,20 @@ class ImportPreviewService
             return strtolower(str_replace([' ', '-'], '_', trim((string) $header)));
         }, $headers);
 
+        // Build a "pre-flight" map of every reference the rows expect to find
+        // (drivers, vehicles, etc.) so we can warn upfront — before the user
+        // clicks Run Import — when something the row depends on is missing
+        // from the selected carrier. Without this, imports of HOS rows
+        // referencing a non-existent vehicle silently get all 506 rows
+        // skipped with no actionable message in the preview screen.
+        $missingRefs = $this->preflightReferences($type, $data, $normalizedHeaders, $carrierId);
+
         // Process rows for preview
         $previewData = [];
         $validCount = 0;
         $duplicateCount = 0;
         $errorCount = 0;
+        $missingRefCount = 0;
 
         // Skip header row (index 0) and process data rows
         foreach ($data as $index => $row) {
@@ -76,8 +86,13 @@ class ImportPreviewService
 
             $rowNumber = $index + 1;
 
-            // Validate the row
+            // Validate the row (basic field-level rules)
             $validation = $this->validateRow($type, $rowArray);
+
+            // Check that the row's foreign references exist (driver, vehicle).
+            // This is what catches "Vehicle not found: 125" and equivalent
+            // before the import runs.
+            $missingRef = $this->findMissingReferenceForRow($type, $rowArray, $missingRefs);
 
             // Check for duplicates
             $isDuplicate = $this->checkDuplicate($type, $rowArray, $carrierId);
@@ -89,6 +104,10 @@ class ImportPreviewService
                 $status = 'error';
                 $statusMessage = implode(', ', $validation['errors']);
                 $errorCount++;
+            } elseif ($missingRef !== null) {
+                $status = 'missing_reference';
+                $statusMessage = $missingRef;
+                $missingRefCount++;
             } elseif ($isDuplicate) {
                 $status = 'duplicate';
                 $statusMessage = $isDuplicate;
@@ -118,8 +137,126 @@ class ImportPreviewService
             'valid' => $validCount,
             'duplicates' => $duplicateCount,
             'errors' => $errorCount,
+            'missing_references' => $missingRefCount,
+            'preflight' => $missingRefs,
             'preview_limited' => ($data->count() - 1) > 100,
         ];
+    }
+
+    /**
+     * Walk the file once and resolve every distinct driver_email /
+     * vehicle_unit_number that appears, then check which ones are NOT
+     * registered against the chosen carrier. Returned shape:
+     *   [
+     *     'missing_drivers'  => ['someone@x.com', ...],
+     *     'missing_vehicles' => ['125', ...],
+     *     'has_driver_column'   => bool,
+     *     'has_vehicle_column'  => bool,
+     *   ]
+     */
+    protected function preflightReferences(string $type, $data, array $normalizedHeaders, ?int $carrierId): array
+    {
+        $result = [
+            'missing_drivers'    => [],
+            'missing_vehicles'   => [],
+            'has_driver_column'  => in_array('driver_email', $normalizedHeaders, true),
+            'has_vehicle_column' => in_array('vehicle_unit_number', $normalizedHeaders, true)
+                || in_array('vehicle_vin', $normalizedHeaders, true),
+        ];
+
+        // Only HOS-style imports gate on driver+vehicle today; expand the
+        // match arm if other types start needing the same checks.
+        if (!in_array($type, ['hos_entries', 'maintenance', 'repairs'], true)) {
+            return $result;
+        }
+
+        $emails = collect();
+        $units = collect();
+
+        foreach ($data as $i => $row) {
+            if ($i === 0) continue;
+
+            $rowValues = array_values($row->toArray());
+            $rowArray = [];
+            foreach ($normalizedHeaders as $idx => $header) {
+                $rowArray[$header] = $rowValues[$idx] ?? null;
+            }
+
+            if (!empty($rowArray['driver_email'])) {
+                $emails->push(strtolower(trim((string) $rowArray['driver_email'])));
+            }
+            if (!empty($rowArray['vehicle_unit_number'])) {
+                $units->push($this->normalizeUnitNumber($rowArray['vehicle_unit_number']));
+            }
+        }
+
+        $emails = $emails->filter()->unique()->values();
+        $units  = $units->filter()->unique()->values();
+
+        if ($emails->isNotEmpty() && $carrierId !== null) {
+            $foundEmails = User::whereIn('email', $emails)
+                ->whereHas('driverDetails', fn ($q) => $q->where('carrier_id', $carrierId))
+                ->pluck('email')
+                ->map(fn ($e) => strtolower($e))
+                ->all();
+
+            $result['missing_drivers'] = $emails
+                ->reject(fn ($e) => in_array($e, $foundEmails, true))
+                ->values()
+                ->all();
+        }
+
+        if ($units->isNotEmpty() && $carrierId !== null) {
+            // Match the same flexible rules as HosEntriesImport::findVehicle
+            // (trim, leading-zero variants) so the preflight matches reality.
+            $vehicles = Vehicle::where('carrier_id', $carrierId)
+                ->whereIn(DB::raw('TRIM(company_unit_number)'), $units->all())
+                ->pluck('company_unit_number')
+                ->map(fn ($u) => trim((string) $u))
+                ->all();
+
+            $result['missing_vehicles'] = $units
+                ->reject(fn ($u) => in_array($u, $vehicles, true)
+                    || in_array(ltrim($u, '0'), $vehicles, true))
+                ->values()
+                ->all();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Per-row resolution: does this row depend on something the preflight
+     * already determined to be missing? Returns the user-facing message,
+     * or null if the row is fine.
+     */
+    protected function findMissingReferenceForRow(string $type, array $row, array $preflight): ?string
+    {
+        if (!empty($preflight['missing_drivers']) && !empty($row['driver_email'])) {
+            $email = strtolower(trim((string) $row['driver_email']));
+            if (in_array($email, $preflight['missing_drivers'], true)) {
+                return "Driver not registered to this carrier: {$email}";
+            }
+        }
+
+        if (!empty($preflight['missing_vehicles']) && !empty($row['vehicle_unit_number'])) {
+            $unit = $this->normalizeUnitNumber($row['vehicle_unit_number']);
+            if (in_array($unit, $preflight['missing_vehicles'], true)) {
+                return "Vehicle not found in this carrier's fleet: {$unit}";
+            }
+        }
+
+        return null;
+    }
+
+    protected function normalizeUnitNumber($raw): string
+    {
+        $needle = trim((string) $raw);
+        // Excel often turns "125" into 125.0 — normalize before comparison.
+        if (preg_match('/^(\d+)\.0+$/', $needle, $m)) {
+            $needle = $m[1];
+        }
+        return $needle;
     }
 
     /**

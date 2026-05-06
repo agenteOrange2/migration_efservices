@@ -135,9 +135,10 @@ class TripTimelineService
                     'status_name' => $this->getStatusName($entry->status),
                     'start_time' => $entry->start_time,
                     'end_time' => $entry->end_time,
-                    'duration_minutes' => $entry->end_time 
-                        ? $entry->start_time->diffInMinutes($entry->end_time)
-                        : $entry->start_time->diffInMinutes(now()),
+                    // Carbon 3: absolute=true so duration stays positive.
+                    'duration_minutes' => $entry->end_time
+                        ? (int) $entry->start_time->diffInMinutes($entry->end_time, true)
+                        : (int) $entry->start_time->diffInMinutes(now(), true),
                     'location' => $entry->formatted_address,
                     'is_active' => $entry->end_time === null,
                 ];

@@ -111,7 +111,9 @@ class HosTimeFormatter
     public static function calculateDuration(Carbon $start, ?Carbon $end = null): int
     {
         $end = $end ?? Carbon::now();
-        return (int) $start->diffInMinutes($end);
+        // Carbon 3 returns a signed float by default; force absolute so a
+        // forward time range yields a positive minute count.
+        return (int) $start->diffInMinutes($end, true);
     }
 
     /**
@@ -132,7 +134,7 @@ class HosTimeFormatter
 
         // If same day, simple calculation
         if ($start->isSameDay($end)) {
-            $minutes = (int) $start->diffInMinutes($end);
+            $minutes = (int) $start->diffInMinutes($end, true);
             $result['total'] = $minutes;
             $result['by_date'][$start->format('Y-m-d')] = $minutes;
             return $result;
@@ -140,15 +142,15 @@ class HosTimeFormatter
 
         // Entry spans multiple days
         $current = $start->copy();
-        
+
         while ($current->lt($end)) {
             $dayEnd = $current->copy()->endOfDay();
-            
+
             if ($dayEnd->gt($end)) {
                 $dayEnd = $end;
             }
-            
-            $minutes = (int) $current->diffInMinutes($dayEnd);
+
+            $minutes = (int) $current->diffInMinutes($dayEnd, true);
             $dateKey = $current->format('Y-m-d');
             
             $result['by_date'][$dateKey] = ($result['by_date'][$dateKey] ?? 0) + $minutes;

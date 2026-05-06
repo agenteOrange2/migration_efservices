@@ -433,9 +433,9 @@ class TripService
             // Close the current HOS driving entry
             $this->closeDrivingEntry($driverId, $trip);
 
-            // Calculate actual duration
+            // Calculate actual duration (Carbon 3: absolute=true).
             $actualDuration = $trip->actual_start_time
-                ? $trip->actual_start_time->diffInMinutes(now())
+                ? (int) $trip->actual_start_time->diffInMinutes(now(), true)
                 : null;
 
             // Process inspection checklist data (use trip's has_trailer flag)
@@ -962,9 +962,9 @@ class TripService
             $currentEntry->update(['end_time' => now()]);
         }
 
-        // Calculate actual duration
-        $actualDuration = $trip->actual_start_time 
-            ? $trip->actual_start_time->diffInMinutes(now()) 
+        // Calculate actual duration (Carbon 3: absolute=true).
+        $actualDuration = $trip->actual_start_time
+            ? (int) $trip->actual_start_time->diffInMinutes(now(), true)
             : null;
 
         // Update trip

@@ -106,7 +106,8 @@ class TripGpsTrackingService
                 $currentPeriod['end'] = $point->recorded_at;
             } else {
                 if ($currentPeriod) {
-                    $duration = $currentPeriod['start']->diffInMinutes($currentPeriod['end']);
+                    // Carbon 3: absolute=true so duration is positive.
+                    $duration = (int) $currentPeriod['start']->diffInMinutes($currentPeriod['end'], true);
                     if ($duration >= $minMinutes) {
                         $currentPeriod['duration_minutes'] = $duration;
                         $stationaryPeriods[] = $currentPeriod;
@@ -118,7 +119,7 @@ class TripGpsTrackingService
 
         // Check if we ended in a stationary period
         if ($currentPeriod) {
-            $duration = $currentPeriod['start']->diffInMinutes($currentPeriod['end'] ?? now());
+            $duration = (int) $currentPeriod['start']->diffInMinutes($currentPeriod['end'] ?? now(), true);
             if ($duration >= $minMinutes) {
                 $currentPeriod['duration_minutes'] = $duration;
                 $stationaryPeriods[] = $currentPeriod;
@@ -168,7 +169,8 @@ class TripGpsTrackingService
         $firstPoint = $points->first();
         $lastPoint = $points->last();
         
-        $durationMinutes = $firstPoint->recorded_at->diffInMinutes($lastPoint->recorded_at);
+        // Carbon 3: absolute=true so trip duration is always positive.
+        $durationMinutes = (int) $firstPoint->recorded_at->diffInMinutes($lastPoint->recorded_at, true);
         
         $trip->update([
             'actual_duration_minutes' => $durationMinutes,

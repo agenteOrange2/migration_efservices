@@ -128,13 +128,18 @@ class HosEntry extends Model
 
     /**
      * Get the duration in minutes.
+     *
+     * Carbon 3 changed the default of diffInMinutes() from absolute=true
+     * (Carbon 2) to absolute=false, so a forward-time diff like 06:45 → 11:13
+     * now returns a NEGATIVE float instead of +268. Pass true explicitly so
+     * HOS Documents and reports never see negative durations.
      */
     public function getDurationMinutesAttribute(): int
     {
         if (!$this->end_time) {
-            return (int) $this->start_time->diffInMinutes(now());
+            return (int) $this->start_time->diffInMinutes(now(), true);
         }
-        return (int) $this->start_time->diffInMinutes($this->end_time);
+        return (int) $this->start_time->diffInMinutes($this->end_time, true);
     }
 
     /**

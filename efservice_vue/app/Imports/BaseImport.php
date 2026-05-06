@@ -154,6 +154,14 @@ abstract class BaseImport implements ToCollection, WithHeadingRow, WithValidatio
                 }
             }
 
+            // Reject obvious non-date inputs (like time-only "08:00" or
+            // garbage strings). Without this guard Carbon::parse('08:00')
+            // returns TODAY at 08:00 and silently writes the wrong date.
+            // A real date will contain at least three digit groups.
+            if (!preg_match('/\d.*[\/\-\.].*\d/', $value)) {
+                return null;
+            }
+
             // Fallback to Carbon::parse for flexible parsing
             $parsed = Carbon::parse($value);
             return $parsed->format('Y-m-d');
@@ -210,6 +218,17 @@ abstract class BaseImport implements ToCollection, WithHeadingRow, WithValidatio
                 } catch (\Exception $e) {
                     continue;
                 }
+            }
+
+            // Reject inputs that lack BOTH date AND time markers — Carbon::parse
+            // is too permissive and would happily turn "garbage" or "08:00"
+            // into a wrong datetime. Caller should provide a richer parser
+            // (see HosEntriesImport::resolveDateTime) when partial inputs are
+            // expected.
+            $hasDate = (bool) preg_match('/\d.*[\/\-\.].*\d/', $value);
+            $hasTime = (bool) preg_match('/\d:\d/', $value);
+            if (!$hasDate && !$hasTime) {
+                return null;
             }
 
             // Fallback to Carbon::parse for flexible parsing

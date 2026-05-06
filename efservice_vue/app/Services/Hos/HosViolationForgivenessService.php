@@ -115,7 +115,8 @@ class HosViolationForgivenessService
         // Calculate new duration
         $actualDuration = null;
         if ($trip->actual_start_time) {
-            $actualDuration = $trip->actual_start_time->diffInMinutes($adjustedEndTime);
+            // Carbon 3: absolute=true so trip duration stays positive.
+            $actualDuration = $trip->actual_start_time->diffInMinutes($adjustedEndTime, true);
         }
 
         $adjustmentNote = "[" . now()->format('Y-m-d H:i:s') . "] End time adjusted via violation forgiveness. " .

@@ -248,7 +248,8 @@ class HosViolation extends Model
             return 0;
         }
 
-        return round(now()->diffInMinutes($this->penalty_end) / 60, 2);
+        // Carbon 3: absolute=true so remaining time isn't negative.
+        return round(now()->diffInMinutes($this->penalty_end, true) / 60, 2);
     }
 
     /**

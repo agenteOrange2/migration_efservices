@@ -143,7 +143,8 @@ class HosDailyLog extends Model
         }
         
         $end = $this->duty_period_end ?? now();
-        return (int) $this->duty_period_start->diffInMinutes($end);
+        // Carbon 3: force absolute so a forward duty period stays positive.
+        return (int) $this->duty_period_start->diffInMinutes($end, true);
     }
 
     /**

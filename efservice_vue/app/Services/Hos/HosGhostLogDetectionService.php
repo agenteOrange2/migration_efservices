@@ -53,8 +53,9 @@ class HosGhostLogDetectionService
             $firstPoint = $gpsPoints->last();
             $lastPoint = $gpsPoints->first();
             
-            $stationaryMinutes = $firstPoint->recorded_at->diffInMinutes($lastPoint->recorded_at);
-            
+            // Carbon 3: absolute=true so stationary span isn't negative.
+            $stationaryMinutes = $firstPoint->recorded_at->diffInMinutes($lastPoint->recorded_at, true);
+
             return $stationaryMinutes >= $thresholdMinutes;
         }
 
@@ -197,9 +198,9 @@ class HosGhostLogDetectionService
         if ($lastMovingTime === null) {
             // All points are stationary, calculate from first point
             $firstPoint = $gpsPoints->last();
-            $stationaryMinutes = $firstPoint->recorded_at->diffInMinutes(now());
+            $stationaryMinutes = $firstPoint->recorded_at->diffInMinutes(now(), true);
         } else {
-            $stationaryMinutes = $lastMovingTime->diffInMinutes(now());
+            $stationaryMinutes = $lastMovingTime->diffInMinutes(now(), true);
         }
 
         return $stationaryMinutes;

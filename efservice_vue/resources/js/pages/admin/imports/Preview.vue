@@ -12,8 +12,15 @@ defineOptions({ layout: RazeLayout })
 interface PreviewRow {
     row: number
     data: Record<string, string | number | null>
-    status: 'valid' | 'duplicate' | 'error'
+    status: 'valid' | 'duplicate' | 'error' | 'missing_reference'
     message: string
+}
+
+interface PreflightInfo {
+    missing_drivers?: string[]
+    missing_vehicles?: string[]
+    has_driver_column?: boolean
+    has_vehicle_column?: boolean
 }
 
 interface PreviewPayload {
@@ -23,6 +30,8 @@ interface PreviewPayload {
     valid: number
     duplicates: number
     errors: number
+    missing_references?: number
+    preflight?: PreflightInfo
     preview_limited?: boolean
 }
 
@@ -80,7 +89,7 @@ function previewValue(value: string | number | null | undefined) {
 }
 
 function rowClass(status: PreviewRow['status']) {
-    if (status === 'error') {
+    if (status === 'error' || status === 'missing_reference') {
         return 'bg-red-50/60'
     }
 
@@ -100,14 +109,25 @@ function badgeClass(status: PreviewRow['status']) {
         return 'bg-slate-100 text-slate-700'
     }
 
+    if (status === 'missing_reference') {
+        return 'bg-amber-100 text-amber-800'
+    }
+
     return 'bg-red-100 text-red-700'
 }
 
 function badgeIcon(status: PreviewRow['status']) {
     if (status === 'valid') return 'Check'
     if (status === 'duplicate') return 'Copy'
+    if (status === 'missing_reference') return 'AlertTriangle'
     return 'X'
 }
+
+const missingDrivers = computed(() => props.preview.preflight?.missing_drivers ?? [])
+const missingVehicles = computed(() => props.preview.preflight?.missing_vehicles ?? [])
+const hasMissingRefs = computed(
+    () => missingDrivers.value.length > 0 || missingVehicles.value.length > 0,
+)
 </script>
 
 <template>
@@ -140,7 +160,7 @@ function badgeIcon(status: PreviewRow['status']) {
         </div>
 
         <div class="col-span-12">
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <div class="box box--stacked rounded-2xl p-5">
                     <p class="text-sm text-slate-500">Total Rows</p>
                     <p class="mt-2 text-2xl font-semibold text-slate-800">{{ preview.total }}</p>
@@ -154,8 +174,65 @@ function badgeIcon(status: PreviewRow['status']) {
                     <p class="mt-2 text-2xl font-semibold text-slate-800">{{ preview.duplicates }}</p>
                 </div>
                 <div class="box box--stacked rounded-2xl p-5">
+                    <p class="text-sm text-slate-500">Missing References</p>
+                    <p class="mt-2 text-2xl font-semibold text-amber-600">{{ preview.missing_references ?? 0 }}</p>
+                </div>
+                <div class="box box--stacked rounded-2xl p-5">
                     <p class="text-sm text-slate-500">Errors</p>
                     <p class="mt-2 text-2xl font-semibold text-red-600">{{ preview.errors }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="hasMissingRefs" class="col-span-12">
+            <div class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
+                <div class="flex gap-4">
+                    <div class="rounded-full bg-amber-100 p-2">
+                        <Lucide icon="AlertTriangle" class="h-5 w-5 text-amber-700" />
+                    </div>
+                    <div class="flex-1 space-y-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-amber-900">
+                                The file references records that don't exist in
+                                <span v-if="carrierName">{{ carrierName }}</span>
+                                <span v-else>the selected carrier</span>.
+                            </h3>
+                            <p class="mt-1 text-sm text-amber-800">
+                                These rows will be skipped during import. Register the missing
+                                records first (or pick a different carrier) and re-upload.
+                            </p>
+                        </div>
+
+                        <div v-if="missingVehicles.length > 0">
+                            <p class="text-sm font-semibold text-amber-900">
+                                Missing vehicles ({{ missingVehicles.length }}):
+                            </p>
+                            <div class="mt-1 flex flex-wrap gap-1.5">
+                                <span
+                                    v-for="unit in missingVehicles"
+                                    :key="`v-${unit}`"
+                                    class="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-mono text-amber-900 ring-1 ring-inset ring-amber-300"
+                                >
+                                    {{ unit }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div v-if="missingDrivers.length > 0">
+                            <p class="text-sm font-semibold text-amber-900">
+                                Drivers not registered to this carrier ({{ missingDrivers.length }}):
+                            </p>
+                            <div class="mt-1 flex flex-wrap gap-1.5">
+                                <span
+                                    v-for="email in missingDrivers"
+                                    :key="`d-${email}`"
+                                    class="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-mono text-amber-900 ring-1 ring-inset ring-amber-300"
+                                >
+                                    {{ email }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -277,6 +354,10 @@ function badgeIcon(status: PreviewRow['status']) {
                         <p v-if="preview.errors > 0" class="flex items-center gap-2">
                             <Lucide icon="AlertCircle" class="h-4 w-4 text-red-500" />
                             {{ preview.errors }} row(s) with validation issues will be skipped.
+                        </p>
+                        <p v-if="(preview.missing_references ?? 0) > 0" class="flex items-center gap-2">
+                            <Lucide icon="AlertTriangle" class="h-4 w-4 text-amber-500" />
+                            {{ preview.missing_references }} row(s) reference drivers or vehicles that don't exist — these will be skipped.
                         </p>
                     </div>
 

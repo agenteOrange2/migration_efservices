@@ -111,7 +111,9 @@ class HosCalculationService
             return 0;
         }
 
-        return (int) $effectiveStart->diffInMinutes($effectiveEnd);
+        // Carbon 3 default for diffInMinutes is signed; pass absolute=true so
+        // forward intervals stay positive and daily totals don't go negative.
+        return (int) $effectiveStart->diffInMinutes($effectiveEnd, true);
     }
 
     /**

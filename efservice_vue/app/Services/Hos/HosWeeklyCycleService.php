@@ -216,7 +216,7 @@ class HosWeeklyCycleService
                 ->first();
 
             if ($firstOffDuty) {
-                return (int) $firstOffDuty->start_time->diffInMinutes(now());
+                return (int) $firstOffDuty->start_time->diffInMinutes(now(), true);
             }
 
             // NEW: If driver has NO HOS entries at all, they are considered fully rested
@@ -229,8 +229,8 @@ class HosWeeklyCycleService
             return 0;
         }
 
-        // Calculate minutes since last on-duty ended
-        return (int) $lastOnDutyEntry->end_time->diffInMinutes(now());
+        // Calculate minutes since last on-duty ended (Carbon 3: absolute=true)
+        return (int) $lastOnDutyEntry->end_time->diffInMinutes(now(), true);
     }
 
     /**

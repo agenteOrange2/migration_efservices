@@ -59,10 +59,11 @@ class TripPause extends Model
      */
     public function getDurationMinutesAttribute(): ?int
     {
+        // Carbon 3: pass absolute=true so a forward-time interval is positive.
         if (!$this->ended_at) {
-            return $this->started_at->diffInMinutes(now());
+            return (int) $this->started_at->diffInMinutes(now(), true);
         }
-        return $this->started_at->diffInMinutes($this->ended_at);
+        return (int) $this->started_at->diffInMinutes($this->ended_at, true);
     }
 
     /**
