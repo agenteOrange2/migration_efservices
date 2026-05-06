@@ -221,6 +221,12 @@ function submitQuickTrip() {
                         </div>
                     </div>
 
+                    <div v-if="quickTripForm.errors.trip || quickTripForm.errors.fmcsa" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-sm font-medium text-slate-800">Cannot create trip</p>
+                        <p v-if="quickTripForm.errors.trip" class="mt-1 text-sm text-danger">{{ quickTripForm.errors.trip }}</p>
+                        <p v-if="quickTripForm.errors.fmcsa" class="mt-1 text-sm text-danger">{{ quickTripForm.errors.fmcsa }}</p>
+                    </div>
+
                     <div>
                         <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Vehicle</label>
                         <TomSelect v-model="quickTripForm.vehicle_id">
@@ -264,18 +270,30 @@ function submitQuickTrip() {
                         </div>
                     </div>
 
-                    <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
-                        <Link :href="route('driver.trips.index')" class="w-full sm:w-auto">
-                            <Button type="button" variant="outline-secondary" class="w-full justify-center sm:w-auto">Cancel</Button>
-                        </Link>
-                        <Button type="submit" variant="primary" class="w-full justify-center gap-2 sm:w-auto" :disabled="quickTripForm.processing || weeklyCycleStatus.is_over_limit || noAssignedVehicles">
-                            <Lucide icon="Zap" class="h-4 w-4" />
-                            {{ quickTripForm.processing ? 'Creating...' : 'Create Quick Trip' }}
-                        </Button>
+                    <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p v-if="noAssignedVehicles" class="text-sm text-danger">You don't have an active vehicle assignment. Contact your carrier.</p>
+                            <p v-else-if="weeklyCycleStatus.is_over_limit" class="text-sm text-danger">You have exceeded your weekly cycle limit and cannot create a new trip.</p>
+                        </div>
+                        <div class="flex flex-col-reverse gap-3 sm:flex-row">
+                            <Link :href="route('driver.trips.index')" class="w-full sm:w-auto">
+                                <Button type="button" variant="outline-secondary" class="w-full justify-center sm:w-auto">Cancel</Button>
+                            </Link>
+                            <Button type="submit" variant="primary" class="w-full justify-center gap-2 sm:w-auto" :disabled="quickTripForm.processing || weeklyCycleStatus.is_over_limit || noAssignedVehicles">
+                                <Lucide icon="Zap" class="h-4 w-4" />
+                                {{ quickTripForm.processing ? 'Creating...' : 'Create Quick Trip' }}
+                            </Button>
+                        </div>
                     </div>
                 </form>
 
                 <form v-else class="space-y-5 p-4 sm:space-y-6 sm:p-6" @submit.prevent="submitFullTrip">
+                    <div v-if="fullTripForm.errors.trip || fullTripForm.errors.fmcsa" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-sm font-medium text-slate-800">Cannot create trip</p>
+                        <p v-if="fullTripForm.errors.trip" class="mt-1 text-sm text-danger">{{ fullTripForm.errors.trip }}</p>
+                        <p v-if="fullTripForm.errors.fmcsa" class="mt-1 text-sm text-danger">{{ fullTripForm.errors.fmcsa }}</p>
+                    </div>
+
                     <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                         <div class="md:col-span-2">
                             <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Vehicle</label>
@@ -326,14 +344,20 @@ function submitQuickTrip() {
                         </div>
                     </div>
 
-                    <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
-                        <Link :href="route('driver.trips.index')" class="w-full sm:w-auto">
-                            <Button type="button" variant="outline-secondary" class="w-full justify-center sm:w-auto">Cancel</Button>
-                        </Link>
-                        <Button type="submit" variant="primary" class="w-full justify-center gap-2 sm:w-auto" :disabled="fullTripForm.processing || weeklyCycleStatus.is_over_limit || noAssignedVehicles">
-                            <Lucide icon="Save" class="h-4 w-4" />
-                            {{ fullTripForm.processing ? 'Creating...' : 'Create Trip' }}
-                        </Button>
+                    <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p v-if="noAssignedVehicles" class="text-sm text-danger">You don't have an active vehicle assignment. Contact your carrier.</p>
+                            <p v-else-if="weeklyCycleStatus.is_over_limit" class="text-sm text-danger">You have exceeded your weekly cycle limit and cannot create a new trip.</p>
+                        </div>
+                        <div class="flex flex-col-reverse gap-3 sm:flex-row">
+                            <Link :href="route('driver.trips.index')" class="w-full sm:w-auto">
+                                <Button type="button" variant="outline-secondary" class="w-full justify-center sm:w-auto">Cancel</Button>
+                            </Link>
+                            <Button type="submit" variant="primary" class="w-full justify-center gap-2 sm:w-auto" :disabled="fullTripForm.processing || weeklyCycleStatus.is_over_limit || noAssignedVehicles">
+                                <Lucide icon="Save" class="h-4 w-4" />
+                                {{ fullTripForm.processing ? 'Creating...' : 'Create Trip' }}
+                            </Button>
+                        </div>
                     </div>
                 </form>
             </div>
