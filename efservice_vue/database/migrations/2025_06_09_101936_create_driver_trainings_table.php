@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('driver_trainings')) {
+            return;
+        }
+
         Schema::create('driver_trainings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_driver_detail_id')->constrained('user_driver_details')->onDelete('cascade');

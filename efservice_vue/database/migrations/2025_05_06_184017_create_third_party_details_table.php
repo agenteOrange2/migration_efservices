@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('third_party_details')) {
+            return;
+        }
+
         Schema::create('third_party_details', function (Blueprint $table) {
             $table->id();
             // $table->foreignId('vehicle_id')->nullable()->constrained('vehicles')->nullOnDelete();

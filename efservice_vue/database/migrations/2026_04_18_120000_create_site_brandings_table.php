@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('site_brandings')) {
+            return;
+        }
+
         Schema::create('site_brandings', function (Blueprint $table) {
             $table->id();
             $table->string('app_name')->default('EF Services');

@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('hos_warnings_sent')) {
+            return;
+        }
+
         Schema::create('hos_warnings_sent', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('driver_id');

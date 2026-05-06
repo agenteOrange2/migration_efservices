@@ -31,7 +31,7 @@ class DriverEmploymentController extends Controller
     /** Send first verification email to employer */
     public function sendEmail(Request $request, UserDriverDetail $driver, DriverEmploymentCompany $company)
     {
-        abort_unless($company->user_driver_detail_id === $driver->id, 404);
+        abort_unless((int) $company->user_driver_detail_id === (int) $driver->id, 404);
 
         $masterCompany = $company->masterCompany;
         $emailToUse    = $masterCompany?->email ?: $company->email;
@@ -90,7 +90,7 @@ class DriverEmploymentController extends Controller
     /** Admin override: mark email as sent or unsent */
     public function markEmailStatus(Request $request, UserDriverDetail $driver, DriverEmploymentCompany $company)
     {
-        abort_unless($company->user_driver_detail_id === $driver->id, 404);
+        abort_unless((int) $company->user_driver_detail_id === (int) $driver->id, 404);
 
         $request->validate(['sent' => 'required|boolean']);
         $company->update(['email_sent' => $request->boolean('sent')]);

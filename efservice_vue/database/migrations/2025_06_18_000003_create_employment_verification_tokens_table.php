@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
+        if (Schema::hasTable('employment_verification_tokens')) {
+            return;
+        }
+
         Schema::create('employment_verification_tokens', function (Blueprint $table) {
             $table->id();
             $table->string('token', 64)->unique();

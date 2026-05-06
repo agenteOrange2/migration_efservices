@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('notification_recipients')) {
+            return;
+        }
+
         Schema::create('notification_recipients', function (Blueprint $table) {
             $table->id();
             $table->string('notification_type'); // 'user_carrier' o 'carrier_registered'

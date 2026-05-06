@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('vehicle_verification_tokens')) {
+            return;
+        }
+
         Schema::create('vehicle_verification_tokens', function (Blueprint $table) {
             $table->id();
             $table->string('token')->unique();

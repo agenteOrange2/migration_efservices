@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('admin_messages')) {
+            return;
+        }
+
         Schema::create('admin_messages', function (Blueprint $table) {
             $table->id();
             // sender is polymorphic (sender_type + sender_id)

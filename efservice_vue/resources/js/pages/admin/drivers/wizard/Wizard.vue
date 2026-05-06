@@ -1400,15 +1400,17 @@ async function sendEmail(company: any) {
     }
     emailLoading.value[company.id] = true;
     try {
-        const res = await axios.post(
+        await axios.post(
             namedRoute('employmentSendEmail', {
                 driver: props.driver!.id,
                 company: company.id,
             }),
         );
         company.email_sent = true;
+        alert('Verification email sent successfully.');
     } catch (e: any) {
-        alert(e.response?.data?.message ?? 'Failed to send email.');
+        const msg = e.response?.data?.message || e.message || 'Failed to send email.';
+        alert(msg);
     } finally {
         delete emailLoading.value[company.id];
     }
@@ -1427,8 +1429,10 @@ async function resendEmail(company: any) {
             }),
         );
         company.email_sent = true;
+        alert('Verification email resent successfully.');
     } catch (e: any) {
-        alert(e.response?.data?.message ?? 'Failed to resend email.');
+        const msg = e.response?.data?.message || e.message || 'Failed to resend email.';
+        alert(msg);
     } finally {
         delete emailLoading.value[company.id];
     }

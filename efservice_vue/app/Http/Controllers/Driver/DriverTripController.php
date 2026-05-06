@@ -382,9 +382,13 @@ class DriverTripController extends AdminTripController
                 'has_trailer' => (bool) $trip->has_trailer,
                 'pre_trip_inspection_data' => $trip->pre_trip_inspection_data,
                 'pre_trip_remarks' => $trip->pre_trip_remarks,
+                'pre_trip_defects_corrected_notes' => $trip->pre_trip_defects_corrected_notes,
+                'pre_trip_defects_not_need_correction_notes' => $trip->pre_trip_defects_not_need_correction_notes,
                 'pre_trip_driver_signature' => $trip->pre_trip_driver_signature,
                 'post_trip_inspection_data' => $trip->post_trip_inspection_data,
                 'post_trip_remarks' => $trip->post_trip_remarks,
+                'post_trip_defects_corrected_notes' => $trip->post_trip_defects_corrected_notes,
+                'post_trip_defects_not_need_correction_notes' => $trip->post_trip_defects_not_need_correction_notes,
                 'post_trip_driver_signature' => $trip->post_trip_driver_signature,
             ]),
             'fmcsaStatus' => $this->fmcsaService->getDriverFMCSAStatus($driver->id, $trip->carrier_id),
@@ -427,6 +431,7 @@ class DriverTripController extends AdminTripController
             'inspectionDocuments' => $inspectionDocuments,
             'tripDocuments' => $tripDocuments,
             'hosLogRoute' => Route::has('driver.hos.history') ? route('driver.hos.history') : null,
+            'inspection' => $this->inspectionConfigPayload(),
         ]);
     }
 

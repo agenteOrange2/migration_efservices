@@ -14,6 +14,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('archive_access_logs')) {
+            return;
+        }
+
         Schema::create('archive_access_logs', function (Blueprint $table) {
             $table->id();
             

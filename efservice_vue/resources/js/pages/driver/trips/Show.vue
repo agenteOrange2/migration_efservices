@@ -13,6 +13,8 @@ declare function route(name: string, params?: any): string
 
 defineOptions({ layout: RazeLayout })
 
+interface InspectionMap { [key: string]: string }
+
 const props = defineProps<{
     driver: { id: number; full_name: string; carrier_name: string | null }
     trip: any
@@ -31,6 +33,10 @@ const props = defineProps<{
     inspectionDocuments: any[]
     tripDocuments: any[]
     hosLogRoute?: string | null
+    inspection: {
+        tractor_items: InspectionMap
+        trailer_items: InspectionMap
+    }
 }>()
 
 const rejectModalOpen = ref(false)
@@ -265,6 +271,132 @@ function uploadDocuments() {
                     <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Estimated Duration</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.estimated_duration || 'N/A' }}</p></div>
                     <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Actual Duration</p><p class="mt-1 text-sm font-medium text-slate-800">{{ trip.actual_duration || 'N/A' }}</p></div>
                     <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4"><p class="text-xs text-slate-500">Break Status</p><p class="mt-1 text-sm font-medium text-slate-800">{{ isOnBreak ? 'On Break' : 'Not On Break' }}</p></div>
+                </div>
+            </div>
+
+            <!-- Pre-Trip Inspection -->
+            <div v-if="trip.pre_trip_inspection_data" class="box box--stacked p-4 sm:p-6">
+                <div class="mb-4 flex items-center gap-2">
+                    <Lucide icon="ClipboardCheck" class="h-4 w-4 text-primary" />
+                    <h2 class="text-base font-semibold text-slate-800">Pre-Trip Inspection</h2>
+                    <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">Completed</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    <template v-for="(checked, key) in trip.pre_trip_inspection_data.tractor" :key="key">
+                        <div class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs"
+                            :class="checked ? 'border-primary/30 bg-primary/5 text-primary' : 'border-slate-200 bg-slate-50 text-slate-400 line-through'">
+                            <Lucide :icon="checked ? 'CheckCircle2' : 'XCircle'" class="h-3.5 w-3.5 shrink-0" />
+                            <span>{{ inspection.tractor_items[key] ?? key }}</span>
+                        </div>
+                    </template>
+                </div>
+
+                <template v-if="trip.pre_trip_inspection_data.trailer">
+                    <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Trailer</p>
+                    <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                        <template v-for="(checked, key) in trip.pre_trip_inspection_data.trailer" :key="key">
+                            <div class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs"
+                                :class="checked ? 'border-primary/30 bg-primary/5 text-primary' : 'border-slate-200 bg-slate-50 text-slate-400 line-through'">
+                                <Lucide :icon="checked ? 'CheckCircle2' : 'XCircle'" class="h-3.5 w-3.5 shrink-0" />
+                                <span>{{ inspection.trailer_items[key] ?? key }}</span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <div v-if="trip.pre_trip_inspection_data.other_tractor_text || trip.pre_trip_inspection_data.other_trailer_text" class="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    <span v-if="trip.pre_trip_inspection_data.other_tractor_text"><strong>Other (Tractor):</strong> {{ trip.pre_trip_inspection_data.other_tractor_text }}</span>
+                    <span v-if="trip.pre_trip_inspection_data.other_trailer_text" class="ml-4"><strong>Other (Trailer):</strong> {{ trip.pre_trip_inspection_data.other_trailer_text }}</span>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                    <div v-if="trip.pre_trip_remarks" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Remarks / Defects</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ trip.pre_trip_remarks }}</p>
+                    </div>
+                    <div v-if="trip.pre_trip_defects_corrected_notes" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Defects Corrected</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ trip.pre_trip_defects_corrected_notes }}</p>
+                    </div>
+                    <div v-if="trip.pre_trip_defects_not_need_correction_notes" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">No Correction Needed — Reason</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ trip.pre_trip_defects_not_need_correction_notes }}</p>
+                    </div>
+                </div>
+
+                <div v-if="trip.pre_trip_driver_signature" class="mt-4">
+                    <p class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Driver Signature</p>
+                    <img v-if="trip.pre_trip_driver_signature.startsWith('data:image')"
+                        :src="trip.pre_trip_driver_signature"
+                        alt="Driver signature"
+                        class="max-h-20 rounded-lg border border-slate-200 bg-white p-2" />
+                    <p v-else class="text-sm font-medium italic text-slate-700">{{ trip.pre_trip_driver_signature }}</p>
+                </div>
+            </div>
+
+            <!-- Post-Trip Inspection -->
+            <div v-if="trip.post_trip_inspection_data" class="box box--stacked p-4 sm:p-6">
+                <div class="mb-4 flex items-center gap-2">
+                    <Lucide icon="ClipboardList" class="h-4 w-4 text-primary" />
+                    <h2 class="text-base font-semibold text-slate-800">Post-Trip Inspection</h2>
+                    <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">Completed</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    <template v-for="(checked, key) in trip.post_trip_inspection_data.tractor" :key="key">
+                        <div class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs"
+                            :class="checked ? 'border-primary/30 bg-primary/5 text-primary' : 'border-slate-200 bg-slate-50 text-slate-400 line-through'">
+                            <Lucide :icon="checked ? 'CheckCircle2' : 'XCircle'" class="h-3.5 w-3.5 shrink-0" />
+                            <span>{{ inspection.tractor_items[key] ?? key }}</span>
+                        </div>
+                    </template>
+                </div>
+
+                <template v-if="trip.post_trip_inspection_data.trailer">
+                    <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Trailer</p>
+                    <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                        <template v-for="(checked, key) in trip.post_trip_inspection_data.trailer" :key="key">
+                            <div class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs"
+                                :class="checked ? 'border-primary/30 bg-primary/5 text-primary' : 'border-slate-200 bg-slate-50 text-slate-400 line-through'">
+                                <Lucide :icon="checked ? 'CheckCircle2' : 'XCircle'" class="h-3.5 w-3.5 shrink-0" />
+                                <span>{{ inspection.trailer_items[key] ?? key }}</span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <div v-if="trip.post_trip_inspection_data.other_tractor_text || trip.post_trip_inspection_data.other_trailer_text" class="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    <span v-if="trip.post_trip_inspection_data.other_tractor_text"><strong>Other (Tractor):</strong> {{ trip.post_trip_inspection_data.other_tractor_text }}</span>
+                    <span v-if="trip.post_trip_inspection_data.other_trailer_text" class="ml-4"><strong>Other (Trailer):</strong> {{ trip.post_trip_inspection_data.other_trailer_text }}</span>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                    <div v-if="trip.post_trip_remarks" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Remarks / Defects</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ trip.post_trip_remarks }}</p>
+                    </div>
+                    <div v-if="trip.post_trip_defects_corrected_notes" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Defects Corrected</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ trip.post_trip_defects_corrected_notes }}</p>
+                    </div>
+                    <div v-if="trip.post_trip_defects_not_need_correction_notes" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">No Correction Needed — Reason</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ trip.post_trip_defects_not_need_correction_notes }}</p>
+                    </div>
+                    <div v-if="trip.driver_notes" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Driver Notes</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ trip.driver_notes }}</p>
+                    </div>
+                </div>
+
+                <div v-if="trip.post_trip_driver_signature" class="mt-4">
+                    <p class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Driver Signature</p>
+                    <img v-if="trip.post_trip_driver_signature.startsWith('data:image')"
+                        :src="trip.post_trip_driver_signature"
+                        alt="Driver signature"
+                        class="max-h-20 rounded-lg border border-slate-200 bg-white p-2" />
+                    <p v-else class="text-sm font-medium italic text-slate-700">{{ trip.post_trip_driver_signature }}</p>
                 </div>
             </div>
 
