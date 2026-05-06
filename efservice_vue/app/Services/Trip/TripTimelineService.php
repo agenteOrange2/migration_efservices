@@ -52,7 +52,7 @@ class TripTimelineService
         }
 
         // Pause events
-        $pauses = TripPause::where('trip_id', $trip->id)->orderBy('started_at')->get();
+        $pauses = TripPause::with('forcedByUser:id,name')->where('trip_id', $trip->id)->orderBy('started_at')->get();
         foreach ($pauses as $pause) {
             $events->push([
                 'type' => 'paused',
