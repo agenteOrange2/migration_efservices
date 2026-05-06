@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import Button from '@/components/Base/Button'
 import FormInput from '@/components/Base/Form/FormInput.vue'
 import Lucide from '@/components/Base/Lucide'
@@ -93,6 +93,10 @@ onMounted(() => {
     }
 })
 
+onUnmounted(() => {
+    gps.stop()
+})
+
 function deleteDocument(documentId: number) {
     if (!confirm('Delete this document?')) return
     router.delete(route('driver.trips.documents.delete', { trip: props.trip.id, media: documentId }), {
@@ -114,17 +118,24 @@ function removeDocumentRow(index: number) {
 
 function uploadDocuments() {
     const formData = new FormData()
+    let hasFile = false
 
     uploadForm.document_types.forEach((type, index) => {
         const input = document.getElementById(`trip-doc-file-${index}`) as HTMLInputElement | null
         const file = input?.files?.[0]
 
         if (file) {
+            hasFile = true
             formData.append(`documents[${index}]`, file)
             formData.append(`document_types[${index}]`, type)
             formData.append(`document_notes[${index}]`, uploadForm.document_notes[index] || '')
         }
     })
+
+    if (!hasFile) {
+        uploadForm.setError('documents' as any, 'Please select at least one file before uploading.')
+        return
+    }
 
     uploadForm.transform(() => formData).post(route('driver.trips.documents.upload', props.trip.id), {
         forceFormData: true,
@@ -502,6 +513,8 @@ function uploadDocuments() {
                             </Button>
                         </div>
                     </div>
+
+                    <p v-if="(uploadForm.errors as any).documents" class="text-sm text-danger">{{ (uploadForm.errors as any).documents }}</p>
 
                     <div class="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
                         <Button type="button" variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto" @click="addDocumentRow">

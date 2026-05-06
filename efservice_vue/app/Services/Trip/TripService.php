@@ -229,18 +229,18 @@ class TripService
         // Get the last trip number with today's date prefix (including soft deleted)
         $lastTrip = Trip::withTrashed()
             ->where('trip_number', 'LIKE', $prefix . '%')
-            ->orderByRaw("CAST(SUBSTRING(trip_number, -4) AS UNSIGNED) DESC")
+            ->orderByRaw("CAST(SUBSTRING_INDEX(trip_number, '-', -1) AS UNSIGNED) DESC")
             ->lockForUpdate()
             ->first();
-        
-        if ($lastTrip && preg_match('/TRP-\d{8}-(\d{4})$/', $lastTrip->trip_number, $matches)) {
+
+        if ($lastTrip && preg_match('/TRP-\d{8}-(\d+)$/', $lastTrip->trip_number, $matches)) {
             $sequence = ((int) $matches[1]) + 1;
         } else {
             $sequence = 1;
         }
-        
+
         $tripNumber = sprintf('TRP-%s-%04d', $date, $sequence);
-        
+
         // Double-check uniqueness - include soft deleted
         $attempts = 0;
         while (Trip::withTrashed()->where('trip_number', $tripNumber)->exists() && $attempts < 100) {
@@ -296,7 +296,7 @@ class TripService
      */
     public function acceptTrip(Trip $trip, int $driverId): Trip
     {
-        if ($trip->user_driver_detail_id !== $driverId) {
+        if ((int) $trip->user_driver_detail_id !== (int) $driverId) {
             throw ValidationException::withMessages([
                 'trip' => ['This trip is not assigned to you.'],
             ]);
@@ -330,7 +330,7 @@ class TripService
      */
     public function rejectTrip(Trip $trip, int $driverId, string $reason): Trip
     {
-        if ($trip->user_driver_detail_id != $driverId) {
+        if ((int) $trip->user_driver_detail_id !== (int) $driverId) {
             throw ValidationException::withMessages([
                 'trip' => ['This trip is not assigned to you.'],
             ]);
@@ -344,7 +344,7 @@ class TripService
 
         $trip->update([
             'status' => Trip::STATUS_CANCELLED,
-            'cancellation_reason' => $reason,
+            'rejection_reason' => $reason,
             'cancelled_by' => $driverId,
             'cancelled_at' => now(),
         ]);
@@ -357,7 +357,7 @@ class TripService
      */
     public function startTrip(Trip $trip, int $driverId, array $preInspection = []): Trip
     {
-        if ($trip->user_driver_detail_id != $driverId) {
+        if ((int) $trip->user_driver_detail_id !== (int) $driverId) {
             throw ValidationException::withMessages([
                 'trip' => ['This trip is not assigned to you.'],
             ]);
@@ -417,7 +417,7 @@ class TripService
      */
     public function endTrip(Trip $trip, int $driverId, array $postInspection = [], ?string $notes = null): Trip
     {
-        if ($trip->user_driver_detail_id != $driverId) {
+        if ((int) $trip->user_driver_detail_id !== (int) $driverId) {
             throw ValidationException::withMessages([
                 'trip' => ['This trip is not assigned to you.'],
             ]);
@@ -491,8 +491,14 @@ class TripService
             ->latest('start_time')
             ->first();
 
-        // If already on break, don't create another break entry
+        // If already on break, don't create another break entry but ensure trip is paused
         if ($currentEntry && $currentEntry->status === 'on_duty_not_driving' && $currentEntry->trip_id === $trip->id) {
+            if ($trip->isInProgress()) {
+                $trip->update(['status' => Trip::STATUS_PAUSED]);
+                if (!$this->tripPauseService->hasActivePause($trip)) {
+                    $this->tripPauseService->createPause($trip, $location, $reason, $forcedBy);
+                }
+            }
             return $trip->fresh();
         }
 
@@ -537,7 +543,7 @@ class TripService
      */
     public function resumeTrip(Trip $trip, int $driverId, ?array $location = null): Trip
     {
-        if ($trip->user_driver_detail_id != $driverId) {
+        if ((int) $trip->user_driver_detail_id !== (int) $driverId) {
             throw ValidationException::withMessages([
                 'trip' => ['This trip is not assigned to you.'],
             ]);
@@ -645,9 +651,18 @@ class TripService
             ]);
         }
 
-        // If trip is in progress, close the driving entry
         if ($trip->isInProgress()) {
             $this->closeDrivingEntry($trip->user_driver_detail_id, $trip);
+        }
+
+        if ($trip->isPaused()) {
+            // Close the open on_duty_not_driving HOS entry
+            HosEntry::where('user_driver_detail_id', $trip->user_driver_detail_id)
+                ->where('trip_id', $trip->id)
+                ->whereNull('end_time')
+                ->update(['end_time' => now()]);
+
+            $this->tripPauseService->endPause($trip);
         }
 
         $trip->update([

@@ -469,6 +469,7 @@ class Trip extends Model implements HasMedia
             self::STATUS_PENDING,
             self::STATUS_ACCEPTED,
             self::STATUS_IN_PROGRESS,
+            self::STATUS_PAUSED,
         ]);
     }
 

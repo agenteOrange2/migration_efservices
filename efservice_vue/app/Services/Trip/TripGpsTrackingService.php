@@ -161,17 +161,21 @@ class TripGpsTrackingService
     public function updateTripDuration(Trip $trip): void
     {
         $points = $this->getTripRoute($trip);
-        
+
         if ($points->count() < 2) {
             return;
         }
 
         $firstPoint = $points->first();
         $lastPoint = $points->last();
-        
+
         // Carbon 3: absolute=true so trip duration is always positive.
         $durationMinutes = (int) $firstPoint->recorded_at->diffInMinutes($lastPoint->recorded_at, true);
-        
+
+        // Subtract total pause time so GPS-derived duration reflects actual driving time
+        $pauseMinutes = $trip->total_pause_duration ?? 0;
+        $durationMinutes = max(0, $durationMinutes - $pauseMinutes);
+
         $trip->update([
             'actual_duration_minutes' => $durationMinutes,
         ]);

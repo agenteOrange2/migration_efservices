@@ -22,6 +22,7 @@ class DestinationVerificationService
         if (!$lastGpsPoint) {
             return [
                 'verified' => false,
+                'arrived' => false,
                 'has_gps_data' => false,
                 'message' => 'No hay datos GPS disponibles para este viaje',
                 'distance_meters' => null,
@@ -34,6 +35,7 @@ class DestinationVerificationService
         if (!$trip->destination_latitude || !$trip->destination_longitude) {
             return [
                 'verified' => false,
+                'arrived' => false,
                 'has_gps_data' => true,
                 'message' => 'El destino no tiene coordenadas registradas',
                 'distance_meters' => null,

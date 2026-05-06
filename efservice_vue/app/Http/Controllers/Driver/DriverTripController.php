@@ -20,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -107,7 +108,8 @@ class DriverTripController extends AdminTripController
                 'total' => (clone $statsQuery)->count(),
                 'pending' => (clone $statsQuery)->where('status', Trip::STATUS_PENDING)->count(),
                 'accepted' => (clone $statsQuery)->where('status', Trip::STATUS_ACCEPTED)->count(),
-                'in_progress' => (clone $statsQuery)->whereIn('status', [Trip::STATUS_IN_PROGRESS, Trip::STATUS_PAUSED])->count(),
+                'in_progress' => (clone $statsQuery)->where('status', Trip::STATUS_IN_PROGRESS)->count(),
+                'paused' => (clone $statsQuery)->where('status', Trip::STATUS_PAUSED)->count(),
                 'completed' => (clone $statsQuery)->where('status', Trip::STATUS_COMPLETED)->count(),
                 'quick_trips' => (clone $statsQuery)->where('is_quick_trip', true)->count(),
             ],
@@ -184,19 +186,23 @@ class DriverTripController extends AdminTripController
         $this->ensureDriverCanCreateTrip($driver, $carrier->id);
 
         try {
-            $trip = $this->tripService->createTrip($carrier->id, [
-                'driver_id' => $driver->id,
-                'vehicle_id' => (int) $validated['vehicle_id'],
-                'origin_address' => $validated['origin_address'],
-                'destination_address' => $validated['destination_address'],
-                'scheduled_start_date' => $startAt,
-                'estimated_duration_minutes' => $validated['estimated_duration_minutes'] ?? 60,
-                'description' => $validated['description'] ?: null,
-                'notes' => $validated['notes'] ?: null,
-                'created_by' => Auth::id(),
-            ]);
+            $trip = DB::transaction(function () use ($carrier, $driver, $validated, $startAt) {
+                $newTrip = $this->tripService->createTrip($carrier->id, [
+                    'driver_id' => $driver->id,
+                    'vehicle_id' => (int) $validated['vehicle_id'],
+                    'origin_address' => $validated['origin_address'],
+                    'destination_address' => $validated['destination_address'],
+                    'scheduled_start_date' => $startAt,
+                    'estimated_duration_minutes' => $validated['estimated_duration_minutes'] ?? 60,
+                    'description' => $validated['description'] ?: null,
+                    'notes' => $validated['notes'] ?: null,
+                    'created_by' => Auth::id(),
+                ]);
 
-            $this->tripService->acceptTrip($trip, $driver->id);
+                $this->tripService->acceptTrip($newTrip, $driver->id);
+
+                return $newTrip->fresh();
+            });
         } catch (\Throwable $exception) {
             return back()->withInput()->withErrors([
                 'trip' => $exception->getMessage(),
@@ -228,18 +234,22 @@ class DriverTripController extends AdminTripController
         $this->ensureDriverCanCreateTrip($driver, $carrier->id);
 
         try {
-            $trip = $this->tripService->createQuickTrip($carrier->id, [
-                'driver_id' => $driver->id,
-                'vehicle_id' => (int) $validated['vehicle_id'],
-                'origin_address' => $validated['origin_address'] ?: null,
-                'destination_address' => $validated['destination_address'] ?: null,
-                'estimated_duration_minutes' => $validated['estimated_duration_minutes'] ?? 60,
-                'description' => $validated['description'] ?: null,
-                'notes' => $validated['notes'] ?: null,
-                'created_by' => Auth::id(),
-            ]);
+            $trip = DB::transaction(function () use ($carrier, $driver, $validated) {
+                $newTrip = $this->tripService->createQuickTrip($carrier->id, [
+                    'driver_id' => $driver->id,
+                    'vehicle_id' => (int) $validated['vehicle_id'],
+                    'origin_address' => $validated['origin_address'] ?: null,
+                    'destination_address' => $validated['destination_address'] ?: null,
+                    'estimated_duration_minutes' => $validated['estimated_duration_minutes'] ?? 60,
+                    'description' => $validated['description'] ?: null,
+                    'notes' => $validated['notes'] ?: null,
+                    'created_by' => Auth::id(),
+                ]);
 
-            $this->tripService->acceptTrip($trip, $driver->id);
+                $this->tripService->acceptTrip($newTrip, $driver->id);
+
+                return $newTrip->fresh();
+            });
         } catch (\Throwable $exception) {
             return back()->withInput()->withErrors([
                 'trip' => $exception->getMessage(),
@@ -800,7 +810,7 @@ class DriverTripController extends AdminTripController
             'defects_corrected_notes' => ['nullable', 'string', 'max:1000'],
             'defects_not_need_correction' => ['nullable', 'boolean'],
             'defects_not_need_correction_notes' => ['nullable', 'string', 'max:1000'],
-            'driver_signature' => ['required', 'string', 'min:2'],
+            'driver_signature' => ['required', 'string', 'min:10'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
 

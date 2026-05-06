@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import Button from '@/components/Base/Button'
-import FormInput from '@/components/Base/Form/FormInput.vue'
 import FormTextarea from '@/components/Base/Form/FormTextarea.vue'
 import Lucide from '@/components/Base/Lucide'
 import RazeLayout from '@/layouts/RazeLayout.vue'
@@ -49,6 +48,50 @@ const form = useForm({
     notes: '',
 })
 
+// --- Signature pad ---
+const signatureCanvas = ref<HTMLCanvasElement | null>(null)
+const signatureSigned = ref(false)
+let signaturePad: any = null
+
+async function initSignaturePad() {
+    await nextTick()
+    const canvas = signatureCanvas.value
+    if (!canvas) return
+
+    const { default: SignaturePad } = await import('signature_pad')
+    const ratio = Math.max(window.devicePixelRatio || 1, 1)
+    canvas.width = canvas.offsetWidth * ratio
+    canvas.height = canvas.offsetHeight * ratio
+    canvas.getContext('2d')!.scale(ratio, ratio)
+
+    signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgb(255,255,255)',
+        penColor: 'rgb(30,41,59)',
+    })
+
+    signaturePad.addEventListener('endStroke', () => {
+        if (!signaturePad.isEmpty()) {
+            form.driver_signature = signaturePad.toDataURL('image/png')
+            signatureSigned.value = true
+        }
+    })
+}
+
+function clearSignature() {
+    signaturePad?.clear()
+    form.driver_signature = ''
+    signatureSigned.value = false
+}
+
+onMounted(() => {
+    initSignaturePad()
+})
+
+onUnmounted(() => {
+    signaturePad?.off()
+})
+
+// --- Inspection helpers ---
 const tractorTotal = computed(() => Object.keys(props.inspection.tractor_items).filter((key) => key !== 'other_tractor').length)
 const trailerTotal = computed(() => Object.keys(props.inspection.trailer_items).filter((key) => key !== 'other_trailer').length)
 
@@ -61,7 +104,6 @@ function toggleSelection(target: string[], value: string) {
         target.splice(index, 1)
         return
     }
-
     target.push(value)
 }
 
@@ -70,7 +112,6 @@ function selectAll(section: 'tractor' | 'trailer') {
         form.tractor = Object.keys(props.inspection.tractor_items).filter((key) => key !== 'other_tractor')
         return
     }
-
     form.trailer = Object.keys(props.inspection.trailer_items).filter((key) => key !== 'other_trailer')
 }
 
@@ -81,6 +122,10 @@ function isChecked(section: 'tractor' | 'trailer', value: string) {
 }
 
 function submit() {
+    if (!form.driver_signature) {
+        form.setError('driver_signature', 'Please sign before submitting.')
+        return
+    }
     form.post(route('driver.trips.end', props.trip.id))
 }
 </script>
@@ -203,11 +248,40 @@ function submit() {
                         </label>
                         <FormTextarea v-if="form.defects_not_need_correction" v-model="form.defects_not_need_correction_notes" rows="3" placeholder="Explain why the defects do not affect safe operation..." />
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">
-                                Driver Signature <span class="text-danger">*</span>
-                            </label>
-                            <FormInput v-model="form.driver_signature" placeholder="Type your full name as your driver signature" />
+                            <div class="mb-2 flex items-center justify-between">
+                                <label class="block text-sm font-medium text-slate-700">
+                                    Driver Signature <span class="text-danger">*</span>
+                                </label>
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-danger"
+                                    @click="clearSignature"
+                                >
+                                    <Lucide icon="Eraser" class="h-3.5 w-3.5" />
+                                    Clear
+                                </button>
+                            </div>
+
+                            <div
+                                class="relative overflow-hidden rounded-xl border-2 transition"
+                                :class="form.errors.driver_signature ? 'border-danger' : signatureSigned ? 'border-primary' : 'border-slate-200'"
+                            >
+                                <canvas
+                                    ref="signatureCanvas"
+                                    class="block w-full touch-none"
+                                    style="height: 160px; background: #fff;"
+                                />
+                                <div
+                                    v-if="!signatureSigned"
+                                    class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-300"
+                                >
+                                    <Lucide icon="PenLine" class="h-8 w-8" />
+                                    <span class="text-sm">Sign here</span>
+                                </div>
+                            </div>
+
                             <p v-if="form.errors.driver_signature" class="mt-1 text-sm text-danger">{{ form.errors.driver_signature }}</p>
+                            <p v-else class="mt-1 text-xs text-slate-400">Draw your signature using your finger or mouse.</p>
                         </div>
                         <FormTextarea v-model="form.notes" rows="4" placeholder="Any final notes, delays, or delivery comments..." />
                     </div>

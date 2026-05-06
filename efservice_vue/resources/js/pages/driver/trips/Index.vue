@@ -54,6 +54,7 @@ const props = defineProps<{
         pending: number
         accepted: number
         in_progress: number
+        paused: number
         completed: number
         quick_trips: number
     }
@@ -82,6 +83,7 @@ const tabs = computed(() => [
     { value: 'pending', label: 'Pending', count: props.stats.pending, icon: 'Clock3' },
     { value: 'accepted', label: 'Accepted', count: props.stats.accepted, icon: 'BadgeCheck' },
     { value: 'in_progress', label: 'In Progress', count: props.stats.in_progress, icon: 'Route' },
+    { value: 'paused', label: 'Paused', count: props.stats.paused ?? 0, icon: 'PauseCircle' },
     { value: 'completed', label: 'Completed', count: props.stats.completed, icon: 'CheckCircle2' },
 ])
 
@@ -127,6 +129,31 @@ function submitReject() {
             rejectTripId.value = null
         },
     })
+}
+
+const pauseTripId = ref<number | null>(null)
+const pauseModalOpen = ref(false)
+const pauseForm = useForm({ reason: '' })
+
+function openPauseModal(trip: TripCard) {
+    pauseTripId.value = trip.id
+    pauseForm.reset()
+    pauseModalOpen.value = true
+}
+
+function submitPause() {
+    if (!pauseTripId.value) return
+    pauseForm.post(route('driver.trips.pause', pauseTripId.value), {
+        preserveScroll: true,
+        onSuccess: () => {
+            pauseModalOpen.value = false
+            pauseTripId.value = null
+        },
+    })
+}
+
+function resumeTrip(tripId: number) {
+    router.post(route('driver.trips.resume', tripId), {}, { preserveScroll: true })
 }
 
 function statusTone(status: string) {
@@ -315,6 +342,26 @@ function statCards() {
                                 </Button>
                             </Link>
 
+                            <Button
+                                v-if="trip.can_pause"
+                                variant="outline-secondary"
+                                class="w-full justify-center gap-2 sm:w-auto"
+                                @click="openPauseModal(trip)"
+                            >
+                                <Lucide icon="Pause" class="h-4 w-4" />
+                                Pause
+                            </Button>
+
+                            <Button
+                                v-if="trip.can_resume"
+                                variant="primary"
+                                class="w-full justify-center gap-2 sm:w-auto"
+                                @click="resumeTrip(trip.id)"
+                            >
+                                <Lucide icon="Play" class="h-4 w-4" />
+                                Resume
+                            </Button>
+
                             <Link v-if="trip.can_end" :href="route('driver.trips.end.form', trip.id)" class="w-full sm:w-auto">
                                 <Button variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto">
                                     <Lucide icon="Square" class="h-4 w-4" />
@@ -398,6 +445,29 @@ function statCards() {
                             <Lucide icon="Send" class="h-4 w-4" />
                             {{ rejectForm.processing ? 'Saving...' : 'Reject Trip' }}
                         </Button>
+                    </div>
+                </form>
+            </div>
+        </Dialog.Panel>
+    </Dialog>
+
+    <Dialog :open="pauseModalOpen" @close="pauseModalOpen = false" size="lg">
+        <Dialog.Panel class="w-full max-w-[640px] overflow-hidden">
+            <div class="p-4 sm:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-800">Pause Trip</h3>
+                        <p class="mt-1 text-sm text-slate-500">Add an optional reason for the pause.</p>
+                    </div>
+                    <button type="button" class="text-slate-400 transition hover:text-slate-600" @click="pauseModalOpen = false">
+                        <Lucide icon="X" class="h-5 w-5" />
+                    </button>
+                </div>
+                <form class="mt-6 space-y-5" @submit.prevent="submitPause">
+                    <FormInput v-model="pauseForm.reason" placeholder="Meal, loading delay, inspection, etc." />
+                    <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+                        <Button type="button" variant="outline-secondary" @click="pauseModalOpen = false">Cancel</Button>
+                        <Button type="submit" variant="primary" :disabled="pauseForm.processing">{{ pauseForm.processing ? 'Saving...' : 'Pause Trip' }}</Button>
                     </div>
                 </form>
             </div>

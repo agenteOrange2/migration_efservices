@@ -11,6 +11,7 @@ use App\Models\Hos\HosConfiguration;
 use App\Models\UserDriverDetail;
 use App\Notifications\HosLimitWarningNotification;
 use App\Notifications\HosAutoStopNotification;
+use App\Services\Trip\TripPauseService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -18,13 +19,16 @@ class HosAutoStopService
 {
     protected HosCalculationService $calculationService;
     protected HosFMCSAService $fmcsaService;
+    protected TripPauseService $tripPauseService;
 
     public function __construct(
         HosCalculationService $calculationService,
-        HosFMCSAService $fmcsaService
+        HosFMCSAService $fmcsaService,
+        TripPauseService $tripPauseService
     ) {
         $this->calculationService = $calculationService;
         $this->fmcsaService = $fmcsaService;
+        $this->tripPauseService = $tripPauseService;
     }
 
     /**
@@ -42,7 +46,8 @@ class HosAutoStopService
             'details' => [],
         ];
 
-        // Get all active trips (in_progress) - these need HOS checking
+        // Get all trips in progress; also include paused ones with an expired penalty
+        // so we can re-check if the driver resumes after the penalty window
         $activeTrips = Trip::where('status', Trip::STATUS_IN_PROGRESS)
             ->whereNotNull('user_driver_detail_id')
             ->with(['driver.user', 'carrier'])
@@ -203,6 +208,9 @@ class HosAutoStopService
                 'penalty_notes' => ($trip->penalty_notes ? $trip->penalty_notes . "\n" : '') . 
                     "[{$now->format('Y-m-d H:i:s')}] Auto-paused: {$reason} - Must rest {$penaltyHours}h before resuming. Can end trip anytime.",
             ]);
+
+            // Record TripPause so pause history and duration calculations are accurate
+            $this->tripPauseService->createPause($trip, null, "Auto-stopped: {$reason}", null);
 
             // Create violation record
             $this->createAutoStopViolation($driverId, $trip->carrier_id, $trip->vehicle_id, $reason);
