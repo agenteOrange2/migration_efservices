@@ -19,6 +19,7 @@ const props = defineProps<{
     gpsRoute?: Array<{ lat: number; lng: number }>
     fmcsaStatus: any
     isOnBreak: boolean
+    hasDutyPeriodActive: boolean
     gpsStats: any | null
     timeline: any[]
     hosEntries: any[]
@@ -42,6 +43,12 @@ const uploadForm = useForm({
     document_types: ['other'],
     document_notes: [''],
 })
+const uploadFiles = ref<(File | null)[]>([null])
+
+function handleFileSelect(index: number, event: Event) {
+    const input = event.target as HTMLInputElement
+    uploadFiles.value[index] = input.files?.[0] ?? null
+}
 
 function statusTone(status: string) {
     if (status === 'completed') return 'bg-primary/10 text-primary'
@@ -108,12 +115,14 @@ function addDocumentRow() {
     if (uploadForm.document_types.length >= 10) return
     uploadForm.document_types.push('other')
     uploadForm.document_notes.push('')
+    uploadFiles.value.push(null)
 }
 
 function removeDocumentRow(index: number) {
     if (uploadForm.document_types.length <= 1) return
     uploadForm.document_types.splice(index, 1)
     uploadForm.document_notes.splice(index, 1)
+    uploadFiles.value.splice(index, 1)
 }
 
 function uploadDocuments() {
@@ -121,9 +130,7 @@ function uploadDocuments() {
     let hasFile = false
 
     uploadForm.document_types.forEach((type, index) => {
-        const input = document.getElementById(`trip-doc-file-${index}`) as HTMLInputElement | null
-        const file = input?.files?.[0]
-
+        const file = uploadFiles.value[index]
         if (file) {
             hasFile = true
             formData.append(`documents[${index}]`, file)
@@ -145,6 +152,7 @@ function uploadDocuments() {
             uploadForm.reset()
             uploadForm.document_types = ['other']
             uploadForm.document_notes = ['']
+            uploadFiles.value = [null]
         },
     })
 }
@@ -199,6 +207,14 @@ function uploadDocuments() {
                         <Button v-if="trip.can_resume" variant="primary" class="w-full justify-center gap-2 sm:w-auto" @click="resumeTrip">
                             <Lucide icon="Play" class="h-4 w-4" />
                             Resume
+                        </Button>
+                        <Button
+                            v-if="trip.status === 'completed' && hasDutyPeriodActive"
+                            variant="outline-danger"
+                            class="w-full justify-center gap-2 sm:w-auto"
+                            @click="router.post(route('driver.hos.end-day'))">
+                            <Lucide icon="Moon" class="h-4 w-4" />
+                            End My Day
                         </Button>
                         <Link v-if="trip.can_end" :href="route('driver.trips.end.form', trip.id)" class="w-full sm:w-auto">
                             <Button variant="outline-secondary" class="w-full justify-center gap-2 sm:w-auto">
@@ -379,6 +395,72 @@ function uploadDocuments() {
                 <p v-else class="text-sm text-slate-500">No trip documents yet.</p>
             </div>
 
+            <!-- Pre-Trip Inspection -->
+            <div v-if="trip.pre_trip_inspection_data" class="box box--stacked p-4 sm:p-6">
+                <h2 class="mb-4 text-base font-semibold text-slate-800">Pre-Trip Inspection</h2>
+                <div class="space-y-4">
+                    <div v-if="trip.pre_trip_inspection_data.tractor?.length" class="space-y-1">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Tractor Items</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span v-for="item in trip.pre_trip_inspection_data.tractor" :key="item"
+                                  class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                                ✓ {{ item.replace(/_/g, ' ') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div v-if="trip.pre_trip_inspection_data.trailer?.length" class="space-y-1">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Trailer Items</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span v-for="item in trip.pre_trip_inspection_data.trailer" :key="item"
+                                  class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                                ✓ {{ item.replace(/_/g, ' ') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div v-if="trip.pre_trip_remarks" class="rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Remarks / Defects</p>
+                        {{ trip.pre_trip_remarks }}
+                    </div>
+                    <div v-if="trip.pre_trip_driver_signature" class="space-y-1">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Driver Signature</p>
+                        <img :src="trip.pre_trip_driver_signature" alt="Driver signature" class="h-16 w-auto max-w-xs rounded border border-slate-200 bg-white p-1" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Post-Trip Inspection -->
+            <div v-if="trip.post_trip_inspection_data" class="box box--stacked p-4 sm:p-6">
+                <h2 class="mb-4 text-base font-semibold text-slate-800">Post-Trip Inspection</h2>
+                <div class="space-y-4">
+                    <div v-if="trip.post_trip_inspection_data.tractor?.length" class="space-y-1">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Tractor Items</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span v-for="item in trip.post_trip_inspection_data.tractor" :key="item"
+                                  class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                                ✓ {{ item.replace(/_/g, ' ') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div v-if="trip.post_trip_inspection_data.trailer?.length" class="space-y-1">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Trailer Items</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span v-for="item in trip.post_trip_inspection_data.trailer" :key="item"
+                                  class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                                ✓ {{ item.replace(/_/g, ' ') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div v-if="trip.post_trip_remarks" class="rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Remarks / Defects</p>
+                        {{ trip.post_trip_remarks }}
+                    </div>
+                    <div v-if="trip.post_trip_driver_signature" class="space-y-1">
+                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Driver Signature</p>
+                        <img :src="trip.post_trip_driver_signature" alt="Driver signature" class="h-16 w-auto max-w-xs rounded border border-slate-200 bg-white p-1" />
+                    </div>
+                </div>
+            </div>
+
             <div v-if="hosEntries.length" class="box box--stacked p-4 sm:p-6">
                 <h2 class="mb-4 text-base font-semibold text-slate-800">HOS Entries</h2>
                 <div class="space-y-3">
@@ -499,7 +581,7 @@ function uploadDocuments() {
                             </div>
                             <div>
                                 <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">File</label>
-                                <input :id="`trip-doc-file-${index}`" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                                <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700" @change="handleFileSelect(index, $event)">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Notes</label>

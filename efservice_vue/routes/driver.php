@@ -300,6 +300,7 @@ Route::middleware(['auth', 'check.driver.status'])->group(function () {
         Route::put('/entries/{entry}', [DriverHosController::class, 'updateEntry'])->name('entries.update');
         Route::delete('/entries/{entry}', [DriverHosController::class, 'deleteEntry'])->name('entries.destroy');
         Route::post('/entries/bulk-delete', [DriverHosController::class, 'bulkDeleteEntries'])->name('entries.bulk-destroy');
+        Route::post('/end-day', [DriverHosController::class, 'endDay'])->name('end-day');
 
         Route::prefix('cycle')->name('cycle.')->group(function () {
             Route::get('/', [DriverHosCycleController::class, 'index'])->name('index');

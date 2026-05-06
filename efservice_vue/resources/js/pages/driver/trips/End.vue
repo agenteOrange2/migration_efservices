@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
+<<<<<<< HEAD
 import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
+=======
+import { computed, ref, onMounted } from 'vue'
+>>>>>>> 8c7e94b (fix trip)
 import Button from '@/components/Base/Button'
 import FormTextarea from '@/components/Base/Form/FormTextarea.vue'
 import Lucide from '@/components/Base/Lucide'
@@ -98,6 +102,75 @@ const trailerTotal = computed(() => Object.keys(props.inspection.trailer_items).
 const tractorProgress = computed(() => form.tractor.filter((item) => item !== 'other_tractor').length)
 const trailerProgress = computed(() => form.trailer.filter((item) => item !== 'other_trailer').length)
 
+// Canvas signature pad
+const signatureCanvas = ref<HTMLCanvasElement | null>(null)
+const hasSignature = ref(false)
+let isDrawing = false
+let lastX = 0
+let lastY = 0
+
+function getCanvasPos(e: MouseEvent | Touch, canvas: HTMLCanvasElement) {
+    const rect = canvas.getBoundingClientRect()
+    return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height),
+    }
+}
+
+function initSignatureCanvas() {
+    const canvas = signatureCanvas.value
+    if (!canvas) return
+    canvas.width = canvas.offsetWidth || canvas.clientWidth || 500
+    canvas.height = 180
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#f8fafc'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.strokeStyle = '#1e293b'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+}
+
+function onSigMouseDown(e: MouseEvent) {
+    const canvas = signatureCanvas.value; if (!canvas) return
+    isDrawing = true
+    const pos = getCanvasPos(e, canvas); lastX = pos.x; lastY = pos.y
+}
+function onSigMouseMove(e: MouseEvent) {
+    if (!isDrawing) return
+    const canvas = signatureCanvas.value; if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    const pos = getCanvasPos(e, canvas)
+    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(pos.x, pos.y); ctx.stroke()
+    lastX = pos.x; lastY = pos.y; hasSignature.value = true
+}
+function onSigMouseUp() { isDrawing = false }
+function onSigTouchStart(e: TouchEvent) {
+    e.preventDefault()
+    const canvas = signatureCanvas.value; if (!canvas) return
+    const pos = getCanvasPos(e.touches[0], canvas)
+    isDrawing = true; lastX = pos.x; lastY = pos.y
+}
+function onSigTouchMove(e: TouchEvent) {
+    e.preventDefault()
+    if (!isDrawing) return
+    const canvas = signatureCanvas.value; if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    const pos = getCanvasPos(e.touches[0], canvas)
+    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(pos.x, pos.y); ctx.stroke()
+    lastX = pos.x; lastY = pos.y; hasSignature.value = true
+}
+function onSigTouchEnd() { isDrawing = false }
+
+function clearSignature() {
+    const canvas = signatureCanvas.value; if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+    hasSignature.value = false; form.driver_signature = ''
+}
+
+onMounted(() => { initSignatureCanvas() })
+
 function toggleSelection(target: string[], value: string) {
     const index = target.indexOf(value)
     if (index >= 0) {
@@ -122,10 +195,19 @@ function isChecked(section: 'tractor' | 'trailer', value: string) {
 }
 
 function submit() {
+<<<<<<< HEAD
     if (!form.driver_signature) {
         form.setError('driver_signature', 'Please sign before submitting.')
         return
     }
+=======
+    if (!hasSignature.value) {
+        form.setError('driver_signature', 'Please sign the inspection report before submitting.')
+        return
+    }
+    const canvas = signatureCanvas.value
+    if (canvas) form.driver_signature = canvas.toDataURL('image/png')
+>>>>>>> 8c7e94b (fix trip)
     form.post(route('driver.trips.end', props.trip.id))
 }
 </script>
@@ -248,6 +330,7 @@ function submit() {
                         </label>
                         <FormTextarea v-if="form.defects_not_need_correction" v-model="form.defects_not_need_correction_notes" rows="3" placeholder="Explain why the defects do not affect safe operation..." />
                         <div>
+<<<<<<< HEAD
                             <div class="mb-2 flex items-center justify-between">
                                 <label class="block text-sm font-medium text-slate-700">
                                     Driver Signature <span class="text-danger">*</span>
@@ -280,6 +363,29 @@ function submit() {
                                 </div>
                             </div>
 
+=======
+                            <label class="mb-1 block text-sm font-medium text-slate-700">
+                                Driver Signature <span class="text-danger">*</span>
+                            </label>
+                            <div class="overflow-hidden rounded-xl border-2 bg-slate-50"
+                                 :class="form.errors.driver_signature ? 'border-danger' : 'border-slate-200'">
+                                <canvas
+                                    ref="signatureCanvas"
+                                    style="touch-action: none; display: block; width: 100%; height: 180px; cursor: crosshair;"
+                                    @mousedown="onSigMouseDown"
+                                    @mousemove="onSigMouseMove"
+                                    @mouseup="onSigMouseUp"
+                                    @mouseleave="onSigMouseUp"
+                                    @touchstart.prevent="onSigTouchStart"
+                                    @touchmove.prevent="onSigTouchMove"
+                                    @touchend="onSigTouchEnd"
+                                />
+                            </div>
+                            <div class="mt-1 flex items-center justify-between">
+                                <p class="text-xs text-slate-500">Sign with your finger or mouse</p>
+                                <button type="button" class="text-xs text-primary hover:underline" @click="clearSignature">Clear</button>
+                            </div>
+>>>>>>> 8c7e94b (fix trip)
                             <p v-if="form.errors.driver_signature" class="mt-1 text-sm text-danger">{{ form.errors.driver_signature }}</p>
                             <p v-else class="mt-1 text-xs text-slate-400">Draw your signature using your finger or mouse.</p>
                         </div>

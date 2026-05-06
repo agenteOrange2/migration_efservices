@@ -349,6 +349,11 @@ class DriverTripController extends AdminTripController
             && $currentEntry->status === HosEntry::STATUS_ON_DUTY_NOT_DRIVING
             && (int) $currentEntry->trip_id === (int) $trip->id;
 
+        $todayLog = \App\Models\Hos\HosDailyLog::forDriver($driver->id)
+            ->whereDate('date', today())
+            ->first();
+        $hasDutyPeriodActive = $todayLog && $todayLog->isDutyPeriodActive();
+
         $gpsRoute = $trip->gpsPoints->map(fn ($pt) => [
             'lat' => (float) $pt->latitude,
             'lng' => (float) $pt->longitude,
@@ -375,9 +380,16 @@ class DriverTripController extends AdminTripController
                 'can_delete_documents' => $trip->canDeleteDocuments(),
                 'documents_count' => $tripDocuments->count(),
                 'has_trailer' => (bool) $trip->has_trailer,
+                'pre_trip_inspection_data' => $trip->pre_trip_inspection_data,
+                'pre_trip_remarks' => $trip->pre_trip_remarks,
+                'pre_trip_driver_signature' => $trip->pre_trip_driver_signature,
+                'post_trip_inspection_data' => $trip->post_trip_inspection_data,
+                'post_trip_remarks' => $trip->post_trip_remarks,
+                'post_trip_driver_signature' => $trip->post_trip_driver_signature,
             ]),
             'fmcsaStatus' => $this->fmcsaService->getDriverFMCSAStatus($driver->id, $trip->carrier_id),
             'isOnBreak' => (bool) $isOnBreak,
+            'hasDutyPeriodActive' => (bool) $hasDutyPeriodActive,
             'gpsRoute' => $gpsRoute,
             'gpsStats' => $gpsStats,
             'timeline' => $timeline,

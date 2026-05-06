@@ -31,18 +31,41 @@ class HosFMCSAService
         $errors = [];
         $warnings = [];
 
-        // 1. Check 10-hour reset requirement (FMCSA requirement for local drivers)
-        $resetCheck = $this->weeklyCycleService->canStartNewDutyPeriod($driverId);
-        if (!$resetCheck['can_start']) {
+        // Check if driver already has an active duty period today (mid-day, between trips)
+        $todayLog = HosDailyLog::forDriver($driverId)
+            ->whereDate('date', today())
+            ->first();
+        $dutyPeriodActiveToday = $todayLog && $todayLog->isDutyPeriodActive();
+
+        // 1. Check 8-hour rest requirement — only required when starting a brand-new duty period
+        if (!$dutyPeriodActiveToday) {
+            $resetCheck = $this->weeklyCycleService->canStartNewDutyPeriod($driverId);
+            if (!$resetCheck['can_start']) {
+                $errors[] = [
+                    'type' => '10_hour_reset',
+                    'message' => "Driver needs {$resetCheck['hours_needed']} more hours of rest before starting a new duty period.",
+                    'hours_needed' => $resetCheck['hours_needed'],
+                    'fmcsa_reference' => '37 TAC §4.11(a)',
+                ];
+            }
+        } else {
+            $resetCheck = ['can_start' => true, 'hours_needed' => 0];
+        }
+
+        // 2. Check if daily driving limit (12h) already reached
+        $config = HosConfiguration::getForCarrier($carrierId);
+        $maxDrivingMinutes = $config->max_driving_hours * 60;
+        $todayDrivingMinutes = $this->getTodayDrivingMinutes($driverId);
+        if ($todayDrivingMinutes >= $maxDrivingMinutes) {
             $errors[] = [
-                'type' => '10_hour_reset',
-                'message' => "Driver needs {$resetCheck['hours_needed']} more hours of rest before starting a new duty period.",
-                'hours_needed' => $resetCheck['hours_needed'],
+                'type' => 'daily_driving_limit',
+                'message' => "You have reached your {$config->max_driving_hours}-hour daily driving limit. End your day and rest before driving again.",
+                'hours_driven' => round($todayDrivingMinutes / 60, 2),
                 'fmcsa_reference' => '37 TAC §4.11(a)',
             ];
         }
 
-        // 2. Check weekly cycle hours
+        // 3. Check weekly cycle hours
         $weeklyStatus = $this->weeklyCycleService->getWeeklyCycleStatus($driverId);
         if ($weeklyStatus['is_over_limit']) {
             $errors[] = [
@@ -59,7 +82,7 @@ class HosFMCSAService
             ];
         }
 
-        // 3. Check for blocking penalties
+        // 4. Check for blocking penalties
         $penaltyCheck = $this->hasBlockingPenalty($driverId);
         if ($penaltyCheck['has_penalty']) {
             $errors[] = [
@@ -71,12 +94,21 @@ class HosFMCSAService
             ];
         }
 
+        $remainingDrivingMinutes = max(0, $maxDrivingMinutes - $todayDrivingMinutes);
+
         return [
             'valid' => empty($errors),
             'errors' => $errors,
             'warnings' => $warnings,
             'weekly_status' => $weeklyStatus,
             'reset_status' => $resetCheck,
+            'daily_status' => [
+                'duty_period_active' => $dutyPeriodActiveToday,
+                'driving_minutes_today' => $todayDrivingMinutes,
+                'driving_hours_today' => round($todayDrivingMinutes / 60, 2),
+                'max_driving_hours' => $config->max_driving_hours,
+                'remaining_driving_hours' => round($remainingDrivingMinutes / 60, 2),
+            ],
         ];
     }
 

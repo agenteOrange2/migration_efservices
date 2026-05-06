@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import Button from '@/components/Base/Button'
 import FormInput from '@/components/Base/Form/FormInput.vue'
 import FormTextarea from '@/components/Base/Form/FormTextarea.vue'
@@ -31,6 +31,12 @@ const props = defineProps<{
         errors: Array<{ message: string; fmcsa_reference?: string | null }>
         warnings: Array<{ message: string }>
         weekly_status?: { hours_remaining?: number }
+        daily_status?: {
+            duty_period_active: boolean
+            driving_hours_today: number
+            max_driving_hours: number
+            remaining_driving_hours: number
+        }
     }
     inspection: {
         tractor_items: InspectionMap
@@ -61,9 +67,76 @@ const trailerTotal = computed(() => Object.keys(props.inspection.trailer_items).
 const tractorProgress = computed(() => form.tractor.filter((item) => item !== 'other_tractor').length)
 const trailerProgress = computed(() => form.trailer.filter((item) => item !== 'other_trailer').length)
 
-const signatureHint = reactive({
-    fullName: '',
-})
+const signatureHint = reactive({ fullName: '' })
+
+// Canvas signature pad
+const signatureCanvas = ref<HTMLCanvasElement | null>(null)
+const hasSignature = ref(false)
+let isDrawing = false
+let lastX = 0
+let lastY = 0
+
+function getCanvasPos(e: MouseEvent | Touch, canvas: HTMLCanvasElement) {
+    const rect = canvas.getBoundingClientRect()
+    return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height),
+    }
+}
+
+function initSignatureCanvas() {
+    const canvas = signatureCanvas.value
+    if (!canvas) return
+    canvas.width = canvas.offsetWidth || canvas.clientWidth || 500
+    canvas.height = 180
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#f8fafc'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.strokeStyle = '#1e293b'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+}
+
+function onSigMouseDown(e: MouseEvent) {
+    const canvas = signatureCanvas.value; if (!canvas) return
+    isDrawing = true
+    const pos = getCanvasPos(e, canvas); lastX = pos.x; lastY = pos.y
+}
+function onSigMouseMove(e: MouseEvent) {
+    if (!isDrawing) return
+    const canvas = signatureCanvas.value; if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    const pos = getCanvasPos(e, canvas)
+    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(pos.x, pos.y); ctx.stroke()
+    lastX = pos.x; lastY = pos.y; hasSignature.value = true
+}
+function onSigMouseUp() { isDrawing = false }
+function onSigTouchStart(e: TouchEvent) {
+    e.preventDefault()
+    const canvas = signatureCanvas.value; if (!canvas) return
+    const pos = getCanvasPos(e.touches[0], canvas)
+    isDrawing = true; lastX = pos.x; lastY = pos.y
+}
+function onSigTouchMove(e: TouchEvent) {
+    e.preventDefault()
+    if (!isDrawing) return
+    const canvas = signatureCanvas.value; if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    const pos = getCanvasPos(e.touches[0], canvas)
+    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(pos.x, pos.y); ctx.stroke()
+    lastX = pos.x; lastY = pos.y; hasSignature.value = true
+}
+function onSigTouchEnd() { isDrawing = false }
+
+function clearSignature() {
+    const canvas = signatureCanvas.value; if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+    hasSignature.value = false; form.driver_signature = ''
+}
+
+onMounted(() => { initSignatureCanvas() })
 
 function toggleSelection(target: string[], value: string) {
     const index = target.indexOf(value)
@@ -91,6 +164,12 @@ function isChecked(section: 'tractor' | 'trailer', value: string) {
 }
 
 function submit() {
+    if (!hasSignature.value) {
+        form.setError('driver_signature', 'Please sign the inspection report before submitting.')
+        return
+    }
+    const canvas = signatureCanvas.value
+    if (canvas) form.driver_signature = canvas.toDataURL('image/png')
     form.post(route('driver.trips.start', props.trip.id))
 }
 </script>
@@ -251,7 +330,24 @@ function submit() {
                                 <label class="mb-1 block text-sm font-medium text-slate-700">
                                     Driver Signature <span class="text-danger">*</span>
                                 </label>
-                                <FormInput v-model="form.driver_signature" placeholder="Type your full name as your driver signature" />
+                                <div class="overflow-hidden rounded-xl border-2 bg-slate-50"
+                                     :class="form.errors.driver_signature ? 'border-danger' : 'border-slate-200'">
+                                    <canvas
+                                        ref="signatureCanvas"
+                                        style="touch-action: none; display: block; width: 100%; height: 180px; cursor: crosshair;"
+                                        @mousedown="onSigMouseDown"
+                                        @mousemove="onSigMouseMove"
+                                        @mouseup="onSigMouseUp"
+                                        @mouseleave="onSigMouseUp"
+                                        @touchstart.prevent="onSigTouchStart"
+                                        @touchmove.prevent="onSigTouchMove"
+                                        @touchend="onSigTouchEnd"
+                                    />
+                                </div>
+                                <div class="mt-1 flex items-center justify-between">
+                                    <p class="text-xs text-slate-500">Sign with your finger or mouse</p>
+                                    <button type="button" class="text-xs text-primary hover:underline" @click="clearSignature">Clear</button>
+                                </div>
                                 <p v-if="form.errors.driver_signature" class="mt-1 text-sm text-danger">{{ form.errors.driver_signature }}</p>
                             </div>
                         </div>
@@ -270,6 +366,37 @@ function submit() {
             </div>
 
             <div class="col-span-12 xl:col-span-4">
+                <div v-if="validation.daily_status" class="box box--stacked p-4 sm:p-6 mb-4">
+                    <div class="flex items-center gap-2 mb-4">
+                        <Lucide icon="Clock" class="h-4 w-4 text-primary" />
+                        <h2 class="text-base font-semibold text-slate-800">Today's Hours</h2>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-slate-600">Driving today</span>
+                                <span class="font-medium" :class="validation.daily_status.driving_hours_today >= validation.daily_status.max_driving_hours ? 'text-danger' : 'text-slate-800'">
+                                    {{ validation.daily_status.driving_hours_today.toFixed(1) }}h / {{ validation.daily_status.max_driving_hours }}h
+                                </span>
+                            </div>
+                            <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                                <div class="h-full rounded-full transition-all"
+                                    :class="(validation.daily_status.driving_hours_today / validation.daily_status.max_driving_hours) >= 1 ? 'bg-danger' : (validation.daily_status.driving_hours_today / validation.daily_status.max_driving_hours) >= 0.75 ? 'bg-warning' : 'bg-primary'"
+                                    :style="{ width: `${Math.min(100, (validation.daily_status.driving_hours_today / validation.daily_status.max_driving_hours) * 100)}%` }" />
+                            </div>
+                        </div>
+                        <p class="text-sm">
+                            <span :class="validation.daily_status.remaining_driving_hours <= 1 ? 'font-medium text-danger' : validation.daily_status.remaining_driving_hours <= 3 ? 'font-medium text-warning' : 'font-medium text-success'">
+                                {{ validation.daily_status.remaining_driving_hours.toFixed(1) }}h remaining
+                            </span>
+                            <span class="text-slate-500"> today</span>
+                        </p>
+                        <p v-if="validation.daily_status.duty_period_active" class="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-500">
+                            Duty period active — continuing your work day.
+                        </p>
+                    </div>
+                </div>
+
                 <div class="box box--stacked xl:sticky xl:top-6 p-4 sm:p-6">
                     <h2 class="text-base font-semibold text-slate-800">Inspection Progress</h2>
                     <div class="mt-5 space-y-4">

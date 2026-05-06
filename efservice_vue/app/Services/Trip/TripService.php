@@ -461,8 +461,8 @@ class TripService
                 'post_trip_driver_signature' => $postInspection['driver_signature'] ?? null,
             ]);
 
-            // Create off-duty HOS entry
-            $this->createOffDutyEntry($driverId, $trip);
+            // Create on_duty_not_driving entry — duty period stays open for next trip
+            $this->createBetweenTripsEntry($driverId, $trip);
 
             return $trip->fresh();
         });
@@ -814,12 +814,38 @@ class TripService
     }
 
     /**
+     * Create an on_duty_not_driving entry between trips (duty period stays open).
+     */
+    protected function createBetweenTripsEntry(int $driverId, Trip $trip): HosEntry
+    {
+        $vehicleId = $trip->vehicle_id;
+        if (!$vehicleId) {
+            $driver = UserDriverDetail::find($driverId);
+            $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
+        }
+
+        return HosEntry::create([
+            'user_driver_detail_id' => $driverId,
+            'vehicle_id' => $vehicleId,
+            'carrier_id' => $trip->carrier_id,
+            'trip_id' => $trip->id,
+            'status' => HosEntry::STATUS_ON_DUTY_NOT_DRIVING,
+            'start_time' => now(),
+            'latitude' => $trip->destination_latitude,
+            'longitude' => $trip->destination_longitude,
+            'formatted_address' => $trip->destination_address,
+            'location_available' => $trip->destination_latitude !== null,
+            'date' => today(),
+        ]);
+    }
+
+    /**
      * Start duty period for the day.
      */
     protected function startDutyPeriod(int $driverId, int $carrierId): void
     {
         $dailyLog = HosDailyLog::getOrCreateForDate($driverId, $carrierId, null, today());
-        
+
         if (!$dailyLog->duty_period_start) {
             $dailyLog->startDutyPeriod();
         }

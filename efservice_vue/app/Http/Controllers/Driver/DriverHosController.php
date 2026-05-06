@@ -270,6 +270,39 @@ class DriverHosController extends Controller
         return back()->with('success', count($validated['entry_ids']) . ' HOS entries deleted successfully.');
     }
 
+    public function endDay(Request $request): RedirectResponse
+    {
+        $driver = $this->resolveDriver();
+
+        // Close any open HOS entries
+        HosEntry::query()
+            ->where('user_driver_detail_id', $driver->id)
+            ->whereNull('end_time')
+            ->update(['end_time' => now()]);
+
+        // Create the off-duty entry
+        HosEntry::create([
+            'user_driver_detail_id' => $driver->id,
+            'carrier_id' => $driver->carrier_id,
+            'status' => HosEntry::STATUS_OFF_DUTY,
+            'start_time' => now(),
+            'date' => today(),
+        ]);
+
+        // Close the duty period if still open
+        $dailyLog = \App\Models\Hos\HosDailyLog::forDriver($driver->id)
+            ->whereDate('date', today())
+            ->first();
+
+        if ($dailyLog && $dailyLog->isDutyPeriodActive()) {
+            $dailyLog->endDutyPeriod();
+        }
+
+        return redirect()
+            ->route('driver.trips.index')
+            ->with('success', 'Your work day has been ended. Get some rest!');
+    }
+
     protected function resolveDriver(): UserDriverDetail
     {
         $user = auth()->user();
