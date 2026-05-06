@@ -473,7 +473,7 @@ class TripService
      */
     public function pauseTrip(Trip $trip, int $driverId, ?array $location = null, ?string $reason = null, ?int $forcedBy = null): Trip
     {
-        if ($trip->user_driver_detail_id !== $driverId) {
+        if ((int) $trip->user_driver_detail_id !== (int) $driverId) {
             throw ValidationException::withMessages([
                 'trip' => ['This trip is not assigned to you.'],
             ]);
