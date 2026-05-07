@@ -24,7 +24,7 @@ class EmploymentVerificationController extends Controller
             return Inertia::render('employment-verification/Error');
         }
 
-        if ($verification->expires_at <= now()) {
+        if (!$verification->expires_at || $verification->expires_at <= now()) {
             return Inertia::render('employment-verification/Expired');
         }
 
@@ -51,7 +51,7 @@ class EmploymentVerificationController extends Controller
         return Inertia::render('employment-verification/Form', [
             'token'           => $token,
             'companyName'     => $masterCompany?->company_name ?? $company->company_name ?? 'Company',
-            'driverName'      => trim(($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')),
+            'driverName'      => trim(($driver->user?->name ?? '') . ' ' . ($driver->last_name ?? '')),
             'ssnLast4'        => $ssnLast4,
             'employment'      => [
                 'employed_from'             => $company->employed_from?->format('m/d/Y'),
@@ -72,15 +72,19 @@ class EmploymentVerificationController extends Controller
             return redirect()->route('employment-verification.error');
         }
 
-        if ($verification->expires_at < now()) {
+        if (!$verification->expires_at || $verification->expires_at < now()) {
             return redirect()->route('employment-verification.expired');
+        }
+
+        if ($verification->verified_at !== null) {
+            return redirect()->route('employment-verification.thank-you');
         }
 
         $validated = $request->validate([
             'verification_status'    => ['required', 'in:verified,rejected'],
             'verification_notes'     => ['nullable', 'string'],
             'verification_by'        => ['required', 'string', 'max:255'],
-            'signature'              => ['required', 'string'],
+            'signature'              => ['required', 'string', 'regex:/^data:image\/(png|jpeg|jpg|gif|webp);base64,/'],
             'employment_confirmed'   => ['required'],
             'dates_confirmed'        => ['required', 'in:0,1'],
             'correct_dates'          => ['nullable', 'string'],
@@ -153,13 +157,20 @@ class EmploymentVerificationController extends Controller
 
             // ── Save signature image ──────────────────────────────────────────
             $signatureData = $validated['signature'];
-            $imageBase64   = explode(',', explode(';', $signatureData)[1])[0];
-            $imageContent  = base64_decode($imageBase64);
+            $parts = explode(';', $signatureData);
+            if (count($parts) < 2 || !str_starts_with($parts[0], 'data:image/')) {
+                throw new \RuntimeException('Invalid signature format.');
+            }
+            $imageBase64  = explode(',', $parts[1])[1] ?? null;
+            $imageContent = $imageBase64 ? base64_decode($imageBase64, true) : false;
+            if ($imageContent === false) {
+                throw new \RuntimeException('Failed to decode signature image.');
+            }
 
             $sigDir  = "driver/{$driverId}/certification";
             $sigName = 'employment_verification_signature_' . time() . '.png';
-            Storage::disk('public')->makeDirectory($sigDir);
-            Storage::disk('public')->put("{$sigDir}/{$sigName}", $imageContent);
+            Storage::disk('local')->makeDirectory($sigDir);
+            Storage::disk('local')->put("{$sigDir}/{$sigName}", $imageContent);
             $sigRelPath = "{$sigDir}/{$sigName}";
 
             // ── SSN for PDF ───────────────────────────────────────────────────
@@ -202,9 +213,9 @@ class EmploymentVerificationController extends Controller
             $companySlug = preg_replace('/[^a-zA-Z0-9]/', '_', $company->company_name ?? 'company');
             $pdfName     = "employment_verification_{$companySlug}_" . time() . '.pdf';
             $pdfDir      = "driver/{$driverId}";
-            Storage::disk('public')->makeDirectory($pdfDir);
+            Storage::disk('local')->makeDirectory($pdfDir);
             $pdfRelPath  = "{$pdfDir}/{$pdfName}";
-            Storage::disk('public')->put($pdfRelPath, $pdf->output());
+            Storage::disk('local')->put($pdfRelPath, $pdf->output());
 
             // ── Update token with file paths ──────────────────────────────────
             $verification->update([
@@ -221,9 +232,9 @@ class EmploymentVerificationController extends Controller
         } catch (\Throwable $e) {
             // Log but don't fail the transaction — verification is already saved
             Log::error('PDF generation failed for employment verification', [
-                'error'         => $e->getMessage(),
-                'driver_id'     => $driver->id ?? null,
-                'verification'  => $verification->token,
+                'error'          => $e->getMessage(),
+                'driver_id'      => $driver->id ?? null,
+                'verification_id' => $verification->id,
             ]);
         }
     }

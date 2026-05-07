@@ -89,7 +89,6 @@ class CarrierController extends Controller
         } catch (\Exception $e) {
             Log::error('Error loading carriers index', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
             return Inertia::render('admin/carriers/Index', [
@@ -209,14 +208,19 @@ class CarrierController extends Controller
                 'notes'            => $doc->notes,
             ]);
 
-            $bankingData = $carrierModel->bankingDetails
-                ? $carrierModel->bankingDetails->only([
-                    'id', 'account_holder_name', 'account_number',
-                    'banking_routing_number', 'zip_code', 'security_code',
-                    'country_code', 'status', 'rejection_reason',
-                    'created_at', 'updated_at',
-                ])
-                : null;
+            $bd = $carrierModel->bankingDetails;
+            $bankingData = $bd ? [
+                'id'                => $bd->id,
+                'account_holder_name' => $bd->account_holder_name,
+                'account_number_last4' => $bd->account_number ? '****' . substr($bd->account_number, -4) : null,
+                'routing_number_last4' => $bd->banking_routing_number ? '****' . substr($bd->banking_routing_number, -4) : null,
+                'zip_code'          => $bd->zip_code,
+                'country_code'      => $bd->country_code,
+                'status'            => $bd->status,
+                'rejection_reason'  => $bd->rejection_reason,
+                'created_at'        => $bd->created_at,
+                'updated_at'        => $bd->updated_at,
+            ] : null;
 
             $vehicles = $carrierModel->vehicles()
                 ->with('currentDriverAssignment.driver.user')
@@ -270,7 +274,6 @@ class CarrierController extends Controller
             Log::error('Error loading carrier details', [
                 'carrier_id' => $carrier->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
             return Inertia::render('admin/carriers/Show', [
@@ -294,11 +297,17 @@ class CarrierController extends Controller
     {
         $memberships = Membership::where('status', 1)->select('id', 'name', 'price')->get();
         $usStates = Constants::usStates();
-        $bankingDetails = $carrier->bankingDetails?->only([
-            'id', 'account_holder_name', 'account_number',
-            'banking_routing_number', 'zip_code', 'security_code',
-            'country_code', 'status', 'rejection_reason',
-        ]);
+        $bd = $carrier->bankingDetails;
+        $bankingDetails = $bd ? [
+            'id'                  => $bd->id,
+            'account_holder_name' => $bd->account_holder_name,
+            'account_number_last4' => $bd->account_number ? '****' . substr($bd->account_number, -4) : null,
+            'routing_number_last4' => $bd->banking_routing_number ? '****' . substr($bd->banking_routing_number, -4) : null,
+            'zip_code'            => $bd->zip_code,
+            'country_code'        => $bd->country_code,
+            'status'              => $bd->status,
+            'rejection_reason'    => $bd->rejection_reason,
+        ] : null;
         $carrier->load('membership:id,name,price');
 
         $referralUrl = route('driver.register', [$carrier->slug, 'token' => $carrier->referrer_token]);
@@ -426,11 +435,11 @@ class CarrierController extends Controller
 
     public function regenerateReferrerToken(Carrier $carrier): RedirectResponse
     {
-        $token = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(8));
+        $token = \Illuminate\Support\Str::random(16);
 
         // Ensure uniqueness
         while (Carrier::where('referrer_token', $token)->where('id', '!=', $carrier->id)->exists()) {
-            $token = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(8));
+            $token = \Illuminate\Support\Str::random(16);
         }
 
         $carrier->update(['referrer_token' => $token]);

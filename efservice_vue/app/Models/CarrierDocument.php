@@ -66,8 +66,8 @@ class CarrierDocument extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('carrier_documents')
-            ->useDisk('public') // Usar el disco público
-            ->singleFile(); // Solo un archivo por colección
+            ->useDisk('public')
+            ->singleFile();
     }
 
     public function registerMediaConversions(Media $media = null): void

@@ -48,6 +48,7 @@ class CarrierWizardController extends Controller
             DB::beginTransaction();
 
             if (User::where('email', $request->email)->exists()) {
+                DB::rollBack();
                 return back()->withErrors(['email' => 'This email is already registered.']);
             }
 
@@ -279,8 +280,17 @@ class CarrierWizardController extends Controller
                 ->withErrors(['general' => 'Please complete your membership selection first.']);
         }
 
+        $bd = $carrier->bankingDetails;
         return Inertia::render('carrier/wizard/Step4', [
-            'bankingDetails' => $carrier->bankingDetails,
+            'bankingDetails' => $bd ? [
+                'id'                   => $bd->id,
+                'account_holder_name'  => $bd->account_holder_name,
+                'account_number_last4' => $bd->account_number ? '****' . substr($bd->account_number, -4) : null,
+                'routing_number_last4' => $bd->banking_routing_number ? '****' . substr($bd->banking_routing_number, -4) : null,
+                'zip_code'             => $bd->zip_code,
+                'country_code'         => $bd->country_code,
+                'status'               => $bd->status,
+            ] : null,
         ]);
     }
 

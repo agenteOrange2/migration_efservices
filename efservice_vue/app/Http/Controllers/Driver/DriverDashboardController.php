@@ -14,6 +14,7 @@ use App\Models\UserDriverDetail;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -37,14 +38,28 @@ class DriverDashboardController extends Controller
         $expiringThreshold = $now->copy()->addDays(30);
 
         // --- Trip stats ---
-        $tripQuery = Trip::where('user_driver_detail_id', $driverId);
+        $tripStats = DB::table('trips')
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status IN (?,?,?) THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as cancelled
+            ", [
+                Trip::STATUS_IN_PROGRESS,
+                Trip::STATUS_ACCEPTED,
+                Trip::STATUS_PENDING,
+                Trip::STATUS_COMPLETED,
+                Trip::STATUS_CANCELLED,
+            ])
+            ->where('user_driver_detail_id', $driverId)
+            ->first();
 
-        $totalTrips     = (clone $tripQuery)->count();
-        $activeTrips    = (clone $tripQuery)->whereIn('status', [Trip::STATUS_IN_PROGRESS, Trip::STATUS_ACCEPTED, Trip::STATUS_PENDING])->count();
-        $completedTrips = (clone $tripQuery)->where('status', Trip::STATUS_COMPLETED)->count();
-        $cancelledTrips = (clone $tripQuery)->where('status', Trip::STATUS_CANCELLED)->count();
+        $totalTrips     = (int) ($tripStats->total ?? 0);
+        $activeTrips    = (int) ($tripStats->active ?? 0);
+        $completedTrips = (int) ($tripStats->completed ?? 0);
+        $cancelledTrips = (int) ($tripStats->cancelled ?? 0);
 
-        $recentTrips = (clone $tripQuery)
+        $recentTrips = Trip::where('user_driver_detail_id', $driverId)
             ->with('vehicle:id,company_unit_number,vin')
             ->orderByDesc('scheduled_start_date')
             ->take(5)
@@ -61,12 +76,15 @@ class DriverDashboardController extends Controller
             ]);
 
         // --- HOS violations ---
-        $violationQuery = HosViolation::where('user_driver_detail_id', $driverId);
+        $violationStats = DB::table('hos_violations')
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN acknowledged = 0 THEN 1 ELSE 0 END) as unacknowledged')
+            ->where('user_driver_detail_id', $driverId)
+            ->first();
 
-        $totalViolations       = (clone $violationQuery)->count();
-        $unacknowledgedViolations = (clone $violationQuery)->where('acknowledged', false)->count();
+        $totalViolations          = (int) ($violationStats->total ?? 0);
+        $unacknowledgedViolations = (int) ($violationStats->unacknowledged ?? 0);
 
-        $recentViolations = (clone $violationQuery)
+        $recentViolations = HosViolation::where('user_driver_detail_id', $driverId)
             ->orderByDesc('violation_date')
             ->take(5)
             ->get()

@@ -393,7 +393,7 @@ class UserDriverDetail extends Model implements HasMedia
         $this->addMediaCollection('license_front')
             ->useDisk('public')
             ->singleFile();
-            
+
         $this->addMediaCollection('license_back')
             ->useDisk('public')
             ->singleFile();

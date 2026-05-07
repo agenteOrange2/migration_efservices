@@ -15,9 +15,16 @@ class CarrierDocumentController extends Controller
 {
     public function __construct(protected CarrierDocumentService $documentService) {}
 
+    private function resolveCarrier(): Carrier
+    {
+        $carrier = Auth::user()?->carrierDetails?->carrier;
+        abort_unless($carrier, 403, 'No carrier associated with this account.');
+        return $carrier;
+    }
+
     public function index()
     {
-        $carrier = Auth::user()->carrierDetails->carrier;
+        $carrier = $this->resolveCarrier();
 
         $documentTypes   = DocumentType::orderBy('requirement', 'desc')->orderBy('name')->get();
         $uploadedDocs    = CarrierDocument::where('carrier_id', $carrier->id)
@@ -68,7 +75,7 @@ class CarrierDocumentController extends Controller
             'document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ]);
 
-        $carrier      = Auth::user()->carrierDetails->carrier;
+        $carrier      = $this->resolveCarrier();
         $documentType = DocumentType::findOrFail($documentTypeId);
 
         $carrierDocument = CarrierDocument::firstOrCreate(
@@ -89,7 +96,7 @@ class CarrierDocumentController extends Controller
 
     public function deleteDocument(int $documentTypeId)
     {
-        $carrier = Auth::user()->carrierDetails->carrier;
+        $carrier = $this->resolveCarrier();
 
         $doc = CarrierDocument::where('carrier_id', $carrier->id)
             ->where('document_type_id', $documentTypeId)

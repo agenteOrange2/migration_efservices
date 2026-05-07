@@ -114,7 +114,6 @@ class LicenseMigrationService
                 'session_id' => $sessionId,
                 'driver_id' => $driverDetail->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             
             $results['success'] = false;

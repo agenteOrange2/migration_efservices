@@ -73,24 +73,22 @@ class PreventMassAssignment
         );
 
         if (!empty($suspiciousFields)) {
-            // Log the suspicious attempt
             Log::warning('Mass assignment attempt detected', [
-                'user_id' => $request->user()?->id,
-                'user_role' => $userRole,
-                'ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'route' => $request->route()?->getName(),
-                'method' => $request->method(),
-                'suspicious_fields' => $suspiciousFields,
-                'all_input' => array_keys($request->all())
+                'user_id'           => $request->user()?->id,
+                'user_role'         => $userRole,
+                'ip'                => $request->ip(),
+                'route'             => $request->route()?->getName(),
+                'method'            => $request->method(),
+                'suspicious_fields' => array_values($suspiciousFields),
             ]);
 
-            // Remove protected fields from request
-            $request->request->remove($suspiciousFields);
-            
-            // For admin users, just log but don't block
+            // Remove each protected field individually (ParameterBag::remove() takes a string, not array)
+            foreach ($suspiciousFields as $field) {
+                $request->request->remove($field);
+                $request->query->remove($field);
+            }
+
             if ($userRole !== 'admin') {
-                // Add warning header for non-admin users
                 $response = $next($request);
                 $response->headers->set('X-Security-Warning', 'Protected fields filtered');
                 return $response;

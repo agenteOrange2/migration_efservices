@@ -222,14 +222,6 @@ class DriverAdminWizardController extends Controller
             abort_unless((int) $driver->carrier_id === (int) $this->resolveCarrierId(), 403);
         }
 
-        \Illuminate\Support\Facades\Log::info('UPDATE_STEP_CALLED', [
-            'step'      => $step,
-            'driver_id' => $driver->id,
-            'method'    => $request->method(),
-            'input_keys'=> array_keys($request->all()),
-            'licenses'  => $request->input('licenses'),
-        ]);
-
         try {
         match ($step) {
             1  => $this->saveStep1($request, $driver),
@@ -259,7 +251,6 @@ class DriverAdminWizardController extends Controller
             \Illuminate\Support\Facades\Log::error('STEP_SAVE_ERROR', [
                 'step'    => $step,
                 'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
             ]);
             throw $e;
         }
@@ -506,11 +497,6 @@ class DriverAdminWizardController extends Controller
     /** Step 3 – Application Details */
     protected function saveStep3(Request $request, UserDriverDetail $driver): void
     {
-        \Illuminate\Support\Facades\Log::info('STEP3_ENTRY', [
-            'driver_id'        => $driver->id,
-            'all_input'        => $request->all(),
-        ]);
-
         $assignmentType = $request->vehicle_assignment_type;
         $needsVehicle   = in_array($assignmentType, ['owner_operator', 'third_party']);
 
@@ -566,17 +552,6 @@ class DriverAdminWizardController extends Controller
         $application = $driver->application ?? DriverApplication::create([
             'user_id' => $driver->user_id,
             'status'  => 'draft',
-        ]);
-
-        \Illuminate\Support\Facades\Log::info('STEP3_DEBUG', [
-            'driver_id'         => $driver->id,
-            'carrier_id'        => $driver->carrier_id,
-            'application_id'    => $application->id,
-            'assignment_type'   => $assignmentType,
-            'needs_vehicle'     => $needsVehicle,
-            'eligible_to_work'  => $request->input('eligible_to_work'),
-            'applying_position' => $request->applying_position,
-            'input_keys'        => array_keys($request->all()),
         ]);
 
         // Base fields always saved
@@ -1730,7 +1705,7 @@ class DriverAdminWizardController extends Controller
             'suspension_date'                  => $m->suspension_date?->format('Y-m-d'),
             'is_terminated'                    => $m->is_terminated,
             'termination_date'                 => $m->termination_date?->format('Y-m-d'),
-            'social_security_number'           => $m->social_security_number,
+            'social_security_number'           => $m->social_security_number ? '•••-••-' . substr(preg_replace('/\D/', '', $m->social_security_number), -4) : null,
             'ss_card_url'                      => $m->getFirstMediaUrl('social_security_card') ?: null,
             'medical_examiner_name'            => $m->medical_examiner_name,
             'medical_examiner_registry_number' => $m->medical_examiner_registry_number,

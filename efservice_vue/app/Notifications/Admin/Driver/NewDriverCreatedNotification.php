@@ -4,15 +4,12 @@ namespace App\Notifications\Admin\Driver;
 
 use App\Models\User;
 use App\Models\Carrier;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 
+// Not queued: plain-text password must never be serialized into the job payload.
 class NewDriverCreatedNotification extends Notification
 {
-    use Queueable;
-
     protected $user;
     protected $carrier;
     protected $password;

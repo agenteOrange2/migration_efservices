@@ -95,6 +95,7 @@ const uploadFile = ref<File | null>(null)
 const uploadDate = ref(new Date().toISOString().slice(0, 10))
 const uploadNotes = ref('')
 const uploading = ref(false)
+const processing = ref(false)
 
 function handleFileChange(e: Event) {
     const input = e.target as HTMLInputElement
@@ -116,34 +117,62 @@ function submitUpload() {
 
 function deleteDocument(docId: number) {
     if (!confirm('Delete this document? This cannot be undone.')) return
-    router.delete(route('admin.drivers.employment-verification.delete-document', [props.verification.id, docId]), { preserveScroll: true })
+    router.delete(route('admin.drivers.employment-verification.delete-document', [props.verification.id, docId]), {
+        preserveScroll: true,
+        onStart: () => { processing.value = true },
+        onFinish: () => { processing.value = false },
+    })
 }
 
 function deleteToken(tokenId: number) {
     if (!confirm('Delete this verification attempt? This cannot be undone.')) return
-    router.delete(route('admin.drivers.employment-verification.delete-token', [props.verification.id, tokenId]), { preserveScroll: true })
+    router.delete(route('admin.drivers.employment-verification.delete-token', [props.verification.id, tokenId]), {
+        preserveScroll: true,
+        onStart: () => { processing.value = true },
+        onFinish: () => { processing.value = false },
+    })
 }
 
 function resend() {
+    if (processing.value) return
     const remaining = props.verification.max_attempts - props.verification.attempt_count
     if (!confirm(`Resend verification email? (${remaining} attempt(s) remaining)`)) return
-    router.post(route('admin.drivers.employment-verification.resend', props.verification.id), {}, { preserveScroll: true })
+    router.post(route('admin.drivers.employment-verification.resend', props.verification.id), {}, {
+        preserveScroll: true,
+        onStart: () => { processing.value = true },
+        onFinish: () => { processing.value = false },
+    })
 }
 
 function toggleEmailFlag() {
+    if (processing.value) return
     const msg = props.verification.email_sent ? 'Mark as NOT sent?' : 'Mark as sent?'
     if (!confirm(msg)) return
-    router.post(route('admin.drivers.employment-verification.toggle-email-flag', props.verification.id), {}, { preserveScroll: true })
+    router.post(route('admin.drivers.employment-verification.toggle-email-flag', props.verification.id), {}, {
+        preserveScroll: true,
+        onStart: () => { processing.value = true },
+        onFinish: () => { processing.value = false },
+    })
 }
 
 function markVerified() {
+    if (processing.value) return
     if (!confirm('Mark this verification as Verified?')) return
-    router.post(route('admin.drivers.employment-verification.mark-verified', props.verification.id), {}, { preserveScroll: true })
+    router.post(route('admin.drivers.employment-verification.mark-verified', props.verification.id), {}, {
+        preserveScroll: true,
+        onStart: () => { processing.value = true },
+        onFinish: () => { processing.value = false },
+    })
 }
 
 function markRejected() {
+    if (processing.value) return
     if (!confirm('Mark this verification as Rejected?')) return
-    router.post(route('admin.drivers.employment-verification.mark-rejected', props.verification.id), {}, { preserveScroll: true })
+    router.post(route('admin.drivers.employment-verification.mark-rejected', props.verification.id), {}, {
+        preserveScroll: true,
+        onStart: () => { processing.value = true },
+        onFinish: () => { processing.value = false },
+    })
 }
 
 const statusBadgeClass = (status: string | null) => {
@@ -497,17 +526,19 @@ function submitEdit() {
                             <Button
                                 v-if="verification.can_send_more"
                                 @click="resend"
+                                :disabled="processing"
                                 variant="primary"
                                 size="sm"
                                 class="inline-flex items-center gap-2 shadow-sm"
                             >
-                                <Lucide icon="Mail" class="w-4 h-4" />
-                                {{ verification.email_sent ? 'Resend Email' : 'Send Email' }}
-                                <span class="opacity-75">({{ verification.max_attempts - verification.attempt_count }} left)</span>
+                                <Lucide :icon="processing ? 'Loader' : 'Mail'" class="w-4 h-4" :class="{ 'animate-spin': processing }" />
+                                {{ processing ? 'Sending...' : (verification.email_sent ? 'Resend Email' : 'Send Email') }}
+                                <span v-if="!processing" class="opacity-75">({{ verification.max_attempts - verification.attempt_count }} left)</span>
                             </Button>
 
                             <Button
                                 @click="toggleEmailFlag"
+                                :disabled="processing"
                                 :variant="verification.email_sent ? 'outline-secondary' : 'outline-success'"
                                 size="sm"
                                 class="inline-flex items-center gap-2"
@@ -519,6 +550,7 @@ function submitEdit() {
                             <Button
                                 v-if="verification.verification_status !== 'verified'"
                                 @click="markVerified"
+                                :disabled="processing"
                                 variant="success"
                                 size="sm"
                                 class="inline-flex items-center gap-2 shadow-sm"
@@ -530,6 +562,7 @@ function submitEdit() {
                             <Button
                                 v-if="verification.verification_status !== 'rejected'"
                                 @click="markRejected"
+                                :disabled="processing"
                                 variant="danger"
                                 size="sm"
                                 class="inline-flex items-center gap-2 shadow-sm"

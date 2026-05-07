@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import Button from '@/components/Base/Button'
 import Lucide from '@/components/Base/Lucide'
 import Litepicker from '@/components/Base/Litepicker/Litepicker.vue'
@@ -42,14 +42,64 @@ interface CompanyOption {
 
 const props = defineProps<{
     carriers: CarrierOption[]
-    drivers: DriverOption[]
 }>()
 
-const companySearch = ref('')
-const companyResults = ref<CompanyOption[]>([])
-const searchLoading = ref(false)
+// ── Driver async search ──────────────────────────────────────────────────────
+const driverSearch       = ref('')
+const driverResults      = ref<DriverOption[]>([])
+const driverSearching    = ref(false)
+const selectedDriver     = ref<DriverOption | null>(null)
+let   driverDebounce: ReturnType<typeof setTimeout> | null = null
+
+async function fetchDrivers(query: string, carrierId: string) {
+    if (!carrierId) {
+        driverResults.value = []
+        return
+    }
+    driverSearching.value = true
+    try {
+        const url = new URL(route('admin.drivers.employment-verification.search-drivers'), window.location.origin)
+        url.searchParams.set('carrier_id', carrierId)
+        if (query.trim()) url.searchParams.set('q', query.trim())
+
+        const res = await fetch(url.toString(), {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        if (!res.ok) throw new Error('Driver search failed')
+        driverResults.value = await res.json()
+    } catch {
+        driverResults.value = []
+    } finally {
+        driverSearching.value = false
+    }
+}
+
+function onDriverSearchInput() {
+    if (driverDebounce) clearTimeout(driverDebounce)
+    driverDebounce = setTimeout(() => fetchDrivers(driverSearch.value, form.carrier_id), 300)
+}
+
+function selectDriver(driver: DriverOption) {
+    selectedDriver.value = driver
+    form.driver_id = String(driver.id)
+    driverSearch.value = driver.name
+    driverResults.value = []
+}
+
+function clearDriver() {
+    selectedDriver.value = null
+    form.driver_id = ''
+    driverSearch.value = ''
+    driverResults.value = []
+}
+
+// ── Company search ───────────────────────────────────────────────────────────
+const companySearch   = ref('')
+const companyResults  = ref<CompanyOption[]>([])
+const searchLoading   = ref(false)
 const selectedCompany = ref<CompanyOption | null>(null)
 
+// ── Form ─────────────────────────────────────────────────────────────────────
 const form = useForm({
     carrier_id: '',
     driver_id: '',
@@ -76,46 +126,43 @@ const form = useForm({
     send_email: true,
 })
 
-const filteredDrivers = computed(() => {
-    if (!form.carrier_id) return []
-    return props.drivers.filter(driver => String(driver.carrier_id ?? '') === form.carrier_id)
-})
-
-watch(() => form.carrier_id, () => {
-    form.driver_id = ''
+// When carrier changes: clear driver and auto-load recent drivers for that carrier
+watch(() => form.carrier_id, (carrierId) => {
+    clearDriver()
+    if (carrierId) fetchDrivers('', carrierId)
 })
 
 watch(() => form.company_mode, (mode) => {
     selectedCompany.value = null
-    companyResults.value = []
-    companySearch.value = ''
+    companyResults.value  = []
+    companySearch.value   = ''
     form.selected_company_id = ''
 
     if (mode === 'new') {
-        form.company_name = ''
-        form.company_email = ''
+        form.company_name    = ''
+        form.company_email   = ''
         form.company_address = ''
-        form.company_city = ''
-        form.company_state = ''
-        form.company_zip = ''
-        form.company_phone = ''
+        form.company_city    = ''
+        form.company_state   = ''
+        form.company_zip     = ''
+        form.company_phone   = ''
         form.company_contact = ''
-        form.company_fax = ''
+        form.company_fax     = ''
     }
 })
 
 function applyCompany(company: CompanyOption) {
-    selectedCompany.value = company
+    selectedCompany.value    = company
     form.selected_company_id = String(company.id)
-    form.company_name = company.company_name ?? ''
-    form.company_email = company.email ?? ''
-    form.company_address = company.address ?? ''
-    form.company_city = company.city ?? ''
-    form.company_state = company.state ?? ''
-    form.company_zip = company.zip ?? ''
-    form.company_phone = company.phone ?? ''
-    form.company_contact = company.contact ?? ''
-    form.company_fax = company.fax ?? ''
+    form.company_name        = company.company_name ?? ''
+    form.company_email       = company.email ?? ''
+    form.company_address     = company.address ?? ''
+    form.company_city        = company.city ?? ''
+    form.company_state       = company.state ?? ''
+    form.company_zip         = company.zip ?? ''
+    form.company_phone       = company.phone ?? ''
+    form.company_contact     = company.contact ?? ''
+    form.company_fax         = company.fax ?? ''
 }
 
 async function searchCompanies() {
@@ -123,20 +170,14 @@ async function searchCompanies() {
         companyResults.value = []
         return
     }
-
     searchLoading.value = true
-
     try {
-        const response = await fetch(`${route('admin.drivers.employment.search-companies')}?q=${encodeURIComponent(companySearch.value)}`, {
-            headers: {
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        })
-
-        if (!response.ok) throw new Error('Search failed')
-
-        companyResults.value = await response.json()
+        const res = await fetch(
+            `${route('admin.drivers.employment.search-companies')}?q=${encodeURIComponent(companySearch.value)}`,
+            { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } },
+        )
+        if (!res.ok) throw new Error('Search failed')
+        companyResults.value = await res.json()
     } catch {
         companyResults.value = []
     } finally {
@@ -178,6 +219,7 @@ function submit() {
         </div>
 
         <form @submit.prevent="submit" class="space-y-6">
+            <!-- Driver Selection -->
             <div class="box box--stacked p-6">
                 <div class="flex items-center gap-3 mb-5">
                     <Lucide icon="Users" class="w-5 h-5 text-primary" />
@@ -185,8 +227,11 @@ function submit() {
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Carrier -->
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Carrier <span class="text-danger">*</span></label>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">
+                            Carrier <span class="text-danger">*</span>
+                        </label>
                         <TomSelect v-model="form.carrier_id">
                             <option value="">Select carrier</option>
                             <option v-for="carrier in carriers" :key="carrier.id" :value="String(carrier.id)">
@@ -196,19 +241,78 @@ function submit() {
                         <p v-if="form.errors.carrier_id" class="text-danger text-xs mt-1">{{ form.errors.carrier_id }}</p>
                     </div>
 
+                    <!-- Driver async search -->
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Driver <span class="text-danger">*</span></label>
-                        <TomSelect v-model="form.driver_id">
-                            <option value="">Select driver</option>
-                            <option v-for="driver in filteredDrivers" :key="driver.id" :value="String(driver.id)">
-                                {{ driver.name }}{{ driver.email ? ` - ${driver.email}` : '' }}
-                            </option>
-                        </TomSelect>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">
+                            Driver <span class="text-danger">*</span>
+                        </label>
+
+                        <div class="relative">
+                            <div class="relative">
+                                <FormInput
+                                    v-model="driverSearch"
+                                    type="text"
+                                    :placeholder="form.carrier_id ? 'Type to search drivers...' : 'Select a carrier first'"
+                                    :disabled="!form.carrier_id"
+                                    autocomplete="off"
+                                    @input="onDriverSearchInput"
+                                />
+                                <button
+                                    v-if="selectedDriver"
+                                    type="button"
+                                    @click="clearDriver"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    title="Clear selection"
+                                >
+                                    <Lucide icon="X" class="w-4 h-4" />
+                                </button>
+                                <span v-else-if="driverSearching" class="absolute right-3 top-1/2 -translate-y-1/2">
+                                    <svg class="animate-spin w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                    </svg>
+                                </span>
+                            </div>
+
+                            <!-- Driver results dropdown -->
+                            <div
+                                v-if="driverResults.length && !selectedDriver"
+                                class="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg divide-y divide-slate-100 overflow-hidden max-h-60 overflow-y-auto"
+                            >
+                                <button
+                                    v-for="driver in driverResults"
+                                    :key="driver.id"
+                                    type="button"
+                                    @click="selectDriver(driver)"
+                                    class="w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors"
+                                >
+                                    <p class="text-sm font-medium text-slate-800">{{ driver.name }}</p>
+                                    <p class="text-xs text-slate-500">{{ driver.email ?? 'No email' }}</p>
+                                </button>
+                            </div>
+
+                            <!-- No results hint -->
+                            <p
+                                v-if="form.carrier_id && !driverSearching && driverResults.length === 0 && driverSearch.length > 0 && !selectedDriver"
+                                class="text-xs text-slate-500 mt-1"
+                            >
+                                No drivers found. Try a different name.
+                            </p>
+                        </div>
+
+                        <!-- Selected driver badge -->
+                        <div v-if="selectedDriver" class="mt-2 flex items-center gap-2 text-xs text-primary">
+                            <Lucide icon="CircleCheck" class="w-4 h-4" />
+                            {{ selectedDriver.name }}
+                            <span v-if="selectedDriver.email" class="text-slate-400">— {{ selectedDriver.email }}</span>
+                        </div>
+
                         <p v-if="form.errors.driver_id" class="text-danger text-xs mt-1">{{ form.errors.driver_id }}</p>
                     </div>
                 </div>
             </div>
 
+            <!-- Company -->
             <div class="box box--stacked p-6">
                 <div class="flex items-center gap-3 mb-5">
                     <Lucide icon="Building2" class="w-5 h-5 text-primary" />
@@ -326,6 +430,7 @@ function submit() {
                 </div>
             </div>
 
+            <!-- Employment Details -->
             <div class="box box--stacked p-6">
                 <div class="flex items-center gap-3 mb-5">
                     <Lucide icon="Briefcase" class="w-5 h-5 text-primary" />
@@ -395,6 +500,7 @@ function submit() {
                 </div>
             </div>
 
+            <!-- Options -->
             <div class="box box--stacked p-6">
                 <div class="space-y-3">
                     <label class="flex items-center gap-3 text-sm text-slate-700">

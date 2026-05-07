@@ -45,7 +45,6 @@ class NewDriverNotification extends Mailable
         } catch (\Exception $e) {
             Log::error('Error al construir correo de notificación de nuevo conductor', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw $e;
         }

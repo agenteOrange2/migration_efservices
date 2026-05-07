@@ -398,6 +398,7 @@ Route::prefix('drivers')->name('drivers.')->group(function () {
     // Employment Verification Management page (static prefix — must come before {driver} wildcard)
     Route::prefix('employment-verification')->name('employment-verification.')->group(function () {
         Route::get('/', [EmploymentVerificationController::class, 'index'])->name('index');
+        Route::get('search-drivers', [EmploymentVerificationController::class, 'searchDrivers'])->name('search-drivers');
         Route::get('new', [EmploymentVerificationController::class, 'create'])->name('new');
         Route::post('new', [EmploymentVerificationController::class, 'store'])->name('store');
         Route::get('{id}', [EmploymentVerificationController::class, 'show'])->name('show');
@@ -409,6 +410,7 @@ Route::prefix('drivers')->name('drivers.')->group(function () {
         Route::post('{id}/upload-document', [EmploymentVerificationController::class, 'uploadDocument'])->name('upload-document');
         Route::delete('{id}/documents/{mediaId}', [EmploymentVerificationController::class, 'deleteDocument'])->name('delete-document');
         Route::delete('{id}/tokens/{tokenId}', [EmploymentVerificationController::class, 'deleteToken'])->name('delete-token');
+        Route::get('{id}/tokens/{tokenId}/file/{type}', [EmploymentVerificationController::class, 'serveTokenFile'])->name('token-file');
     });
 
     Route::get('{driver}/documents/download', [DriverListController::class, 'downloadDocuments'])->name('documents.download');

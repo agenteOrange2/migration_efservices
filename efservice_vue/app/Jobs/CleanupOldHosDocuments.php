@@ -128,11 +128,11 @@ class CleanupOldHosDocuments implements ShouldQueue
                 $document->file_name
             );
 
-            // Copy file to archive location
+            // Copy file to archive location on private disk (never public — contains PII/HOS data)
             $fileContents = Storage::disk('public')->get($document->getPath());
-            Storage::disk('public')->put($archivePath, $fileContents);
+            Storage::disk('local')->put($archivePath, $fileContents);
 
-            // Create metadata file for the archived document
+            // Create metadata file alongside the archived document
             $metadata = [
                 'original_id' => $document->id,
                 'collection' => $document->collection_name,
@@ -147,7 +147,7 @@ class CleanupOldHosDocuments implements ShouldQueue
             ];
 
             $metadataPath = str_replace('.pdf', '.json', $archivePath);
-            Storage::disk('public')->put($metadataPath, json_encode($metadata, JSON_PRETTY_PRINT));
+            Storage::disk('local')->put($metadataPath, json_encode($metadata, JSON_PRETTY_PRINT));
 
             return true;
         } catch (\Exception $e) {

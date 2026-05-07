@@ -46,12 +46,6 @@ class CheckDriverStatus
             return $next($request);
         }
 
-        Log::info('Driver status check', [
-            'user_id' => $user->id,
-            'has_driver_details' => $user->driverDetails ? 'yes' : 'no',
-            'path' => $request->path()
-        ]);
-
         // Ensure driver registration is complete
         if (!$user->driverDetails) {
             return redirect()->route('driver.complete_registration')
@@ -65,11 +59,7 @@ class CheckDriverStatus
         if (!$application) {
             $application = DriverApplication::create([
                 'user_id' => $user->id,
-                'status' => DriverApplication::STATUS_DRAFT
-            ]);
-            Log::info('Created driver application', [
-                'user_id' => $user->id,
-                'application_id' => $application->id
+                'status'  => DriverApplication::STATUS_DRAFT,
             ]);
         }
 

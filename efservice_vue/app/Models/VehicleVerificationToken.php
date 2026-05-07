@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 use App\Models\Admin\Vehicle\VehicleDriverAssignment;
 use App\Models\Admin\Vehicle\Vehicle;
 use App\Models\UserDriverDetail;
@@ -78,7 +79,7 @@ class VehicleVerificationToken extends Model implements HasMedia
      */
     public static function generateToken(): string
     {
-        return md5(uniqid() . time());
+        return Str::random(64);
     }
     
     /**

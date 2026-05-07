@@ -202,7 +202,6 @@ class CarrierService
             Log::error('Error al obtener detalles completos del carrier', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);

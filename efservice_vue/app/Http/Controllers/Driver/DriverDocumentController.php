@@ -9,7 +9,6 @@ use App\Services\Driver\DriverNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -71,14 +70,12 @@ class DriverDocumentController extends Controller
         $media = $driver->addMediaFromRequest('document')
             ->toMediaCollection($validated['category']);
 
-        if (Schema::hasTable('driver_document_status')) {
-            DriverDocumentStatus::query()->create([
-                'driver_id' => $driver->id,
-                'media_id' => $media->id,
-                'category' => $validated['category'],
-                'status' => 'pending',
-            ]);
-        }
+        DriverDocumentStatus::query()->create([
+            'driver_id' => $driver->id,
+            'media_id' => $media->id,
+            'category' => $validated['category'],
+            'status' => 'pending',
+        ]);
 
         DriverNotificationService::notifyDocumentUploaded(
             $driver,
@@ -287,12 +284,10 @@ class DriverDocumentController extends Controller
             'You do not have permission to delete this document.'
         );
 
-        if (Schema::hasTable('driver_document_status')) {
-            DriverDocumentStatus::query()
-                ->where('driver_id', $driver->id)
-                ->where('media_id', $media->id)
-                ->delete();
-        }
+        DriverDocumentStatus::query()
+            ->where('driver_id', $driver->id)
+            ->where('media_id', $media->id)
+            ->delete();
 
         $media->delete();
 
@@ -302,9 +297,7 @@ class DriverDocumentController extends Controller
     private function renderIndexPage(bool $pendingMode): Response
     {
         $driver = $this->loadDriverWithRelationships();
-        $documentStatuses = Schema::hasTable('driver_document_status')
-            ? DriverDocumentStatus::query()->where('driver_id', $driver->id)->get()->keyBy('media_id')
-            : collect();
+        $documentStatuses = DriverDocumentStatus::query()->where('driver_id', $driver->id)->get()->keyBy('media_id');
 
         $categories = $this->buildDocumentCategories($driver, $documentStatuses);
         $totalDocuments = $categories->sum('count');

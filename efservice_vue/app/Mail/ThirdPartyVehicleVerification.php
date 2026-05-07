@@ -49,7 +49,6 @@ class ThirdPartyVehicleVerification extends Mailable
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error en ThirdPartyVehicleVerification', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
                 'third_party_name' => $this->thirdPartyName,
                 'driver_name' => $this->driverName,
                 'vehicle_data' => $this->vehicleData,

@@ -27,7 +27,6 @@ abstract class BaseService
         } catch (\Exception $e) {
             Log::error('Transaction failed in ' . static::class, [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw $e;
         }

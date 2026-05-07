@@ -147,7 +147,7 @@ class DriverProfileController extends Controller
         }
 
         $user->update([
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
         ]);
 
         return redirect()

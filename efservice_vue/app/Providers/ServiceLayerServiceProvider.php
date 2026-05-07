@@ -12,7 +12,8 @@ use App\Services\Hos\HosCalculationService;
 use App\Services\Hos\HosAlertService;
 use App\Services\Hos\HosService;
 use App\Services\Hos\HosConfigurationService;
-use App\Services\Hos\HosReportService;
+use App\Services\Hos\HosReportService; // PDF generation service (daily/monthly)
+use App\Services\HosReportService as HosTripReportService; // trip/HOS report queries used by controllers
 use App\Services\Hos\HosWeeklyCycleService;
 use App\Services\Hos\HosFMCSAService;
 use App\Services\Hos\HosGhostLogDetectionService;
@@ -74,12 +75,16 @@ class ServiceLayerServiceProvider extends ServiceProvider
             return new HosConfigurationService();
         });
 
+        // PDF document generator (daily/monthly HOS reports)
         $this->app->singleton(HosReportService::class, function ($app) {
             return new HosReportService(
                 $app->make(HosCalculationService::class),
                 $app->make(HosAlertService::class)
             );
         });
+
+        // Trip/HOS query service used by ReportsController and CarrierReportsController
+        $this->app->singleton(HosTripReportService::class, fn () => new HosTripReportService());
 
         // FMCSA HOS Services
         $this->app->singleton(HosWeeklyCycleService::class, function ($app) {

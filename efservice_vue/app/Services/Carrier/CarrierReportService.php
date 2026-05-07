@@ -65,7 +65,6 @@ class CarrierReportService
                 Log::error('Error generating dashboard metrics', [
                     'carrier_id' => $carrierId,
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
                 ]);
                 throw new Exception('Error generating dashboard metrics: ' . $e->getMessage());
             }
@@ -441,7 +440,6 @@ class CarrierReportService
             Log::error('Error generating driver report', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error generating driver report: ' . $e->getMessage());
         }
@@ -605,7 +603,6 @@ class CarrierReportService
             Log::error('Error exporting driver report PDF', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error exporting driver report PDF: ' . $e->getMessage());
         }
@@ -669,7 +666,6 @@ class CarrierReportService
             Log::error('Error generating vehicle report', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error generating vehicle report: ' . $e->getMessage());
         }
@@ -825,7 +821,6 @@ class CarrierReportService
             Log::error('Error exporting vehicle report PDF', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error exporting vehicle report PDF: ' . $e->getMessage());
         }
@@ -885,7 +880,6 @@ class CarrierReportService
             Log::error('Error generating accident report', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error generating accident report: ' . $e->getMessage());
         }
@@ -1059,7 +1053,6 @@ class CarrierReportService
             Log::error('Error exporting accident report PDF', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error exporting accident report PDF: ' . $e->getMessage());
         }
@@ -1175,7 +1168,6 @@ class CarrierReportService
             Log::error('Error generating medical records report', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error generating medical records report: ' . $e->getMessage());
         }
@@ -1360,7 +1352,6 @@ class CarrierReportService
             Log::error('Error exporting medical records report PDF', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error exporting medical records report PDF: ' . $e->getMessage());
         }
@@ -1428,7 +1419,6 @@ class CarrierReportService
             Log::error('Error generating license report', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error generating license report: ' . $e->getMessage());
         }
@@ -1626,7 +1616,6 @@ class CarrierReportService
             Log::error('Error exporting license report PDF', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error exporting license report PDF: ' . $e->getMessage());
         }
@@ -1686,7 +1675,6 @@ class CarrierReportService
             Log::error('Error generating maintenance report', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error generating maintenance report: ' . $e->getMessage());
         }
@@ -1879,7 +1867,6 @@ class CarrierReportService
             Log::error('Error exporting maintenance report PDF', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error exporting maintenance report PDF: ' . $e->getMessage());
         }
@@ -1939,7 +1926,6 @@ class CarrierReportService
             Log::error('Error generating repair report', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error generating repair report: ' . $e->getMessage());
         }
@@ -2138,7 +2124,6 @@ class CarrierReportService
             Log::error('Error exporting repair report PDF', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error exporting repair report PDF: ' . $e->getMessage());
         }
@@ -2214,7 +2199,6 @@ class CarrierReportService
             Log::error('Error generating monthly summary', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error generating monthly summary: ' . $e->getMessage());
         }
@@ -2382,7 +2366,6 @@ class CarrierReportService
             Log::error('Error exporting monthly summary report PDF', [
                 'carrier_id' => $carrierId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw new Exception('Error exporting monthly summary PDF: ' . $e->getMessage());
         }

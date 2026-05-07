@@ -95,7 +95,24 @@ class DriverTripController extends AdminTripController
 
         $trips->through(fn (Trip $trip) => $this->tripCardPayload($trip));
 
-        $statsQuery = Trip::query()->where('user_driver_detail_id', $driver->id);
+        $rawStats = DB::table('trips')
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as accepted,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as paused,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN is_quick_trip = 1 THEN 1 ELSE 0 END) as quick_trips
+            ", [
+                Trip::STATUS_PENDING,
+                Trip::STATUS_ACCEPTED,
+                Trip::STATUS_IN_PROGRESS,
+                Trip::STATUS_PAUSED,
+                Trip::STATUS_COMPLETED,
+            ])
+            ->where('user_driver_detail_id', $driver->id)
+            ->first();
 
         return Inertia::render('driver/trips/Index', [
             'driver' => [
@@ -105,13 +122,13 @@ class DriverTripController extends AdminTripController
             ],
             'filters' => $filters,
             'stats' => [
-                'total' => (clone $statsQuery)->count(),
-                'pending' => (clone $statsQuery)->where('status', Trip::STATUS_PENDING)->count(),
-                'accepted' => (clone $statsQuery)->where('status', Trip::STATUS_ACCEPTED)->count(),
-                'in_progress' => (clone $statsQuery)->where('status', Trip::STATUS_IN_PROGRESS)->count(),
-                'paused' => (clone $statsQuery)->where('status', Trip::STATUS_PAUSED)->count(),
-                'completed' => (clone $statsQuery)->where('status', Trip::STATUS_COMPLETED)->count(),
-                'quick_trips' => (clone $statsQuery)->where('is_quick_trip', true)->count(),
+                'total'       => (int) $rawStats->total,
+                'pending'     => (int) $rawStats->pending,
+                'accepted'    => (int) $rawStats->accepted,
+                'in_progress' => (int) $rawStats->in_progress,
+                'paused'      => (int) $rawStats->paused,
+                'completed'   => (int) $rawStats->completed,
+                'quick_trips' => (int) $rawStats->quick_trips,
             ],
             'trips' => $trips,
         ]);

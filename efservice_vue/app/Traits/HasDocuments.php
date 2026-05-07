@@ -273,7 +273,6 @@ trait HasDocuments
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Excepción al eliminar archivo físico", [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
         }
         

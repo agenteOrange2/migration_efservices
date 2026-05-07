@@ -40,7 +40,6 @@ class CarrierObserver
             Log::error('CarrierObserver: Error generating base documents', [
                 'carrier_id' => $carrier->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
         }
     }

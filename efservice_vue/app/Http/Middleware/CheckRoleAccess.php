@@ -20,50 +20,25 @@ class CheckRoleAccess
      */
     public function handle(Request $request, Closure $next, string $requiredRole): Response
     {
-        // Verificar si es una ruta pública que no requiere autenticación
         if ($this->isPublicRoute($request, $requiredRole)) {
-            Log::info('CheckRoleAccess: Public route, allowing access', [
-                'path' => $request->path(),
-                'required_role' => $requiredRole
-            ]);
             return $next($request);
         }
 
         $user = Auth::user();
-        
+
         if (!$user) {
-            Log::info('CheckRoleAccess: No authenticated user, redirecting to login', [
-                'path' => $request->path(),
-                'required_role' => $requiredRole
-            ]);
             return redirect()->route('login');
         }
 
-        Log::info('CheckRoleAccess: Checking role access', [
-            'user_id' => $user->id,
-            'user_roles' => $user->getRoleNames()->toArray(),
-            'required_role' => $requiredRole,
-            'path' => $request->path()
-        ]);
-
-        // Verificar si el usuario tiene el rol requerido
         if (!$user->hasRole($requiredRole)) {
-            Log::warning('CheckRoleAccess: Access denied - insufficient role', [
-                'user_id' => $user->id,
-                'user_roles' => $user->getRoleNames()->toArray(),
+            Log::warning('CheckRoleAccess: access denied', [
+                'user_id'       => $user->id,
                 'required_role' => $requiredRole,
-                'path' => $request->path()
+                'path'          => $request->path(),
             ]);
 
-            // Redirigir según el rol del usuario
             return $this->redirectBasedOnUserRole($user, $request);
         }
-
-        Log::info('CheckRoleAccess: Access granted', [
-            'user_id' => $user->id,
-            'required_role' => $requiredRole,
-            'path' => $request->path()
-        ]);
 
         return $next($request);
     }

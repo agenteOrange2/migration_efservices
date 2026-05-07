@@ -76,34 +76,23 @@ class AuthenticationService
      */
     public function determineRedirect(User $user): string
     {
-        // Superadmin - highest priority
         if ($user->hasRole('superadmin')) {
-            Log::info('AUTH_REDIRECT', [
-                'user_id' => $user->id,
-                'destination' => 'admin_dashboard',
-                'role' => 'superadmin'
-            ]);
             return route('admin.dashboard');
         }
-        
-        // Carrier
+
         if ($user->hasRole('user_carrier')) {
             return $this->getCarrierRedirect($user);
         }
-        
-        // Driver
+
         if ($user->hasRole('user_driver')) {
             return $this->getDriverRedirect($user);
         }
-        
-        // No recognized role - log warning
+
         Log::warning('AUTH_REDIRECT_NO_ROLE', [
             'user_id' => $user->id,
-            'email' => $user->email,
-            'roles' => $user->getRoleNames()->toArray(),
-            'destination' => 'home'
+            'roles'   => $user->getRoleNames()->toArray(),
         ]);
-        
+
         return '/';
     }
 
@@ -116,88 +105,35 @@ class AuthenticationService
     private function getCarrierRedirect(User $user): string
     {
         $carrierDetails = $user->carrierDetails;
-        
-        // No carrier details or no carrier_id - needs to complete registration
+
         if (!$carrierDetails || !$carrierDetails->carrier_id) {
-            Log::info('AUTH_REDIRECT', [
-                'user_id' => $user->id,
-                'destination' => 'carrier_wizard_step2',
-                'reason' => 'no_carrier_details'
-            ]);
             return route('carrier.wizard.step2');
         }
-        
+
         $carrier = $carrierDetails->carrier;
-        
-        // No carrier record found
+
         if (!$carrier) {
-            Log::info('AUTH_REDIRECT', [
-                'user_id' => $user->id,
-                'destination' => 'carrier_wizard_step2',
-                'reason' => 'carrier_not_found'
-            ]);
             return route('carrier.wizard.step2');
         }
-        
-        // Redirect based on carrier status
+
         switch ($carrier->status) {
             case Carrier::STATUS_PENDING:
             case Carrier::STATUS_PENDING_VALIDATION:
-                Log::info('AUTH_REDIRECT', [
-                    'user_id' => $user->id,
-                    'carrier_id' => $carrier->id,
-                    'destination' => 'carrier_pending_validation',
-                    'carrier_status' => $carrier->status,
-                ]);
                 return route('carrier.pending.validation');
 
             case Carrier::STATUS_INACTIVE:
-                Log::info('AUTH_REDIRECT', [
-                    'user_id' => $user->id,
-                    'carrier_id' => $carrier->id,
-                    'destination' => 'login',
-                    'carrier_status' => 'inactive'
-                ]);
                 return route('login');
 
             case Carrier::STATUS_REJECTED:
-                Log::info('AUTH_REDIRECT', [
-                    'user_id' => $user->id,
-                    'carrier_id' => $carrier->id,
-                    'destination' => 'carrier_pending_validation',
-                    'carrier_status' => 'rejected',
-                ]);
                 return route('carrier.pending.validation');
 
             case Carrier::STATUS_ACTIVE:
-                // Check if documents are in progress
                 if ($carrier->document_status === Carrier::DOCUMENT_STATUS_IN_PROGRESS) {
-                    Log::info('AUTH_REDIRECT', [
-                        'user_id' => $user->id,
-                        'carrier_id' => $carrier->id,
-                        'destination' => 'carrier_documents',
-                        'carrier_status' => 'active',
-                        'document_status' => 'in_progress'
-                    ]);
                     return route('carrier.documents.index', $carrier->slug);
                 }
-
-                Log::info('AUTH_REDIRECT', [
-                    'user_id' => $user->id,
-                    'carrier_id' => $carrier->id,
-                    'destination' => 'carrier_dashboard',
-                    'carrier_status' => 'active'
-                ]);
                 return route('carrier.dashboard');
 
             default:
-                Log::info('AUTH_REDIRECT', [
-                    'user_id' => $user->id,
-                    'carrier_id' => $carrier->id,
-                    'destination' => 'carrier_pending_validation',
-                    'carrier_status' => $carrier->status,
-                    'reason' => 'unknown_status'
-                ]);
                 return route('carrier.pending.validation');
         }
     }
@@ -212,35 +148,18 @@ class AuthenticationService
     {
         $driverDetails = $user->driverDetails;
 
-        // No driver details - needs to complete registration
         if (!$driverDetails) {
-            Log::info('AUTH_REDIRECT', [
-                'user_id' => $user->id,
-                'destination' => 'driver_complete_registration',
-                'reason' => 'no_driver_details'
-            ]);
             return route('driver.complete_registration');
         }
 
-        // Check if driver has an active carrier
         $carrier = $driverDetails->carrier;
 
-        if ($carrier && $carrier->status == Carrier::STATUS_ACTIVE) {
-            // Check driver's own status
-            if ($driverDetails->status == \App\Models\UserDriverDetail::STATUS_ACTIVE) {
-                Log::info('AUTH_REDIRECT', [
-                    'user_id' => $user->id,
-                    'driver_id' => $driverDetails->id,
-                    'carrier_id' => $carrier->id,
-                    'destination' => 'driver_dashboard'
-                ]);
-                return route('driver.dashboard');
-            }
+        if ($carrier && $carrier->status == Carrier::STATUS_ACTIVE
+            && $driverDetails->status == \App\Models\UserDriverDetail::STATUS_ACTIVE) {
+            return route('driver.dashboard');
         }
 
-        // Application still in DRAFT and not yet submitted by the driver:
-        // resume the wizard at the step they left off, instead of dumping
-        // them on the pending page where they have no way to keep filling.
+        // Resume wizard if application is still an incomplete draft
         $application = $user->driverApplication;
         $isDraftIncomplete =
             (!$application || $application->status === \App\Models\Admin\Driver\DriverApplication::STATUS_DRAFT)
@@ -255,23 +174,9 @@ class AuthenticationService
 
         if ($isDraftIncomplete && !$carrierBlocksAccess) {
             $step = $driverDetails->current_step ?? 1;
-            Log::info('AUTH_REDIRECT', [
-                'user_id'    => $user->id,
-                'driver_id'  => $driverDetails->id,
-                'destination'=> 'driver_application_wizard',
-                'reason'     => 'application_draft_incomplete',
-                'step'       => $step,
-            ]);
             return route('driver.application.wizard', ['step' => $step]);
         }
 
-        // Driver pending or carrier not active
-        Log::info('AUTH_REDIRECT', [
-            'user_id' => $user->id,
-            'driver_id' => $driverDetails->id ?? null,
-            'destination' => 'driver_pending',
-            'reason' => 'driver_or_carrier_not_active'
-        ]);
         return route('driver.pending');
     }
 

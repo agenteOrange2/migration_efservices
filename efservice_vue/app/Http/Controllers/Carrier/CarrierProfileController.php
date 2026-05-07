@@ -31,11 +31,34 @@ class CarrierProfileController extends Controller
         $carrier = $this->resolveCarrier()->load(['membership', 'bankingDetails']);
 
         $totalDocuments = DocumentType::query()->count();
-        $approvedDocuments = $carrier->documents()
-            ->where('status', CarrierDocument::STATUS_APPROVED)
-            ->count();
+
+        // Single query for all document counts (replaces 7 separate queries)
+        $docRow = DB::table('carrier_documents')
+            ->where('carrier_id', $carrier->id)
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as approved,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as rejected,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as in_process
+            ', [
+                CarrierDocument::STATUS_PENDING,
+                CarrierDocument::STATUS_APPROVED,
+                CarrierDocument::STATUS_REJECTED,
+                CarrierDocument::STATUS_IN_PROCESS,
+            ])
+            ->first();
+
+        $documentStats = [
+            'total'      => (int) ($docRow->total ?? 0),
+            'pending'    => (int) ($docRow->pending ?? 0),
+            'approved'   => (int) ($docRow->approved ?? 0),
+            'rejected'   => (int) ($docRow->rejected ?? 0),
+            'in_process' => (int) ($docRow->in_process ?? 0),
+        ];
+
         $documentProgress = $totalDocuments > 0
-            ? round(($approvedDocuments / $totalDocuments) * 100)
+            ? round(($documentStats['approved'] / $totalDocuments) * 100)
             : 0;
 
         $pendingDocuments = $carrier->documents()
@@ -45,9 +68,9 @@ class CarrierProfileController extends Controller
             ->take(5)
             ->get()
             ->map(fn (CarrierDocument $document) => [
-                'id' => $document->id,
-                'name' => $document->documentType?->name ?? 'Unknown document',
-                'status' => (int) $document->status,
+                'id'         => $document->id,
+                'name'       => $document->documentType?->name ?? 'Unknown document',
+                'status'     => (int) $document->status,
                 'status_name' => $document->status_name,
                 'updated_at' => optional($document->updated_at)->format('M d, Y'),
             ])
@@ -60,25 +83,29 @@ class CarrierProfileController extends Controller
             ->get();
 
         $membership = $carrier->membership;
-        $driversCount = $carrier->userDrivers()->count();
-        $activeDrivers = $carrier->userDrivers()->where('status', 1)->count();
-        $vehiclesCount = $carrier->vehicles()->count();
-        $activeVehicles = $carrier->vehicles()->where('out_of_service', false)->count();
+
+        // Single query for drivers counts
+        $driverRow = DB::table('user_driver_details')
+            ->where('carrier_id', $carrier->id)
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as active')
+            ->first();
+        $driversCount  = (int) ($driverRow->total ?? 0);
+        $activeDrivers = (int) ($driverRow->active ?? 0);
+
+        // Single query for vehicle counts
+        $vehicleRow = DB::table('vehicles')
+            ->where('carrier_id', $carrier->id)
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN out_of_service = 0 THEN 1 ELSE 0 END) as active')
+            ->first();
+        $vehiclesCount  = (int) ($vehicleRow->total ?? 0);
+        $activeVehicles = (int) ($vehicleRow->active ?? 0);
 
         $now = Carbon::now();
         $expiringThreshold = $now->copy()->addDays(30);
 
-        $licenseStats = $this->licenseStats($carrier->id, $now, $expiringThreshold);
-        $medicalStats = $this->medicalStats($carrier->id, $now, $expiringThreshold);
+        $licenseStats  = $this->licenseStats($carrier->id, $now, $expiringThreshold);
+        $medicalStats  = $this->medicalStats($carrier->id, $now, $expiringThreshold);
         $accidentStats = $this->accidentStats($carrier->id, $now);
-
-        $documentStats = [
-            'total' => $carrier->documents()->count(),
-            'pending' => $carrier->documents()->where('status', CarrierDocument::STATUS_PENDING)->count(),
-            'approved' => $carrier->documents()->where('status', CarrierDocument::STATUS_APPROVED)->count(),
-            'rejected' => $carrier->documents()->where('status', CarrierDocument::STATUS_REJECTED)->count(),
-            'in_process' => $carrier->documents()->where('status', CarrierDocument::STATUS_IN_PROCESS)->count(),
-        ];
 
         $membershipLimits = [
             'drivers' => [
@@ -277,9 +304,11 @@ class CarrierProfileController extends Controller
             }
 
             if ($request->hasFile('logo_carrier')) {
+                $ext  = $request->file('logo_carrier')->extension();
+                $name = strtolower(preg_replace('/[^a-zA-Z0-9]/', '_', $carrier->name));
                 $carrier->clearMediaCollection('logo_carrier');
                 $carrier->addMediaFromRequest('logo_carrier')
-                    ->usingFileName(strtolower(str_replace(' ', '_', $carrier->name)) . '.webp')
+                    ->usingFileName("{$name}.{$ext}")
                     ->toMediaCollection('logo_carrier');
             }
         });
@@ -291,71 +320,71 @@ class CarrierProfileController extends Controller
 
     private function licenseStats(int $carrierId, Carbon $now, Carbon $expiringThreshold): array
     {
-        $total = DriverLicense::query()
-            ->whereHas('driverDetail', fn ($query) => $query->where('carrier_id', $carrierId))
-            ->count();
+        $row = DB::table('driver_licenses')
+            ->join('user_driver_details', 'driver_licenses.user_driver_detail_id', '=', 'user_driver_details.id')
+            ->where('user_driver_details.carrier_id', $carrierId)
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN expiration_date < ? THEN 1 ELSE 0 END) as expired,
+                SUM(CASE WHEN expiration_date >= ? AND expiration_date <= ? THEN 1 ELSE 0 END) as expiring_soon
+            ', [$now->toDateString(), $now->toDateString(), $expiringThreshold->toDateString()])
+            ->first();
 
-        $expired = DriverLicense::query()
-            ->whereHas('driverDetail', fn ($query) => $query->where('carrier_id', $carrierId))
-            ->whereDate('expiration_date', '<', $now)
-            ->count();
-
-        $expiringSoon = DriverLicense::query()
-            ->whereHas('driverDetail', fn ($query) => $query->where('carrier_id', $carrierId))
-            ->whereDate('expiration_date', '>=', $now)
-            ->whereDate('expiration_date', '<=', $expiringThreshold)
-            ->count();
+        $total       = (int) ($row->total ?? 0);
+        $expired     = (int) ($row->expired ?? 0);
+        $expiringSoon = (int) ($row->expiring_soon ?? 0);
 
         return [
-            'total' => $total,
-            'expired' => $expired,
+            'total'        => $total,
+            'expired'      => $expired,
             'expiring_soon' => $expiringSoon,
-            'valid' => max(0, $total - $expired - $expiringSoon),
+            'valid'        => max(0, $total - $expired - $expiringSoon),
         ];
     }
 
     private function medicalStats(int $carrierId, Carbon $now, Carbon $expiringThreshold): array
     {
-        $total = DriverMedicalQualification::query()
-            ->whereHas('userDriverDetail', fn ($query) => $query->where('carrier_id', $carrierId))
-            ->count();
+        $row = DB::table('driver_medical_qualifications')
+            ->join('user_driver_details', 'driver_medical_qualifications.user_driver_detail_id', '=', 'user_driver_details.id')
+            ->where('user_driver_details.carrier_id', $carrierId)
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN medical_card_expiration_date < ? THEN 1 ELSE 0 END) as expired,
+                SUM(CASE WHEN medical_card_expiration_date >= ? AND medical_card_expiration_date <= ? THEN 1 ELSE 0 END) as expiring_soon
+            ', [$now->toDateString(), $now->toDateString(), $expiringThreshold->toDateString()])
+            ->first();
 
-        $expired = DriverMedicalQualification::query()
-            ->whereHas('userDriverDetail', fn ($query) => $query->where('carrier_id', $carrierId))
-            ->whereDate('medical_card_expiration_date', '<', $now)
-            ->count();
-
-        $expiringSoon = DriverMedicalQualification::query()
-            ->whereHas('userDriverDetail', fn ($query) => $query->where('carrier_id', $carrierId))
-            ->whereDate('medical_card_expiration_date', '>=', $now)
-            ->whereDate('medical_card_expiration_date', '<=', $expiringThreshold)
-            ->count();
+        $total       = (int) ($row->total ?? 0);
+        $expired     = (int) ($row->expired ?? 0);
+        $expiringSoon = (int) ($row->expiring_soon ?? 0);
 
         return [
-            'total' => $total,
-            'expired' => $expired,
+            'total'        => $total,
+            'expired'      => $expired,
             'expiring_soon' => $expiringSoon,
-            'valid' => max(0, $total - $expired - $expiringSoon),
+            'valid'        => max(0, $total - $expired - $expiringSoon),
         ];
     }
 
     private function accidentStats(int $carrierId, Carbon $now): array
     {
-        $monthStart = $now->copy()->subDays(30);
-        $yearStart = $now->copy()->startOfYear();
+        $monthStart = $now->copy()->subDays(30)->toDateString();
+        $yearStart  = $now->copy()->startOfYear()->toDateString();
+
+        $row = DB::table('driver_accidents')
+            ->join('user_driver_details', 'driver_accidents.user_driver_detail_id', '=', 'user_driver_details.id')
+            ->where('user_driver_details.carrier_id', $carrierId)
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN accident_date >= ? THEN 1 ELSE 0 END) as this_month,
+                SUM(CASE WHEN accident_date >= ? THEN 1 ELSE 0 END) as this_year
+            ', [$monthStart, $yearStart])
+            ->first();
 
         return [
-            'total' => DriverAccident::query()
-                ->whereHas('userDriverDetail', fn ($query) => $query->where('carrier_id', $carrierId))
-                ->count(),
-            'this_month' => DriverAccident::query()
-                ->whereHas('userDriverDetail', fn ($query) => $query->where('carrier_id', $carrierId))
-                ->whereDate('accident_date', '>=', $monthStart)
-                ->count(),
-            'this_year' => DriverAccident::query()
-                ->whereHas('userDriverDetail', fn ($query) => $query->where('carrier_id', $carrierId))
-                ->whereDate('accident_date', '>=', $yearStart)
-                ->count(),
+            'total'      => (int) ($row->total ?? 0),
+            'this_month' => (int) ($row->this_month ?? 0),
+            'this_year'  => (int) ($row->this_year ?? 0),
         ];
     }
 

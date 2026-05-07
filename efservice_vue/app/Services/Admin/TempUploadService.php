@@ -18,7 +18,7 @@ class TempUploadService
      */
     public function store(UploadedFile $file, string $folder = 'temp')
     {
-        $filename = Str::random(20) . '.' . $file->getClientOriginalExtension();
+        $filename = Str::random(20) . '.' . $file->extension();
         $path = $file->storeAs($folder, $filename, 'public');
         
         // Aplicar compresión automática si es una imagen
@@ -62,66 +62,31 @@ class TempUploadService
     public function moveToPermanent(string $token)
     {
         try {
-            // Log detallado al inicio
-            Log::info('Iniciando moveToPermanent', ['token' => $token]);
-            
             $tempFiles = Session::get('temp_files', []);
-            
-            Log::info('Estado actual de tempFiles', [
-                'token_exists' => isset($tempFiles[$token]),
-                'total_temp_files' => count($tempFiles),
-                'available_tokens' => array_keys($tempFiles)
-            ]);
-            
-            $tempFile = $tempFiles[$token] ?? null;
-            
+            $tempFile  = $tempFiles[$token] ?? null;
+
             if (!$tempFile) {
-                Log::error('Token no encontrado en archivos temporales', ['token' => $token]);
+                Log::warning('TempUploadService: token not found in session');
                 return false;
             }
-            
-            Log::info('Información del archivo temporal encontrado', [
-                'token' => $token,
-                'disk' => $tempFile['disk'],
-                'path' => $tempFile['path'],
-                'original_name' => $tempFile['original_name'] ?? 'unknown'
-            ]);
-            
+
             $sourcePath = Storage::disk($tempFile['disk'])->path($tempFile['path']);
-            
-            Log::info('Ruta completa del archivo', [
-                'token' => $token,
-                'source_path' => $sourcePath
-            ]);
-            
+
             if (!file_exists($sourcePath)) {
-                Log::error('Archivo temporal no existe en el disco', [
-                    'token' => $token, 
-                    'path' => $sourcePath,
-                    'disk_exists' => Storage::disk($tempFile['disk'])->exists($tempFile['path']),
-                    'storage_path' => storage_path(),
-                    'public_path' => public_path()
+                Log::error('TempUploadService: temp file missing from disk', [
+                    'disk' => $tempFile['disk'],
                 ]);
                 return false;
             }
-            
-            Log::info('Archivo encontrado, retornando ruta', [
-                'token' => $token,
-                'path' => $sourcePath,
-                'size' => filesize($sourcePath),
-                'mime' => mime_content_type($sourcePath)
-            ]);
-            
-            // Eliminar el token procesado para que no se pueda usar nuevamente
+
+            // Consume the token so it cannot be reused
             unset($tempFiles[$token]);
             Session::put('temp_files', $tempFiles);
-            
+
             return $sourcePath;
         } catch (\Exception $e) {
-            Log::error('Error en moveToPermanent', [
-                'token' => $token,
+            Log::error('TempUploadService: moveToPermanent failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             return false;
         }
@@ -162,48 +127,23 @@ class TempUploadService
             $extension = strtolower($file->getClientOriginalExtension());
             
             if (!in_array($extension, $imageExtensions)) {
-                Log::info('Archivo no es imagen, saltando compresión', [
-                    'extension' => $extension,
-                    'file' => $file->getClientOriginalName()
-                ]);
-                return true; // No es imagen, no necesita compresión
+                return true;
             }
 
-            Log::info('Iniciando compresión de imagen', [
-                'original_name' => $file->getClientOriginalName(),
-                'original_size' => $file->getSize(),
-                'temp_path' => $tempPath
-            ]);
+            $manager   = new ImageManager(new Driver());
+            $fullPath  = Storage::disk('public')->path($tempPath);
+            $image     = $manager->read($fullPath);
 
-            // Crear manager de imagen
-            $manager = new ImageManager(new Driver());
-            
-            // Leer la imagen desde el archivo temporal
-            $fullPath = Storage::disk('public')->path($tempPath);
-            $image = $manager->read($fullPath);
-            
-            // Redimensionar manteniendo proporción (máximo 800px de ancho)
             if ($image->width() > 800) {
                 $image->scaleDown(width: 800);
             }
-            
-            // Comprimir y guardar como JPEG con 80% de calidad
+
             $image->toJpeg(80)->save($fullPath);
-            
-            $newSize = filesize($fullPath);
-            
-            Log::info('Compresión completada', [
-                'original_size' => $file->getSize(),
-                'new_size' => $newSize,
-                'reduction_percentage' => round((($file->getSize() - $newSize) / $file->getSize()) * 100, 2)
-            ]);
-            
+
             return true;
         } catch (\Exception $e) {
-            Log::error('Error al comprimir imagen', [
+            Log::error('TempUploadService: image compression failed', [
                 'error' => $e->getMessage(),
-                'file' => $file->getClientOriginalName(),
-                'trace' => $e->getTraceAsString()
             ]);
             return false;
         }

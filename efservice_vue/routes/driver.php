@@ -34,7 +34,7 @@ Route::middleware('guest')->group(function () {
     Route::get('register/{carrier:slug}', [DriverRegistrationController::class, 'showRegistrationForm'])
         ->name('register');
 
-    Route::post('register/{carrier:slug}', [DriverRegistrationController::class, 'register'])
+    Route::middleware('throttle:5,1')->post('register/{carrier:slug}', [DriverRegistrationController::class, 'register'])
         ->name('register.submit');
 
     Route::get('/register', [DriverRegistrationController::class, 'showIndependentCarrierSelection'])
@@ -43,10 +43,10 @@ Route::middleware('guest')->group(function () {
     Route::get('/register/form/{carrier_slug}', [DriverRegistrationController::class, 'showIndependentRegistrationForm'])
         ->name('register.form');
 
-    Route::post('/register', [DriverRegistrationController::class, 'registerIndependent'])
+    Route::middleware('throttle:5,1')->post('/register', [DriverRegistrationController::class, 'registerIndependent'])
         ->name('register.independent');
 
-    Route::get('confirm/{token}', [DriverRegistrationController::class, 'confirmEmail'])
+    Route::middleware('throttle:20,1')->get('confirm/{token}', [DriverRegistrationController::class, 'confirmEmail'])
         ->name('confirm');
 
     Route::get('registration/success', fn () => inertia('driver/registration/Success'))

@@ -27,32 +27,46 @@ class EmploymentVerificationController extends Controller
             ->orderBy('name')
             ->get(['id', 'name'])
             ->map(fn ($carrier) => [
-                'id' => $carrier->id,
+                'id'   => $carrier->id,
                 'name' => $carrier->name,
-            ]);
-
-        $drivers = UserDriverDetail::query()
-            ->with(['user', 'carrier'])
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn ($driver) => [
-                'id' => $driver->id,
-                'carrier_id' => $driver->carrier_id,
-                'carrier_name' => $driver->carrier?->name,
-                'name' => trim(($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')),
-                'email' => $driver->user->email,
             ]);
 
         return Inertia::render('admin/drivers/employment-verification/Create', [
             'carriers' => $carriers,
-            'drivers' => $drivers,
         ]);
+    }
+
+    public function searchDrivers(Request $request)
+    {
+        $term      = $request->input('q', '');
+        $carrierId = $request->input('carrier_id');
+
+        $drivers = UserDriverDetail::query()
+            ->with(['user:id,name,email', 'carrier:id,name'])
+            ->when($carrierId, fn ($q) => $q->where('carrier_id', $carrierId))
+            ->when($term, function ($q) use ($term) {
+                $q->whereHas('user', fn ($u) => $u->where('name', 'like', "%{$term}%"))
+                  ->orWhere('last_name', 'like', "%{$term}%");
+            })
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get()
+            ->map(fn ($driver) => [
+                'id'           => $driver->id,
+                'carrier_id'   => $driver->carrier_id,
+                'carrier_name' => $driver->carrier?->name,
+                'name'         => trim(($driver->user?->name ?? '') . ' ' . ($driver->last_name ?? '')),
+                'email'        => $driver->user?->email,
+            ]);
+
+        return response()->json($drivers);
     }
 
     public function index(Request $request)
     {
         $query = DriverEmploymentCompany::query()
-            ->with(['userDriverDetail.user', 'masterCompany', 'verificationTokens'])
+            ->with(['userDriverDetail.user', 'masterCompany'])
+            ->withCount('verificationTokens')
             ->where('email_sent', true);
 
         if ($request->filled('status')) {
@@ -86,12 +100,12 @@ class EmploymentVerificationController extends Controller
             return [
                 'id'                  => $item->id,
                 'driver_id'           => $item->user_driver_detail_id,
-                'driver_name'         => $driver ? (($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')) : '—',
+                'driver_name'         => $driver ? trim(($driver->user?->name ?? '') . ' ' . ($driver->last_name ?? '')) : '—',
                 'company_name'        => $company ? $company->company_name : ($item->company_name ?? 'Custom company'),
                 'email'               => $item->email,
                 'email_sent'          => $item->email_sent,
                 'verification_status' => $item->verification_status ?? 'pending',
-                'attempt_count'       => $item->verificationTokens->count(),
+                'attempt_count'       => $item->verification_tokens_count,
                 'updated_at'          => $item->updated_at?->format('M d, Y'),
             ];
         });
@@ -101,7 +115,7 @@ class EmploymentVerificationController extends Controller
             ->get()
             ->map(fn ($d) => [
                 'id'   => $d->id,
-                'name' => trim(($d->user->name ?? '') . ' ' . ($d->last_name ?? '')),
+                'name' => trim(($d->user?->name ?? '') . ' ' . ($d->last_name ?? '')),
             ]);
 
         return Inertia::render('admin/drivers/employment-verification/Index', [
@@ -123,7 +137,7 @@ class EmploymentVerificationController extends Controller
         $driver = $company->userDriverDetail;
         $masterCompany = $company->masterCompany;
 
-        $maxAttempts = 3;
+        $maxAttempts = config('employment_verification.max_attempts');
         $attemptCount = $company->verificationTokens->count();
 
         $tokens = $company->verificationTokens->sortBy('created_at')->values()->map(fn ($t) => [
@@ -134,8 +148,8 @@ class EmploymentVerificationController extends Controller
             'verified_at'   => $t->verified_at?->format('M d, Y H:i'),
             'is_verified'   => $t->isVerified(),
             'is_expired'    => $t->isExpired(),
-            'document_url'  => $t->document_path ? Storage::url($t->document_path) : null,
-            'signature_url' => $t->signature_path ? Storage::url($t->signature_path) : null,
+            'document_url'  => $t->document_path ? route('admin.drivers.employment-verification.token-file', [$company->id, $t->id, 'document']) : null,
+            'signature_url' => $t->signature_path ? route('admin.drivers.employment-verification.token-file', [$company->id, $t->id, 'signature']) : null,
         ]);
 
         $latestToken = $tokens->last();
@@ -172,7 +186,7 @@ class EmploymentVerificationController extends Controller
             'verification' => [
                 'id'                        => $company->id,
                 'driver_id'                 => $company->user_driver_detail_id,
-                'driver_name'               => $driver ? trim(($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')) : '—',
+                'driver_name'               => $driver ? trim(($driver->user?->name ?? '') . ' ' . ($driver->last_name ?? '')) : '—',
                 'company_name'              => $masterCompany?->company_name ?? ($company->company_name ?? 'Custom Company'),
                 'email'                     => $company->email,
                 'email_sent'                => $company->email_sent,
@@ -351,13 +365,15 @@ class EmploymentVerificationController extends Controller
     {
         $company = DriverEmploymentCompany::with(['userDriverDetail.user', 'masterCompany'])->findOrFail($id);
 
-        if (empty($company->email)) {
-            return back()->with('error', 'No email address found for this company.');
+        $resolvedEmail = $company->masterCompany?->email ?: $company->email;
+        if (empty($resolvedEmail) || !filter_var($resolvedEmail, FILTER_VALIDATE_EMAIL)) {
+            return back()->with('error', 'No valid email address found for this company.');
         }
 
+        $maxAttempts  = config('employment_verification.max_attempts');
         $attemptCount = EmploymentVerificationToken::where('employment_company_id', $company->id)->count();
-        if ($attemptCount >= 3) {
-            return back()->with('error', 'Maximum verification attempts (3) reached. No more emails can be sent.');
+        if ($attemptCount >= $maxAttempts) {
+            return back()->with('error', "Maximum verification attempts ({$maxAttempts}) reached. No more emails can be sent.");
         }
 
         try {
@@ -388,10 +404,21 @@ class EmploymentVerificationController extends Controller
 
     public function markVerified(Request $request, $id)
     {
-        DriverEmploymentCompany::findOrFail($id)->update([
+        $company      = DriverEmploymentCompany::findOrFail($id);
+        $adminName    = Auth::user()?->name ?? 'Admin';
+        $customNotes  = $request->input('notes', '');
+        $auditLine    = "Manually verified by {$adminName} on " . now()->format('Y-m-d H:i:s') . '.';
+
+        $company->update([
             'verification_status' => 'verified',
             'verification_date'   => now(),
-            'verification_notes'  => $request->input('notes', 'Manually verified by admin'),
+            'verification_notes'  => trim(($customNotes ? $customNotes . "\n\n" : '') . $auditLine),
+        ]);
+
+        Log::info('Employment verification marked as verified', [
+            'employment_id' => $id,
+            'admin_id'      => Auth::id(),
+            'admin_name'    => $adminName,
         ]);
 
         return back()->with('success', 'Marked as verified.');
@@ -399,10 +426,21 @@ class EmploymentVerificationController extends Controller
 
     public function markRejected(Request $request, $id)
     {
-        DriverEmploymentCompany::findOrFail($id)->update([
+        $company      = DriverEmploymentCompany::findOrFail($id);
+        $adminName    = Auth::user()?->name ?? 'Admin';
+        $customNotes  = $request->input('notes', '');
+        $auditLine    = "Manually rejected by {$adminName} on " . now()->format('Y-m-d H:i:s') . '.';
+
+        $company->update([
             'verification_status' => 'rejected',
             'verification_date'   => now(),
-            'verification_notes'  => $request->input('notes', 'Manually rejected by admin'),
+            'verification_notes'  => trim(($customNotes ? $customNotes . "\n\n" : '') . $auditLine),
+        ]);
+
+        Log::info('Employment verification marked as rejected', [
+            'employment_id' => $id,
+            'admin_id'      => Auth::id(),
+            'admin_name'    => $adminName,
         ]);
 
         return back()->with('success', 'Marked as rejected.');
@@ -411,7 +449,7 @@ class EmploymentVerificationController extends Controller
     public function uploadDocument(Request $request, $id)
     {
         $request->validate([
-            'verification_document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'verification_document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'verification_date'     => 'required|date',
             'verification_notes'    => 'nullable|string|max:500',
         ]);
@@ -421,7 +459,7 @@ class EmploymentVerificationController extends Controller
         try {
             $file = $request->file('verification_document');
             $originalName = $file->getClientOriginalName();
-            $uniqueFileName = 'Employment_verification_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $uniqueFileName = 'Employment_verification_' . time() . '_' . uniqid() . '.' . $file->extension();
 
             $company->addMedia($file->getRealPath())
                 ->usingName('Employment Verification - ' . $originalName)
@@ -483,26 +521,60 @@ class EmploymentVerificationController extends Controller
         return back()->with('success', 'Verification attempt deleted.');
     }
 
-    protected function sendVerificationEmail(DriverEmploymentCompany $company): int
+    public function serveTokenFile(int $id, int $tokenId, string $type)
     {
-        $attemptCount = EmploymentVerificationToken::where('employment_company_id', $company->id)->count();
-        if ($attemptCount >= 3) {
-            throw new \RuntimeException('Maximum verification attempts (3) reached. No more emails can be sent.');
+        $company = DriverEmploymentCompany::findOrFail($id);
+        $token = EmploymentVerificationToken::where('id', $tokenId)
+            ->where('employment_company_id', $id)
+            ->firstOrFail();
+
+        $path = match ($type) {
+            'document'  => $token->document_path,
+            'signature' => $token->signature_path,
+            default     => abort(404),
+        };
+
+        if (!$path || !Storage::disk('local')->exists($path)) {
+            abort(404);
         }
 
-        $token = Str::random(64);
+        return Storage::disk('local')->download($path);
+    }
 
-        EmploymentVerificationToken::create([
-            'token'                 => $token,
-            'driver_id'             => $company->user_driver_detail_id,
-            'employment_company_id' => $company->id,
-            'email'                 => $company->email,
-            'expires_at'            => now()->addDays(30),
-        ]);
+    protected function sendVerificationEmail(DriverEmploymentCompany $company): int
+    {
+        $masterCompany = $company->masterCompany;
+        $companyName   = $masterCompany?->company_name ?? ($company->company_name ?? 'Company');
+        $emailToUse    = $masterCompany?->email ?: $company->email;
+        $driver        = $company->userDriverDetail;
+        $driverName    = $driver ? trim(($driver->user?->name ?? '') . ' ' . ($driver->last_name ?? '')) : 'Driver';
 
-        $companyName = $company->masterCompany?->company_name ?? ($company->company_name ?? 'Company');
-        $driver = $company->userDriverDetail;
-        $driverName = $driver ? trim(($driver->user->name ?? '') . ' ' . ($driver->last_name ?? '')) : 'Driver';
+        if (empty($emailToUse) || !filter_var($emailToUse, FILTER_VALIDATE_EMAIL)) {
+            throw new \RuntimeException('No valid email address found for this company.');
+        }
+
+        // Create token inside a locked transaction to prevent race conditions
+        [$token, $attemptNumber] = DB::transaction(function () use ($company, $emailToUse) {
+            $attemptCount = EmploymentVerificationToken::where('employment_company_id', $company->id)
+                ->lockForUpdate()
+                ->count();
+
+            if ($attemptCount >= config('employment_verification.max_attempts')) {
+                throw new \RuntimeException('Maximum verification attempts (' . config('employment_verification.max_attempts') . ') reached. No more emails can be sent.');
+            }
+
+            $token = Str::random(64);
+
+            EmploymentVerificationToken::create([
+                'token'                 => $token,
+                'driver_id'             => $company->user_driver_detail_id,
+                'employment_company_id' => $company->id,
+                'email'                 => $emailToUse,
+                'expires_at'            => now()->addDays(config('employment_verification.token_expiry_days')),
+            ]);
+
+            return [$token, $attemptCount + 1];
+        });
 
         $employmentData = [
             'positions_held'            => $company->positions_held,
@@ -513,21 +585,25 @@ class EmploymentVerificationController extends Controller
             'safety_sensitive_function' => $company->safety_sensitive_function,
         ];
 
-        Mail::to($company->email)->send(new EmploymentVerification(
-            $companyName,
-            $driverName,
-            $employmentData,
-            $token,
-            $company->user_driver_detail_id,
-            $company->id,
-        ));
+        // If email delivery fails, roll back the token so the attempt slot is not consumed
+        try {
+            Mail::to($emailToUse)->send(new EmploymentVerification(
+                $companyName,
+                $driverName,
+                $employmentData,
+                $token,
+                $company->user_driver_detail_id,
+                $company->id,
+            ));
+        } catch (\Throwable $e) {
+            EmploymentVerificationToken::where('token', $token)->delete();
+            throw $e;
+        }
 
         $company->update(['email_sent' => true]);
 
-        $attemptNumber = $attemptCount + 1;
-
-        // Generate Email Attempt Record PDF (same as efservices)
-        $this->generateAttemptPdf($company, $driver, $companyName, $driverName, $token, $attemptNumber);
+        // PDF generation is intentionally outside the transaction (file I/O)
+        $this->generateAttemptPdf($company, $driver, $companyName, $driverName, $token, $attemptNumber, $emailToUse);
 
         return $attemptNumber;
     }
@@ -538,7 +614,8 @@ class EmploymentVerificationController extends Controller
         string $companyName,
         string $driverName,
         string $token,
-        int $attemptNumber
+        int $attemptNumber,
+        string $emailSentTo = ''
     ): void {
         if (!$driver) return;
 
@@ -547,17 +624,17 @@ class EmploymentVerificationController extends Controller
                 'attemptNumber'  => $attemptNumber,
                 'attemptDate'    => now()->format('m/d/Y'),
                 'attemptTime'    => now()->format('h:i:s A'),
-                'emailSentTo'    => $company->email,
+                'emailSentTo'    => $emailSentTo ?: $company->email,
                 'driverName'     => $driverName,
                 'driverId'       => $driver->id,
                 'companyName'    => $companyName,
-                'companyEmail'   => $company->email,
+                'companyEmail'   => $emailSentTo ?: $company->email,
                 'employedFrom'   => $company->employed_from?->format('m/d/Y') ?? 'Not specified',
                 'employedTo'     => $company->employed_to?->format('m/d/Y') ?? 'Not specified',
                 'positionsHeld'  => $company->positions_held ?? 'Not specified',
                 'reasonForLeaving' => $company->reason_for_leaving ?? 'Not specified',
                 'token'          => $token,
-                'expiresAt'      => now()->addDays(30)->format('m/d/Y h:i A'),
+                'expiresAt'      => now()->addDays(config('employment_verification.token_expiry_days'))->format('m/d/Y h:i A'),
                 'generatedAt'    => now()->format('m/d/Y h:i:s A'),
             ];
 
@@ -570,17 +647,24 @@ class EmploymentVerificationController extends Controller
             Storage::disk('local')->makeDirectory('temp');
             $pdf->save($tempPath);
 
-            $driver->addMedia($tempPath)
-                ->usingFileName($pdfFileName)
-                ->usingName("Employment Verification Attempt #{$attemptNumber} - {$companyName}")
-                ->withCustomProperties([
-                    'attempt_number' => $attemptNumber,
-                    'company_name'   => $companyName,
-                    'company_id'     => $company->id,
-                    'email_sent_to'  => $company->email,
-                    'sent_at'        => now()->toDateTimeString(),
-                ])
-                ->toMediaCollection('employment_verification_attempts');
+            try {
+                $driver->addMedia($tempPath)
+                    ->usingFileName($pdfFileName)
+                    ->usingName("Employment Verification Attempt #{$attemptNumber} - {$companyName}")
+                    ->withCustomProperties([
+                        'attempt_number' => $attemptNumber,
+                        'company_name'   => $companyName,
+                        'company_id'     => $company->id,
+                        'email_sent_to'  => $company->email,
+                        'sent_at'        => now()->toDateTimeString(),
+                    ])
+                    ->toMediaCollection('employment_verification_attempts');
+            } finally {
+                // Spatie moves the file; this removes it only if the move failed
+                if (file_exists($tempPath)) {
+                    @unlink($tempPath);
+                }
+            }
 
             Log::info('Employment verification attempt PDF generated', [
                 'driver_id'      => $driver->id,

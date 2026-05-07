@@ -2,15 +2,12 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
 
+// Not queued: plain-text password must never be serialized into the job payload.
 class DriverRegistrationCredentials extends Mailable
 {
-    use Queueable, SerializesModels;
 
     public $name;
     public $email;
@@ -44,7 +41,6 @@ class DriverRegistrationCredentials extends Mailable
         } catch (\Exception $e) {
             Log::error('Error al construir correo de credenciales', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw $e;
         }

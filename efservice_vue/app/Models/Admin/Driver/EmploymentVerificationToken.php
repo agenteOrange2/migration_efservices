@@ -25,6 +25,10 @@ class EmploymentVerificationToken extends Model
         'verified_at',
         'signature_path',
         'document_path',
+        'verified',
+        'verification_status',
+        'verification_notes',
+        'verification_by',
     ];
 
     /**
@@ -74,7 +78,7 @@ class EmploymentVerificationToken extends Model
      */
     public function isExpired()
     {
-        return $this->expires_at->isPast();
+        return $this->expires_at && $this->expires_at->isPast();
     }
 
     /**

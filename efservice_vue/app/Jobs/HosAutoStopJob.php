@@ -50,7 +50,6 @@ class HosAutoStopJob implements ShouldQueue
         } catch (\Exception $e) {
             Log::error('HOS Auto-Stop Job failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
             throw $e;
