@@ -103,14 +103,19 @@ class HosController extends Controller
             ->orderBy('last_name')
             ->get();
 
-        $driverSummaries = $drivers->map(function (UserDriverDetail $driver) use ($today) {
+        // Batch load today's violation counts to avoid 1 query per driver
+        $todayViolationCounts = HosViolation::query()
+            ->selectRaw('user_driver_detail_id, COUNT(*) as cnt')
+            ->whereIn('user_driver_detail_id', $drivers->pluck('id'))
+            ->whereDate('violation_date', $today)
+            ->groupBy('user_driver_detail_id')
+            ->pluck('cnt', 'user_driver_detail_id');
+
+        $driverSummaries = $drivers->map(function (UserDriverDetail $driver) use ($today, $todayViolationCounts) {
             $currentEntry = $this->hosService->getDriverCurrentStatus($driver->id);
             $totals = $this->calculationService->calculateDailyTotals($driver->id, $today);
             $remaining = $this->calculationService->calculateRemainingHours($driver->id, $today);
-            $todayViolations = HosViolation::query()
-                ->where('user_driver_detail_id', $driver->id)
-                ->whereDate('violation_date', $today)
-                ->count();
+            $todayViolations = (int) ($todayViolationCounts[$driver->id] ?? 0);
 
             return [
                 'id' => $driver->id,
@@ -437,16 +442,23 @@ class HosController extends Controller
             'has_penalty' => (bool) $violation->has_penalty,
         ]);
 
-        $statsBase = clone $query;
+        $rawViolationStats = (clone $query)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN acknowledged = 1 THEN 1 ELSE 0 END) as acknowledged,
+                SUM(CASE WHEN acknowledged = 0 THEN 1 ELSE 0 END) as unacknowledged,
+                SUM(CASE WHEN is_forgiven = 1 THEN 1 ELSE 0 END) as forgiven
+            ")
+            ->first();
 
         return Inertia::render('admin/hos/Violations', [
             'filters' => $filters,
             'violations' => $violations,
             'stats' => [
-                'total' => (clone $statsBase)->count(),
-                'acknowledged' => (clone $statsBase)->where('acknowledged', true)->count(),
-                'unacknowledged' => (clone $statsBase)->where('acknowledged', false)->count(),
-                'forgiven' => (clone $statsBase)->where('is_forgiven', true)->count(),
+                'total'         => (int) $rawViolationStats->total,
+                'acknowledged'  => (int) $rawViolationStats->acknowledged,
+                'unacknowledged'=> (int) $rawViolationStats->unacknowledged,
+                'forgiven'      => (int) $rawViolationStats->forgiven,
             ],
             'carriers' => $this->carrierOptions($scope),
             'drivers' => $this->driverOptions($scope, $filters['carrier_id'], false),

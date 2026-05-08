@@ -187,6 +187,7 @@ class HosDocumentController extends Controller
             ->values();
 
         abort_if($ids->isEmpty(), 422, 'No documents were selected.');
+        abort_if($ids->count() > 50, 422, 'Maximum 50 documents can be downloaded at once.');
 
         $documents = Media::query()->whereIn('id', $ids)->get();
         abort_if($documents->isEmpty(), 404);
@@ -194,6 +195,9 @@ class HosDocumentController extends Controller
         foreach ($documents as $media) {
             $this->authorizeMedia($media, $scope);
         }
+
+        $totalBytes = $documents->sum('size');
+        abort_if($totalBytes > 500 * 1024 * 1024, 422, 'Total file size exceeds 500 MB. Select fewer documents.');
 
         $zipName = 'hos-documents-' . now()->format('YmdHis') . '.zip';
         $zipPath = storage_path('app/temp/' . $zipName);

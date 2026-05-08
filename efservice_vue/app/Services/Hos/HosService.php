@@ -11,6 +11,7 @@ use App\Models\Hos\HosConfiguration;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Illuminate\Validation\ValidationException;
 
 class HosService
 {
@@ -47,7 +48,9 @@ class HosService
         // Check for active vehicle assignment
         $vehicleAssignment = $driver->activeVehicleAssignment;
         if (!$vehicleAssignment) {
-            throw new InvalidArgumentException("Driver must have an active vehicle assignment to record HOS entries");
+            throw ValidationException::withMessages([
+                'vehicle_assignment' => 'Driver must have an active vehicle assignment to record HOS entries.',
+            ]);
         }
 
         $now = Carbon::now();
@@ -107,10 +110,13 @@ class HosService
 
         if ($openEntry) {
             $openEntry->update(['end_time' => $endTime]);
-            
-            // If entry spans midnight, recalculate both days
+
+            // Recalculate the start day always
+            $this->calculationService->recalculateDailyLog($driverId, $openEntry->start_time);
+
+            // If entry spans midnight, also recalculate the end day
             if (!$openEntry->start_time->isSameDay($endTime)) {
-                $this->calculationService->recalculateDailyLog($driverId, $openEntry->start_time);
+                $this->calculationService->recalculateDailyLog($driverId, $endTime);
             }
         }
 
@@ -199,7 +205,9 @@ class HosService
         $vehicleAssignment = $driver->activeVehicleAssignment;
 
         if (!$vehicleAssignment) {
-            throw new InvalidArgumentException("Driver must have an active vehicle assignment");
+            throw ValidationException::withMessages([
+                'vehicle_assignment' => 'Driver must have an active vehicle assignment.',
+            ]);
         }
 
         return DB::transaction(function () use ($driver, $status, $startTime, $endTime, $location, $createdBy, $reason, $vehicleAssignment) {

@@ -37,6 +37,7 @@ interface DriverRouteNames {
     show: string
     create: string
     edit?: string
+    editInfo?: string
     activate?: string
     deactivate?: string
     destroy?: string
@@ -306,7 +307,10 @@ const effectiveStatusBadge = (status: string) => {
                                         <Link :href="namedRoute('show', d.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="View">
                                             <Lucide icon="Eye" class="w-4 h-4" />
                                         </Link>
-                                        <Link v-if="routeNames.edit" :href="namedRoute('edit', d.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Edit">
+                                        <Link v-if="routeNames.editInfo" :href="namedRoute('editInfo', d.id)" class="p-1.5 text-slate-400 hover:text-warning transition" title="Edit general info">
+                                            <Lucide icon="UserCog" class="w-4 h-4" />
+                                        </Link>
+                                        <Link v-if="routeNames.edit" :href="namedRoute('edit', d.id)" class="p-1.5 text-slate-400 hover:text-primary transition" title="Continue wizard">
                                             <Lucide icon="Pencil" class="w-4 h-4" />
                                         </Link>
                                         <button

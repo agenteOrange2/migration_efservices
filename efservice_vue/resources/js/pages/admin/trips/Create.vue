@@ -33,7 +33,8 @@ const form = useForm({
     estimated_duration_minutes: '',
     description: '',
     notes: '',
-    load_type: '',
+    load_type:   '',
+    load_unit:   '',
     load_weight: '',
 })
 

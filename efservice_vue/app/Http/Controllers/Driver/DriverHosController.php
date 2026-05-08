@@ -274,6 +274,16 @@ class DriverHosController extends Controller
     {
         $driver = $this->resolveDriver();
 
+        // Resolve vehicle_id from the last active/completed trip today, or fall back to active assignment
+        $lastTrip = \App\Models\Trip::where('user_driver_detail_id', $driver->id)
+            ->whereNotNull('vehicle_id')
+            ->whereDate('scheduled_start_date', today())
+            ->orderByDesc('updated_at')
+            ->first();
+
+        $vehicleId = $lastTrip?->vehicle_id
+            ?? $driver->activeVehicleAssignment?->vehicle_id;
+
         // Close any open HOS entries
         HosEntry::query()
             ->where('user_driver_detail_id', $driver->id)
@@ -283,10 +293,12 @@ class DriverHosController extends Controller
         // Create the off-duty entry
         HosEntry::create([
             'user_driver_detail_id' => $driver->id,
-            'carrier_id' => $driver->carrier_id,
-            'status' => HosEntry::STATUS_OFF_DUTY,
-            'start_time' => now(),
-            'date' => today(),
+            'vehicle_id'            => $vehicleId,
+            'carrier_id'            => $driver->carrier_id,
+            'status'                => HosEntry::STATUS_OFF_DUTY,
+            'start_time'            => now(),
+            'date'                  => today(),
+            'created_by'            => auth()->id(),
         ]);
 
         // Close the duty period if still open

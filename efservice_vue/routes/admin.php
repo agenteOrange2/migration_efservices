@@ -420,6 +420,8 @@ Route::prefix('drivers')->name('drivers.')->group(function () {
     Route::post('{driver}/migration', [DriverMigrationController::class, 'execute'])->name('migration.execute');
 
     Route::get('{driver}', [DriverListController::class, 'show'])->name('show');
+    Route::get('{driver}/edit', [DriverListController::class, 'edit'])->name('edit');
+    Route::put('{driver}/edit', [DriverListController::class, 'update'])->name('update');
     Route::put('{driver}/activate', [DriverListController::class, 'activate'])->name('activate');
     Route::put('{driver}/deactivate', [DriverListController::class, 'deactivate'])->name('deactivate');
     Route::delete('{driver}', [DriverListController::class, 'destroy'])->name('destroy');

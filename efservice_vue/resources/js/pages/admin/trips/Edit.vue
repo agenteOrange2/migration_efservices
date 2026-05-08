@@ -23,6 +23,7 @@ const props = defineProps<{
         description: string | null
         notes: string | null
         load_type: string | null
+        load_unit: string | null
         load_weight: string
         status_label: string
     }
@@ -50,7 +51,8 @@ const form = useForm({
     estimated_duration_minutes: props.trip.estimated_duration_minutes ?? '',
     description: props.trip.description || '',
     notes: props.trip.notes || '',
-    load_type: props.trip.load_type || '',
+    load_type:   props.trip.load_type || '',
+    load_unit:   props.trip.load_unit || '',
     load_weight: props.trip.load_weight || '',
 })
 

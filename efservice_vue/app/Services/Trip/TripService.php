@@ -747,9 +747,14 @@ class TripService
      */
     protected function createDrivingEntry(int $driverId, Trip $trip): HosEntry
     {
-        // Close any open entries first
+        // Close any open entries for this driver that belong to this trip or have no trip association.
+        // We do NOT close entries from other trips (integrity) or entries from other days (past records).
         HosEntry::forDriver($driverId)
             ->open()
+            ->where(function ($q) use ($trip) {
+                $q->where('trip_id', $trip->id)
+                  ->orWhereNull('trip_id');
+            })
             ->update(['end_time' => now()]);
 
         // Get vehicle_id from trip or driver's active assignment
@@ -891,38 +896,35 @@ class TripService
             ]);
         }
 
-        // Close the current driving entry
-        $this->closeDrivingEntry($trip->user_driver_detail_id, $trip);
+        return DB::transaction(function () use ($trip, $forcedBy, $reason) {
+            $this->closeDrivingEntry($trip->user_driver_detail_id, $trip);
 
-        // Get vehicle_id from trip or driver's active assignment
-        $vehicleId = $trip->vehicle_id;
-        if (!$vehicleId) {
-            $driver = UserDriverDetail::find($trip->user_driver_detail_id);
-            $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
-        }
+            $vehicleId = $trip->vehicle_id;
+            if (!$vehicleId) {
+                $driver = UserDriverDetail::find($trip->user_driver_detail_id);
+                $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
+            }
 
-        // Create on-duty not driving entry (for break)
-        HosEntry::create([
-            'user_driver_detail_id' => $trip->user_driver_detail_id,
-            'vehicle_id' => $vehicleId,
-            'carrier_id' => $trip->carrier_id,
-            'trip_id' => $trip->id,
-            'status' => 'on_duty_not_driving',
-            'start_time' => now(),
-            'date' => today(),
-            'latitude' => null,
-            'longitude' => null,
-            'formatted_address' => 'Paused trip (emergency control)',
-            'location_available' => false,
-        ]);
+            HosEntry::create([
+                'user_driver_detail_id' => $trip->user_driver_detail_id,
+                'vehicle_id'            => $vehicleId,
+                'carrier_id'            => $trip->carrier_id,
+                'trip_id'               => $trip->id,
+                'status'                => HosEntry::STATUS_ON_DUTY_NOT_DRIVING,
+                'start_time'            => now(),
+                'date'                  => today(),
+                'formatted_address'     => 'Paused by admin/carrier emergency control',
+                'location_available'    => false,
+                'is_manual_entry'       => true,
+                'manual_entry_reason'   => $reason ?? 'Forced pause by admin/carrier',
+                'created_by'            => $forcedBy,
+            ]);
 
-        // Create TripPause record with forced_by
-        $this->tripPauseService->createPause($trip, null, $reason ?? 'Forced pause by admin/carrier', $forcedBy);
+            $this->tripPauseService->createPause($trip, null, $reason ?? 'Forced pause by admin/carrier', $forcedBy);
+            $trip->update(['status' => Trip::STATUS_PAUSED]);
 
-        // Update trip status to paused
-        $trip->update(['status' => Trip::STATUS_PAUSED]);
-
-        return $trip->fresh();
+            return $trip->fresh();
+        });
     }
 
     /**
@@ -936,51 +938,49 @@ class TripService
             ]);
         }
 
-        // Close the current on-duty not driving entry
-        $currentEntry = HosEntry::where('user_driver_detail_id', $trip->user_driver_detail_id)
-            ->whereNull('end_time')
-            ->latest('start_time')
-            ->first();
+        return DB::transaction(function () use ($trip, $forcedBy) {
+            $currentEntry = HosEntry::where('user_driver_detail_id', $trip->user_driver_detail_id)
+                ->whereNull('end_time')
+                ->latest('start_time')
+                ->first();
 
-        if ($currentEntry) {
-            $currentEntry->update(['end_time' => now()]);
-        }
+            if ($currentEntry) {
+                $currentEntry->update(['end_time' => now()]);
+            }
 
-        // End the active TripPause
-        $this->tripPauseService->endPause($trip);
+            $this->tripPauseService->endPause($trip);
 
-        // Get vehicle_id from trip or driver's active assignment
-        $vehicleId = $trip->vehicle_id;
-        if (!$vehicleId) {
-            $driver = UserDriverDetail::find($trip->user_driver_detail_id);
-            $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
-        }
+            $vehicleId = $trip->vehicle_id;
+            if (!$vehicleId) {
+                $driver = UserDriverDetail::find($trip->user_driver_detail_id);
+                $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
+            }
 
-        // Create new driving entry
-        HosEntry::create([
-            'user_driver_detail_id' => $trip->user_driver_detail_id,
-            'vehicle_id' => $vehicleId,
-            'carrier_id' => $trip->carrier_id,
-            'trip_id' => $trip->id,
-            'status' => 'on_duty_driving',
-            'start_time' => now(),
-            'date' => today(),
-            'latitude' => null,
-            'longitude' => null,
-            'formatted_address' => 'Resumed trip (emergency control)',
-            'location_available' => false,
-        ]);
+            HosEntry::create([
+                'user_driver_detail_id' => $trip->user_driver_detail_id,
+                'vehicle_id'            => $vehicleId,
+                'carrier_id'            => $trip->carrier_id,
+                'trip_id'               => $trip->id,
+                'status'                => HosEntry::STATUS_ON_DUTY_DRIVING,
+                'start_time'            => now(),
+                'date'                  => today(),
+                'formatted_address'     => 'Resumed by admin/carrier emergency control',
+                'location_available'    => false,
+                'is_manual_entry'       => true,
+                'manual_entry_reason'   => 'Force-resumed by admin/carrier',
+                'created_by'            => $forcedBy,
+            ]);
 
-        // Update trip status back to in_progress
-        $trip->update(['status' => Trip::STATUS_IN_PROGRESS]);
+            $trip->update(['status' => Trip::STATUS_IN_PROGRESS]);
 
-        return $trip->fresh();
+            return $trip->fresh();
+        });
     }
 
     /**
      * Emergency control: End trip without driver action (for admin/carrier emergency use).
      */
-    public function forceEndTrip(Trip $trip): Trip
+    public function forceEndTrip(Trip $trip, ?int $forcedBy = null): Trip
     {
         if (!$trip->canBeEnded()) {
             throw ValidationException::withMessages([
@@ -988,38 +988,51 @@ class TripService
             ]);
         }
 
-        // If trip is paused, end the active pause first
-        if ($trip->isPaused()) {
-            $this->tripPauseService->endPause($trip);
-        }
+        return DB::transaction(function () use ($trip, $forcedBy) {
+            if ($trip->isPaused()) {
+                $this->tripPauseService->endPause($trip);
+            }
 
-        // Close the current HOS entry
-        $currentEntry = HosEntry::where('user_driver_detail_id', $trip->user_driver_detail_id)
-            ->whereNull('end_time')
-            ->latest('start_time')
-            ->first();
+            // Close any open HOS entry for this trip
+            HosEntry::where('user_driver_detail_id', $trip->user_driver_detail_id)
+                ->where('trip_id', $trip->id)
+                ->whereNull('end_time')
+                ->update(['end_time' => now()]);
 
-        if ($currentEntry) {
-            $currentEntry->update(['end_time' => now()]);
-        }
+            $actualDuration = $trip->actual_start_time
+                ? (int) $trip->actual_start_time->diffInMinutes(now(), true)
+                : null;
 
-        // Calculate actual duration (Carbon 3: absolute=true).
-        $actualDuration = $trip->actual_start_time
-            ? (int) $trip->actual_start_time->diffInMinutes(now(), true)
-            : null;
+            $trip->update([
+                'status'                 => Trip::STATUS_COMPLETED,
+                'completed_at'           => now(),
+                'actual_end_time'        => now(),
+                'actual_duration_minutes'=> $actualDuration,
+            ]);
 
-        // Update trip
-        $trip->update([
-            'status' => Trip::STATUS_COMPLETED,
-            'completed_at' => now(),
-            'actual_end_time' => now(),
-            'actual_duration_minutes' => $actualDuration,
-        ]);
+            $vehicleId = $trip->vehicle_id;
+            if (!$vehicleId) {
+                $driver = UserDriverDetail::find($trip->user_driver_detail_id);
+                $vehicleId = $driver?->activeVehicleAssignment?->vehicle_id;
+            }
 
-        // Create off-duty HOS entry
-        $this->createOffDutyEntry($trip->user_driver_detail_id, $trip);
+            HosEntry::create([
+                'user_driver_detail_id' => $trip->user_driver_detail_id,
+                'vehicle_id'            => $vehicleId,
+                'carrier_id'            => $trip->carrier_id,
+                'trip_id'               => $trip->id,
+                'status'                => HosEntry::STATUS_OFF_DUTY,
+                'start_time'            => now(),
+                'date'                  => today(),
+                'formatted_address'     => 'Ended by admin/carrier emergency control',
+                'location_available'    => false,
+                'is_manual_entry'       => true,
+                'manual_entry_reason'   => 'Force-ended by admin/carrier',
+                'created_by'            => $forcedBy,
+            ]);
 
-        return $trip->fresh();
+            return $trip->fresh();
+        });
     }
 
     /**

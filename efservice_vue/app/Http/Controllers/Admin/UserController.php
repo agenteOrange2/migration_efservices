@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -87,7 +86,7 @@ class UserController extends Controller
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
+                'password' => $validated['password'],
             ]);
 
             $user->status = $validated['status'] ? 1 : 0;
@@ -101,9 +100,11 @@ class UserController extends Controller
             }
 
             if ($request->hasFile('profile_photo')) {
-                $fileName = strtolower(str_replace(' ', '_', $user->name)) . '.webp';
+                $file = $request->file('profile_photo');
+                $ext = $file->extension();
+                $safeName = preg_replace('/[^a-z0-9_-]/', '_', strtolower($user->name));
                 $user->addMediaFromRequest('profile_photo')
-                    ->usingFileName($fileName)
+                    ->usingFileName("{$safeName}.{$ext}")
                     ->toMediaCollection('profile_photos');
             }
 
@@ -186,11 +187,16 @@ class UserController extends Controller
         ]);
 
         try {
-            $user->update([
-                'name' => $validated['name'],
+            $updateData = [
+                'name'  => $validated['name'],
                 'email' => $validated['email'],
-                'password' => $validated['password'] ? Hash::make($validated['password']) : $user->password,
-            ]);
+            ];
+
+            if (!empty($validated['password'])) {
+                $updateData['password'] = $validated['password'];
+            }
+
+            $user->update($updateData);
 
             $user->status = $validated['status'] ? 1 : 0;
             $user->save();
@@ -201,10 +207,12 @@ class UserController extends Controller
             }
 
             if ($request->hasFile('profile_photo')) {
+                $file = $request->file('profile_photo');
+                $ext = $file->extension();
+                $safeName = preg_replace('/[^a-z0-9_-]/', '_', strtolower($user->name));
                 $user->clearMediaCollection('profile_photos');
-                $fileName = strtolower(str_replace(' ', '_', $user->name)) . '.webp';
                 $user->addMediaFromRequest('profile_photo')
-                    ->usingFileName($fileName)
+                    ->usingFileName("{$safeName}.{$ext}")
                     ->toMediaCollection('profile_photos');
             }
 

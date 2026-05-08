@@ -93,7 +93,8 @@ function resetFilters() {
 }
 
 function destroyTrip(trip: any) {
-    if (!confirm(`Delete trip ${trip.trip_number}?`)) return
+    const status = trip.status.replace('_', ' ')
+    if (!confirm(`Delete trip ${trip.trip_number} (${status})?\n\nThis action cannot be undone.`)) return
     router.delete(namedRoute('destroy', trip.id), { preserveScroll: true })
 }
 
@@ -253,15 +254,33 @@ function badgeClass(status: string) {
                                     </div>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <Link :href="namedRoute('show', trip.id)" class="p-1.5 text-slate-400 transition hover:text-primary">
-                                            <Lucide icon="Eye" class="h-4 w-4" />
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <Link
+                                            :href="namedRoute('show', trip.id)"
+                                            class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-100 hover:text-primary"
+                                            title="View"
+                                        >
+                                            <Lucide icon="Eye" class="h-3.5 w-3.5" />
+                                            View
                                         </Link>
-                                        <Link v-if="trip.can_edit" :href="namedRoute('edit', trip.id)" class="p-1.5 text-slate-400 transition hover:text-primary">
-                                            <Lucide icon="PenLine" class="h-4 w-4" />
+                                        <Link
+                                            v-if="trip.can_edit"
+                                            :href="namedRoute('edit', trip.id)"
+                                            class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-500 transition hover:bg-primary/10 hover:text-primary"
+                                            title="Edit"
+                                        >
+                                            <Lucide icon="PenLine" class="h-3.5 w-3.5" />
+                                            Edit
                                         </Link>
-                                        <button v-if="trip.can_delete" type="button" class="p-1.5 text-slate-400 transition hover:text-red-500" @click="destroyTrip(trip)">
-                                            <Lucide icon="Trash2" class="h-4 w-4" />
+                                        <button
+                                            v-if="trip.can_delete"
+                                            type="button"
+                                            class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-danger/70 transition hover:bg-danger/10 hover:text-danger"
+                                            title="Delete"
+                                            @click="destroyTrip(trip)"
+                                        >
+                                            <Lucide icon="Trash2" class="h-3.5 w-3.5" />
+                                            Delete
                                         </button>
                                     </div>
                                 </td>

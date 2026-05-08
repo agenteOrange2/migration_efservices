@@ -55,7 +55,7 @@ const toastClasses = computed(() => {
 })
 
 onMounted(() => {
-    updateAppearance('dark')
+    // Theme is initialized by initializeTheme() in app.ts and managed by useAppearance()
 })
 </script>
 

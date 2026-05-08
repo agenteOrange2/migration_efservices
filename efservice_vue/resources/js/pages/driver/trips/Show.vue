@@ -100,9 +100,13 @@ function resumeTrip() {
 // GPS tracking — starts automatically when trip is in_progress, stops on pause/end
 const gps = useGpsTracking({ tripId: props.trip.id })
 
-onMounted(() => {
+onMounted(async () => {
     if (props.trip.status === 'in_progress') {
-        gps.start()
+        // Check existing permission before starting — avoids surprise dialog on reload
+        const perm = await gps.checkPermission()
+        if (perm !== 'denied') {
+            gps.start()
+        }
     }
 })
 
@@ -238,6 +242,62 @@ function uploadDocuments() {
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                     <p class="font-semibold text-slate-800">This quick trip still needs route details.</p>
                     <p class="mt-1">Missing: {{ Object.values(trip.missing_fields).join(', ') }}</p>
+                </div>
+            </div>
+
+            <!-- GPS status banner — shown when trip is active and GPS is not tracking -->
+            <div v-if="trip.status === 'in_progress'" class="box box--stacked overflow-hidden">
+                <!-- Tracking OK -->
+                <div v-if="gps.isTracking.value && !gps.error.value" class="flex items-center gap-3 px-4 py-3 bg-success/5 border-b border-success/20">
+                    <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-success"></span>
+                    </span>
+                    <span class="text-sm font-medium text-success">GPS active — location is being recorded</span>
+                    <span v-if="gps.lastPoint.value" class="ml-auto text-xs text-slate-400 hidden sm:block">
+                        {{ gps.lastPoint.value.lat.toFixed(5) }}, {{ gps.lastPoint.value.lng.toFixed(5) }}
+                        <template v-if="gps.lastPoint.value.speed !== null"> · {{ gps.lastPoint.value.speed }} mph</template>
+                    </span>
+                </div>
+
+                <!-- GPS error / denied / not started -->
+                <div v-else-if="gps.error.value || gps.permissionState.value === 'denied'" class="p-4">
+                    <div class="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4">
+                        <div class="flex items-start gap-3">
+                            <Lucide icon="MapPinOff" class="h-5 w-5 flex-shrink-0 text-warning mt-0.5" />
+                            <div class="flex-1">
+                                <p class="text-sm font-semibold text-slate-800">GPS location is off</p>
+                                <p class="mt-1 text-sm text-slate-600">
+                                    {{ gps.error.value || 'Location access is blocked. Your route will not be recorded.' }}
+                                </p>
+                                <div v-if="gps.permissionState.value === 'denied'" class="mt-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                                    <p class="text-xs font-medium text-slate-700">How to enable GPS:</p>
+                                    <p class="text-xs text-slate-500 mt-0.5">
+                                        Tap the lock 🔒 icon in your browser's address bar → Site settings → Location → Allow.
+                                        Then tap "Retry GPS" below.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <Button
+                            variant="warning"
+                            class="flex items-center justify-center gap-2 w-full sm:w-auto"
+                            @click="gps.start()"
+                        >
+                            <Lucide icon="RotateCcw" class="h-4 w-4" />
+                            Retry GPS
+                        </Button>
+                    </div>
+                </div>
+
+                <!-- Waiting for first fix -->
+                <div v-else class="flex items-center gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200">
+                    <Lucide icon="Loader" class="h-4 w-4 text-slate-400 animate-spin flex-shrink-0" />
+                    <span class="text-sm text-slate-500">Connecting to GPS...</span>
+                    <Button variant="outline-secondary" class="ml-auto flex items-center gap-1.5 text-xs" @click="gps.start()">
+                        <Lucide icon="RotateCcw" class="h-3.5 w-3.5" />
+                        Retry
+                    </Button>
                 </div>
             </div>
 
@@ -400,7 +460,7 @@ function uploadDocuments() {
                 </div>
             </div>
 
-            <div v-if="trip.origin_lat || (gpsRoute && gpsRoute.length > 0)" class="box box--stacked p-4 sm:p-6">
+            <div v-if="trip.origin_address" class="box box--stacked p-4 sm:p-6">
                 <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex flex-wrap items-center gap-2">
                         <Lucide icon="Map" class="h-4 w-4 text-primary" />
@@ -408,8 +468,11 @@ function uploadDocuments() {
                         <span v-if="gpsRoute && gpsRoute.length > 0" class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
                             {{ gpsRoute.length }} GPS points
                         </span>
-                        <span v-else class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+                        <span v-else-if="trip.origin_lat" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
                             Estimated route
+                        </span>
+                        <span v-else class="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-600 border border-amber-200">
+                            GPS not started
                         </span>
                     </div>
                     <a v-if="googleMapsUrls.route" :href="googleMapsUrls.route" target="_blank" class="inline-flex items-center gap-1 text-sm text-primary hover:underline">

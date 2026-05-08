@@ -137,25 +137,21 @@ class User extends Authenticatable implements HasMedia
         return $this->hasOne(UserDriverDetail::class);
     }
 
-    //Registro de Media Library
-    public function getProfilePhotoUrlAttribute()
+    public function getProfilePhotoUrlAttribute(): string
     {
-        // Si el usuario pertenece a un UserCarrier, busca en la colección "profile_photo_carrier"
-        if ($this->carrierDetails()->exists()) {
+        // Use already-loaded relations to avoid extra queries
+        if ($this->relationLoaded('carrierDetails') ? $this->carrierDetails : null) {
             $media = $this->getFirstMedia('profile_photo_carrier');
-            $collection = 'profile_photo_carrier';
-        } 
-        // Si el usuario es un driver, busca en la colección "profile_photo_driver" del modelo UserDriverDetail
-        elseif ($this->driverDetails()->exists()) {
-            $driverDetail = $this->driverDetails;
-            $media = $driverDetail->getFirstMedia('profile_photo_driver');
             return $media ? $media->getUrl() : asset('build/default_profile.png');
-        } 
-        else {
-            // Si no, busca en la colección "profile_photos" (para superadmin o User estándar)
-            $media = $this->getFirstMedia('profile_photos');
         }
 
+        if ($this->relationLoaded('driverDetails') ? $this->driverDetails : null) {
+            $media = $this->driverDetails->getFirstMedia('profile_photo_driver');
+            return $media ? $media->getUrl() : asset('build/default_profile.png');
+        }
+
+        // Fallback: check via foreign key presence without triggering a relation query
+        $media = $this->getFirstMedia('profile_photos');
         return $media ? $media->getUrl() : asset('build/default_profile.png');
     }
 

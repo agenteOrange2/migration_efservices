@@ -239,7 +239,7 @@ function submit() {
 }
 
 onMounted(() => {
-    updateAppearance('dark')
+    // Theme managed by initializeTheme() in app.ts
 })
 </script>
 

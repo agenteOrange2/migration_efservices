@@ -367,12 +367,16 @@ class HosViolation extends Model
     public function forgive(int $userId, string $reason, ?\Carbon\Carbon $adjustedEndTime = null): void
     {
         $updateData = [
-            'is_forgiven' => true,
-            'forgiven_by' => $userId,
-            'forgiven_at' => now(),
-            'forgiveness_reason' => $reason,
-            'has_penalty' => false,
-            'penalty_end' => null,
+            'is_forgiven'       => true,
+            'forgiven_by'       => $userId,
+            'forgiven_at'       => now(),
+            'forgiveness_reason'=> $reason,
+            'has_penalty'       => false,
+            'penalty_end'       => null,
+            // Reset acknowledgment — a forgiven violation starts clean
+            'acknowledged'      => false,
+            'acknowledged_by'   => null,
+            'acknowledged_at'   => null,
         ];
 
         // If adjusting trip end time

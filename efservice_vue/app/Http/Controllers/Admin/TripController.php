@@ -9,6 +9,7 @@ use App\Models\Hos\HosEntry;
 use App\Models\Trip;
 use App\Models\TripPause;
 use App\Models\UserDriverDetail;
+use App\Services\Hos\HosFMCSAService;
 use App\Services\Hos\HosWeeklyCycleService;
 use App\Services\Trip\DestinationVerificationService;
 use App\Services\Trip\TripGpsTrackingService;
@@ -33,6 +34,7 @@ class TripController extends Controller
         protected HosWeeklyCycleService $weeklyCycleService,
         protected TripTimelineService $timelineService,
         protected DestinationVerificationService $verificationService,
+        protected HosFMCSAService $fmcsaService,
     ) {
     }
 
@@ -91,13 +93,30 @@ class TripController extends Controller
         $tripStatsQuery = Trip::query();
         $this->applyTripScope($tripStatsQuery, $scope, $filters['carrier_id']);
 
+        $rawStats = (clone $tripStatsQuery)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as accepted,
+                SUM(CASE WHEN status IN (?,?) THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN has_violations = 1 THEN 1 ELSE 0 END) as violations
+            ", [
+                Trip::STATUS_PENDING,
+                Trip::STATUS_ACCEPTED,
+                Trip::STATUS_IN_PROGRESS,
+                Trip::STATUS_PAUSED,
+                Trip::STATUS_COMPLETED,
+            ])
+            ->first();
+
         $stats = [
-            'total' => (clone $tripStatsQuery)->count(),
-            'pending' => (clone $tripStatsQuery)->where('status', Trip::STATUS_PENDING)->count(),
-            'accepted' => (clone $tripStatsQuery)->where('status', Trip::STATUS_ACCEPTED)->count(),
-            'in_progress' => (clone $tripStatsQuery)->whereIn('status', [Trip::STATUS_IN_PROGRESS, Trip::STATUS_PAUSED])->count(),
-            'completed' => (clone $tripStatsQuery)->where('status', Trip::STATUS_COMPLETED)->count(),
-            'violations' => (clone $tripStatsQuery)->where('has_violations', true)->count(),
+            'total'       => (int) $rawStats->total,
+            'pending'     => (int) $rawStats->pending,
+            'accepted'    => (int) $rawStats->accepted,
+            'in_progress' => (int) $rawStats->in_progress,
+            'completed'   => (int) $rawStats->completed,
+            'violations'  => (int) $rawStats->violations,
         ];
 
         $trips->through(fn (Trip $trip) => $this->tripIndexRow($trip));
@@ -126,16 +145,37 @@ class TripController extends Controller
             ->with(['carrier:id,name', 'driver.user:id,name', 'vehicle:id,company_unit_number,year,make,model']);
         $this->applyTripScope($query, $scope, $filters['carrier_id']);
 
+        $rawStats = (clone $query)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as accepted,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as paused,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as cancelled,
+                SUM(CASE WHEN has_violations = 1 THEN 1 ELSE 0 END) as with_violations,
+                SUM(CASE WHEN forgot_to_close = 1 THEN 1 ELSE 0 END) as ghost_logs
+            ", [
+                Trip::STATUS_PENDING,
+                Trip::STATUS_ACCEPTED,
+                Trip::STATUS_IN_PROGRESS,
+                Trip::STATUS_PAUSED,
+                Trip::STATUS_COMPLETED,
+                Trip::STATUS_CANCELLED,
+            ])
+            ->first();
+
         $stats = [
-            'total' => (clone $query)->count(),
-            'pending' => (clone $query)->where('status', Trip::STATUS_PENDING)->count(),
-            'accepted' => (clone $query)->where('status', Trip::STATUS_ACCEPTED)->count(),
-            'in_progress' => (clone $query)->where('status', Trip::STATUS_IN_PROGRESS)->count(),
-            'paused' => (clone $query)->where('status', Trip::STATUS_PAUSED)->count(),
-            'completed' => (clone $query)->where('status', Trip::STATUS_COMPLETED)->count(),
-            'cancelled' => (clone $query)->where('status', Trip::STATUS_CANCELLED)->count(),
-            'with_violations' => (clone $query)->where('has_violations', true)->count(),
-            'ghost_logs' => (clone $query)->where('forgot_to_close', true)->count(),
+            'total'          => (int) $rawStats->total,
+            'pending'        => (int) $rawStats->pending,
+            'accepted'       => (int) $rawStats->accepted,
+            'in_progress'    => (int) $rawStats->in_progress,
+            'paused'         => (int) $rawStats->paused,
+            'completed'      => (int) $rawStats->completed,
+            'cancelled'      => (int) $rawStats->cancelled,
+            'with_violations'=> (int) $rawStats->with_violations,
+            'ghost_logs'     => (int) $rawStats->ghost_logs,
         ];
 
         if ($request->expectsJson()) {
@@ -217,8 +257,9 @@ class TripController extends Controller
             'estimated_duration_minutes' => ['nullable', 'integer', 'min:1'],
             'description' => ['nullable', 'string', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'load_type' => ['nullable', 'string', 'max:100'],
-            'load_weight' => ['nullable', 'numeric', 'min:0'],
+            'load_type'   => ['nullable', 'string', 'max:100'],
+            'load_unit'   => ['nullable', 'string', 'max:50'],
+            'load_weight' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
         ]);
 
         $carrierId = (int) $validated['carrier_id'];
@@ -287,9 +328,10 @@ class TripController extends Controller
             'scheduled_end_time' => ['nullable', 'date_format:H:i'],
             'estimated_duration_minutes' => ['nullable', 'integer', 'min:1'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'load_type' => ['nullable', 'string', 'max:100'],
-            'load_weight' => ['nullable', 'numeric', 'min:0'],
+            'notes'       => ['nullable', 'string', 'max:1000'],
+            'load_type'   => ['nullable', 'string', 'max:100'],
+            'load_unit'   => ['nullable', 'string', 'max:50'],
+            'load_weight' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
         ]);
 
         $carrierId = (int) $validated['carrier_id'];
@@ -321,10 +363,11 @@ class TripController extends Controller
             'start_time' => $scheduledStart,
             'estimated_duration_minutes' => $validated['estimated_duration_minutes'] ?? null,
             'description' => $validated['description'] ?: null,
-            'notes' => $validated['notes'] ?: null,
-            'load_type' => $validated['load_type'] ?: null,
+            'notes'       => $validated['notes'] ?: null,
+            'load_type'   => $validated['load_type'] ?: null,
+            'load_unit'   => $validated['load_unit'] ?: null,
             'load_weight' => $validated['load_weight'] ?: null,
-            'updated_by' => Auth::id(),
+            'updated_by'  => Auth::id(),
         ]);
 
         return redirect()
@@ -337,8 +380,8 @@ class TripController extends Controller
         $scope = $this->scopeContext();
         $this->ensureAllowedCarrier((int) $trip->carrier_id, $scope);
 
-        if (in_array($trip->status, [Trip::STATUS_IN_PROGRESS, Trip::STATUS_PAUSED, Trip::STATUS_COMPLETED], true)) {
-            return back()->with('error', 'Only pending, accepted, or cancelled trips can be deleted.');
+        if ($trip->status === Trip::STATUS_IN_PROGRESS) {
+            return back()->with('error', 'A trip that is currently in progress cannot be deleted. Force-end it first.');
         }
 
         $trip->delete();
@@ -356,7 +399,7 @@ class TripController extends Controller
         $trip->load([
             'carrier:id,name',
             'driver.user:id,name,email',
-            'vehicle:id,company_unit_number,year,make,model',
+            'vehicle:id,company_unit_number,year,make,model,registration_number',
             'gpsPoints',
             'violations',
             'hosEntries',
@@ -434,8 +477,29 @@ class TripController extends Controller
             'lng' => (float) $pt->longitude,
         ])->values();
 
+        $tripPayload = array_merge($this->tripDetailPayload($trip), [
+            'vehicle_license_plate' => $trip->vehicle?->registration_number,
+            'pre_trip_inspection_data' => $trip->pre_trip_inspection_data,
+            'pre_trip_remarks' => $trip->pre_trip_remarks,
+            'pre_trip_defects_corrected_notes' => $trip->pre_trip_defects_corrected_notes,
+            'pre_trip_defects_not_need_correction_notes' => $trip->pre_trip_defects_not_need_correction_notes,
+            'pre_trip_driver_signature' => $trip->pre_trip_driver_signature,
+            'post_trip_inspection_data' => $trip->post_trip_inspection_data,
+            'post_trip_remarks' => $trip->post_trip_remarks,
+            'post_trip_defects_corrected_notes' => $trip->post_trip_defects_corrected_notes,
+            'post_trip_defects_not_need_correction_notes' => $trip->post_trip_defects_not_need_correction_notes,
+            'post_trip_driver_signature' => $trip->post_trip_driver_signature,
+        ]);
+
         return Inertia::render('admin/trips/Show', [
-            'trip' => $this->tripDetailPayload($trip),
+            'trip' => $tripPayload,
+            'fmcsaStatus' => $trip->user_driver_detail_id && $trip->carrier_id
+                ? $this->fmcsaService->getDriverFMCSAStatus($trip->user_driver_detail_id, $trip->carrier_id)
+                : null,
+            'inspection' => [
+                'tractor_items' => Trip::getTractorInspectionItems(),
+                'trailer_items' => Trip::getTrailerInspectionItems(),
+            ],
             'gpsRoute' => $gpsRoute,
             'gpsStats' => $gpsStats,
             'timeline' => $timeline,
@@ -498,7 +562,7 @@ class TripController extends Controller
 
     public function forceEnd(Trip $trip): RedirectResponse
     {
-        return $this->runEmergencyAction($trip, fn () => $this->tripService->forceEndTrip($trip), 'Trip ended successfully.');
+        return $this->runEmergencyAction($trip, fn () => $this->tripService->forceEndTrip($trip, Auth::id()), 'Trip ended successfully.');
     }
 
     protected function runEmergencyAction(Trip $trip, callable $callback, string $successMessage): RedirectResponse
@@ -672,7 +736,7 @@ class TripController extends Controller
             'forgot_to_close' => (bool) $trip->forgot_to_close,
             'violations_count' => (int) $trip->violations_count,
             'can_edit' => in_array($trip->status, [Trip::STATUS_PENDING, Trip::STATUS_ACCEPTED], true),
-            'can_delete' => in_array($trip->status, [Trip::STATUS_PENDING, Trip::STATUS_ACCEPTED, Trip::STATUS_CANCELLED], true),
+            'can_delete' => $trip->status !== Trip::STATUS_IN_PROGRESS,
             'quick_actions' => [
                 'can_force_start' => $trip->isAccepted(),
                 'can_force_pause' => $trip->isInProgress(),
@@ -713,7 +777,7 @@ class TripController extends Controller
             'rejection_reason' => $trip->rejection_reason,
             'cancellation_reason' => $trip->cancellation_reason,
             'can_edit' => in_array($trip->status, [Trip::STATUS_PENDING, Trip::STATUS_ACCEPTED], true),
-            'can_delete' => in_array($trip->status, [Trip::STATUS_PENDING, Trip::STATUS_ACCEPTED, Trip::STATUS_CANCELLED], true),
+            'can_delete' => $trip->status !== Trip::STATUS_IN_PROGRESS,
             'can_force_start' => $trip->isAccepted(),
             'can_force_pause' => $trip->isInProgress(),
             'can_force_resume' => $trip->isPaused(),
@@ -741,7 +805,8 @@ class TripController extends Controller
             'estimated_duration_minutes' => $trip->estimated_duration_minutes,
             'description' => $trip->description,
             'notes' => $trip->notes,
-            'load_type' => $trip->load_type,
+            'load_type'   => $trip->load_type,
+            'load_unit'   => $trip->load_unit,
             'load_weight' => $trip->load_weight !== null ? (string) $trip->load_weight : '',
             'status_label' => $trip->status_name,
         ];

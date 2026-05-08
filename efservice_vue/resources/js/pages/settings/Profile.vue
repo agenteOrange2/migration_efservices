@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import Button from '@/components/Base/Button/Button.vue';
 import { FormInput, FormLabel } from '@/components/Base/Form';
@@ -10,9 +10,10 @@ import RazeLayout from '@/layouts/RazeLayout.vue';
 type Props = {
   mustVerifyEmail: boolean;
   status?: string;
+  profilePhotoUrl?: string | null;
 };
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
@@ -26,6 +27,35 @@ const submitProfile = () => {
   profileForm.patch(route('profile.update'));
 };
 
+// --- Photo ---
+const photoPreview = ref<string | null>(null);
+const photoInput = ref<HTMLInputElement | null>(null);
+
+function handlePhotoChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => { photoPreview.value = ev.target?.result as string; };
+  reader.readAsDataURL(file);
+
+  const formData = new FormData();
+  formData.append('photo', file);
+  router.post(route('profile.photo.update'), formData, {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => { photoPreview.value = null; },
+    onError: () => { photoPreview.value = null; },
+  });
+}
+
+function deletePhoto() {
+  if (!confirm('¿Eliminar la foto de perfil?')) return;
+  router.delete(route('profile.photo.delete'), {
+    preserveScroll: true,
+  });
+}
+
+// --- Delete account ---
 const deleteForm = useForm({
   password: '',
 });
@@ -93,6 +123,65 @@ const submitDelete = () => {
 
           <!-- Content -->
           <div class="flex-1 space-y-6">
+            <!-- Profile Photo -->
+            <div class="box box--stacked p-5">
+              <div class="mb-5">
+                <h3 class="text-base font-medium">Foto de Perfil</h3>
+                <p class="text-slate-500 text-sm mt-1">Actualiza tu foto de perfil.</p>
+              </div>
+
+              <div class="flex items-center gap-5">
+                <div class="h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-2 border-primary/10 bg-primary/5 flex items-center justify-center">
+                  <img
+                    v-if="photoPreview"
+                    :src="photoPreview"
+                    class="h-full w-full object-cover"
+                    alt="Preview"
+                  />
+                  <img
+                    v-else-if="props.profilePhotoUrl"
+                    :src="props.profilePhotoUrl"
+                    class="h-full w-full object-cover"
+                    alt="Profile photo"
+                  />
+                  <Lucide v-else icon="User" class="h-10 w-10 text-primary/50" />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <label class="cursor-pointer">
+                    <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-darkmode-400 dark:bg-darkmode-600 dark:text-slate-300 dark:hover:bg-darkmode-500 transition-colors">
+                      <Lucide icon="Upload" class="h-3.5 w-3.5" />
+                      Cambiar foto
+                    </span>
+                    <input
+                      ref="photoInput"
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      class="hidden"
+                      @change="handlePhotoChange"
+                    />
+                  </label>
+
+                  <button
+                    v-if="props.profilePhotoUrl"
+                    type="button"
+                    @click="deletePhoto"
+                    class="inline-flex items-center gap-1.5 text-xs text-danger hover:text-danger/80 transition-colors"
+                  >
+                    <Lucide icon="Trash2" class="h-3 w-3" />
+                    Eliminar foto
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="status === 'photo-updated'" class="mt-3 text-sm text-success font-medium">
+                Foto actualizada correctamente.
+              </div>
+              <div v-if="status === 'photo-deleted'" class="mt-3 text-sm text-slate-500">
+                Foto eliminada.
+              </div>
+            </div>
+
             <!-- Profile Info -->
             <div class="box box--stacked p-5">
               <div class="mb-5">

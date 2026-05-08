@@ -51,11 +51,15 @@ class HosCalculationService
             }
         }
 
-        // Also check for entries from previous day that span into this date
+        // Also check for entries from previous day that span into this date.
+        // Condition: entry START is before midnight (previous day) AND entry END is after midnight (this day).
+        // Using strict > for end_time avoids double-counting entries that end exactly at 00:00:00.
+        $dayBoundary = $date->copy()->startOfDay();
         $previousDayEntries = HosEntry::forDriver($driverId)
             ->whereDate('date', $date->copy()->subDay())
             ->whereNotNull('end_time')
-            ->where('end_time', '>', $date->copy()->startOfDay())
+            ->where('start_time', '<', $dayBoundary)
+            ->where('end_time', '>', $dayBoundary)
             ->get();
 
         foreach ($previousDayEntries as $entry) {

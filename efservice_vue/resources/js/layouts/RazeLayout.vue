@@ -663,7 +663,6 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 }
 
 onMounted(() => {
-  updateAppearance('dark');
   syncFullscreenState();
   document.addEventListener('fullscreenchange', syncFullscreenState);
   document.addEventListener('keydown', handleGlobalKeydown);

@@ -85,6 +85,7 @@ class CarrierDriverController extends DriverListController
                 'show'       => 'carrier.drivers.show',
                 'create'     => 'carrier.drivers.create',
                 'edit'       => 'carrier.drivers.edit',
+                'editInfo'   => 'carrier.drivers.edit-info',
                 'activate'   => 'carrier.drivers.activate',
                 'deactivate' => 'carrier.drivers.deactivate',
                 'destroy'    => 'carrier.drivers.destroy',
@@ -127,6 +128,7 @@ class CarrierDriverController extends DriverListController
         $driverData['routeNames'] = [
             'index'                    => 'carrier.drivers.index',
             'edit'                     => 'carrier.drivers.edit',
+            'editInfo'                 => 'carrier.drivers.edit-info',
             'documentsDownload'        => 'carrier.drivers.documents.download',
             'activate'                 => 'carrier.drivers.activate',
             'deactivate'               => 'carrier.drivers.deactivate',
@@ -184,6 +186,72 @@ class CarrierDriverController extends DriverListController
 
             return back()->with('error', 'Driver could not be deleted.');
         }
+    }
+
+    public function editInfo(UserDriverDetail $driver): Response
+    {
+        abort_unless((int) $driver->carrier_id === (int) $this->resolveCarrierId(), 403);
+
+        $driver->load('user:id,name,email');
+
+        return Inertia::render('admin/drivers/Edit', [
+            'driver' => [
+                'id'          => $driver->id,
+                'name'        => $driver->user?->name ?? '',
+                'middle_name' => $driver->middle_name ?? '',
+                'last_name'   => $driver->last_name ?? '',
+                'email'       => $driver->user?->email ?? '',
+                'phone'       => $driver->phone ?? '',
+                'photo_url'   => $driver->getFirstMediaUrl('profile_photo_driver') ?: null,
+            ],
+            'updateUrl' => route('carrier.drivers.update-info', $driver),
+            'backUrl'   => route('carrier.drivers.show', $driver),
+        ]);
+    }
+
+    public function updateInfo(Request $request, UserDriverDetail $driver): RedirectResponse
+    {
+        abort_unless((int) $driver->carrier_id === (int) $this->resolveCarrierId(), 403);
+
+        $driver->load('user:id,name,email,password');
+
+        $validated = $request->validate([
+            'name'        => ['required', 'string', 'max:100'],
+            'middle_name' => ['nullable', 'string', 'max:100'],
+            'last_name'   => ['required', 'string', 'max:100'],
+            'email'       => ['required', 'email', 'max:255', \Illuminate\Validation\Rule::unique('users', 'email')->ignore($driver->user_id)],
+            'phone'       => ['nullable', 'string', 'max:30'],
+            'password'    => ['nullable', 'string', 'min:8', 'confirmed'],
+            'photo'       => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:3072'],
+        ]);
+
+        $userUpdate = [
+            'name'  => $validated['name'],
+            'email' => $validated['email'],
+        ];
+        if (!empty($validated['password'])) {
+            $userUpdate['password'] = $validated['password'];
+        }
+        $driver->user->update($userUpdate);
+
+        $driver->update([
+            'middle_name' => $validated['middle_name'] ?? null,
+            'last_name'   => $validated['last_name'],
+            'phone'       => $validated['phone'] ?? null,
+        ]);
+
+        if ($request->hasFile('photo')) {
+            $file     = $request->file('photo');
+            $ext      = $file->extension();
+            $safeName = preg_replace('/[^a-z0-9_-]/', '_', strtolower(trim($validated['name'] . '_' . $validated['last_name'])));
+            $driver->clearMediaCollection('profile_photo_driver');
+            $driver->addMediaFromRequest('photo')
+                ->usingFileName("{$safeName}.{$ext}")
+                ->toMediaCollection('profile_photo_driver');
+        }
+
+        return redirect()->route('carrier.drivers.edit-info', $driver)
+            ->with('success', 'Driver updated successfully.');
     }
 
     protected function countByEffectiveStatus($query, string $status): int

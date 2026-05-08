@@ -11,6 +11,7 @@ use App\Services\Driver\StepCompletionCalculator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -84,7 +85,82 @@ class DriverListController extends Controller
                 'inactive' => $inactiveDriversCount,
                 'new' => $newDriversCount,
             ],
+            'routeNames' => [
+                'index'      => 'admin.drivers.index',
+                'show'       => 'admin.drivers.show',
+                'create'     => 'admin.drivers.wizard.create',
+                'edit'       => 'admin.drivers.wizard.edit',
+                'editInfo'   => 'admin.drivers.edit',
+                'activate'   => 'admin.drivers.activate',
+                'deactivate' => 'admin.drivers.deactivate',
+                'destroy'    => 'admin.drivers.destroy',
+            ],
         ]);
+    }
+
+    public function edit(UserDriverDetail $driver): Response
+    {
+        $driver->load('user:id,name,email');
+
+        return Inertia::render('admin/drivers/Edit', [
+            'driver' => [
+                'id'          => $driver->id,
+                'name'        => $driver->user?->name ?? '',
+                'middle_name' => $driver->middle_name ?? '',
+                'last_name'   => $driver->last_name ?? '',
+                'email'       => $driver->user?->email ?? '',
+                'phone'       => $driver->phone ?? '',
+                'photo_url'   => $driver->getFirstMediaUrl('profile_photo_driver') ?: null,
+            ],
+            'updateUrl' => route('admin.drivers.update', $driver),
+            'backUrl'   => route('admin.drivers.show', $driver),
+        ]);
+    }
+
+    public function update(Request $request, UserDriverDetail $driver): \Illuminate\Http\RedirectResponse
+    {
+        $driver->load('user:id,name,email,password');
+
+        $validated = $request->validate([
+            'name'        => ['required', 'string', 'max:100'],
+            'middle_name' => ['nullable', 'string', 'max:100'],
+            'last_name'   => ['required', 'string', 'max:100'],
+            'email'       => ['required', 'email', 'max:255', \Illuminate\Validation\Rule::unique('users', 'email')->ignore($driver->user_id)],
+            'phone'       => ['nullable', 'string', 'max:30'],
+            'password'    => ['nullable', 'string', 'min:8', 'confirmed'],
+            'photo'       => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:3072'],
+        ]);
+
+        // Update User record (name, email, optional password)
+        $userUpdate = [
+            'name'  => $validated['name'],
+            'email' => $validated['email'],
+        ];
+        if (!empty($validated['password'])) {
+            $userUpdate['password'] = $validated['password'];
+        }
+        $driver->user->update($userUpdate);
+
+        // Update UserDriverDetail record
+        $driver->update([
+            'middle_name' => $validated['middle_name'] ?? null,
+            'last_name'   => $validated['last_name'],
+            'phone'       => $validated['phone'] ?? null,
+        ]);
+
+        // Handle photo upload
+        if ($request->hasFile('photo')) {
+            $file     = $request->file('photo');
+            $ext      = $file->extension();
+            $safeName = preg_replace('/[^a-z0-9_-]/', '_', strtolower(trim($validated['name'] . '_' . $validated['last_name'])));
+            $driver->clearMediaCollection('profile_photo_driver');
+            $driver->addMediaFromRequest('photo')
+                ->usingFileName("{$safeName}.{$ext}")
+                ->toMediaCollection('profile_photo_driver');
+        }
+
+        return redirect()->route('admin.drivers.edit', $driver)
+            ->with('success', 'Driver updated successfully.');
     }
 
     public function show(UserDriverDetail $driver): Response

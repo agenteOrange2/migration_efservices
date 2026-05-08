@@ -222,7 +222,7 @@ class DriverTripController extends AdminTripController
             });
         } catch (\Throwable $exception) {
             return back()->withInput()->withErrors([
-                'trip' => $exception->getMessage(),
+                'trip' => $this->extractErrorMessage($exception),
             ]);
         }
 
@@ -269,7 +269,7 @@ class DriverTripController extends AdminTripController
             });
         } catch (\Throwable $exception) {
             return back()->withInput()->withErrors([
-                'trip' => $exception->getMessage(),
+                'trip' => $this->extractErrorMessage($exception),
             ]);
         }
 
@@ -460,7 +460,7 @@ class DriverTripController extends AdminTripController
         try {
             $this->tripService->acceptTrip($trip, $driver->id);
         } catch (\Throwable $exception) {
-            return back()->with('error', $exception->getMessage());
+            return back()->with('error', $this->extractErrorMessage($exception));
         }
 
         return redirect()
@@ -480,7 +480,7 @@ class DriverTripController extends AdminTripController
         try {
             $this->tripService->rejectTrip($trip, $driver->id, $validated['reason']);
         } catch (\Throwable $exception) {
-            return back()->withErrors(['reason' => $exception->getMessage()]);
+            return back()->withErrors(['reason' => $this->extractErrorMessage($exception)]);
         }
 
         return redirect()
@@ -527,7 +527,7 @@ class DriverTripController extends AdminTripController
             $this->tripService->startTrip($trip, $driver->id, $validated);
         } catch (\Throwable $exception) {
             return back()->withInput()->withErrors([
-                'trip' => $exception->getMessage(),
+                'trip' => $this->extractErrorMessage($exception),
             ]);
         }
 
@@ -596,7 +596,7 @@ class DriverTripController extends AdminTripController
             $this->tripService->endTrip($trip, $driver->id, $validated, $validated['notes'] ?? null);
         } catch (\Throwable $exception) {
             return back()->withInput()->withErrors([
-                'trip' => $exception->getMessage(),
+                'trip' => $this->extractErrorMessage($exception),
             ]);
         }
 
@@ -910,9 +910,15 @@ class DriverTripController extends AdminTripController
     {
         if ($exception instanceof ValidationException) {
             $first = collect($exception->errors())->flatten()->first();
-            return $first ?? $exception->getMessage();
+            return $first ?? 'Validation failed.';
         }
 
-        return $exception->getMessage();
+        // Log the real error but never expose DB/internal details to the driver
+        \Illuminate\Support\Facades\Log::warning('DriverTripController error', [
+            'exception' => $exception->getMessage(),
+            'class'     => get_class($exception),
+        ]);
+
+        return 'An unexpected error occurred. Please try again.';
     }
 }

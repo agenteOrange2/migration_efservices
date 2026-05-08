@@ -19,9 +19,12 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+
         return Inertia::render('settings/Profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-            'status' => $request->session()->get('status'),
+            'mustVerifyEmail'   => $user instanceof MustVerifyEmail,
+            'status'            => $request->session()->get('status'),
+            'profilePhotoUrl'   => $user->getFirstMediaUrl('profile_photos') ?: null,
         ]);
     }
 
@@ -39,6 +42,38 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return to_route('profile.edit');
+    }
+
+    /**
+     * Update the user's profile photo.
+     */
+    public function updatePhoto(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
+        ]);
+
+        $user = $request->user();
+        $file = $request->file('photo');
+        $ext = $file->extension();
+        $safeName = preg_replace('/[^a-z0-9_-]/', '_', strtolower($user->name));
+
+        $user->clearMediaCollection('profile_photos');
+        $user->addMediaFromRequest('photo')
+            ->usingFileName("{$safeName}.{$ext}")
+            ->toMediaCollection('profile_photos');
+
+        return to_route('profile.edit')->with('status', 'photo-updated');
+    }
+
+    /**
+     * Delete the user's profile photo.
+     */
+    public function deletePhoto(Request $request): RedirectResponse
+    {
+        $request->user()->clearMediaCollection('profile_photos');
+
+        return to_route('profile.edit')->with('status', 'photo-deleted');
     }
 
     /**
