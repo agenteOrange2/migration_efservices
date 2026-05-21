@@ -64,7 +64,7 @@ const translations = {
             features: 'Features',
             pricing: 'Pricing',
             testimonials: 'Testimonials',
-            contact: 'Contact',
+            otherServices: 'Other Services',
             login: 'Login',
             dashboard: 'Dashboard',
             contactBtn: 'Contact',
@@ -278,6 +278,17 @@ const translations = {
             },
             customSubtitle: "Tell us about your needs and we'll create a custom plan.",
         },
+        otherServices: {
+            badge: 'Sister Company',
+            title: 'Other Services',
+            subtitle: 'Discover EF Services — our sister company offering complementary logistics and business solutions designed to grow alongside your operation.',
+            bullets: [
+                'Complementary logistics solutions',
+                'Business consulting & support',
+                'Integrated tools for carriers & drivers',
+            ],
+            cta: 'Visit EF Services',
+        },
         misc: {
             sending: 'Sending...',
             genericError: 'An error occurred. Please try again.',
@@ -291,7 +302,7 @@ const translations = {
             features: 'Caracteristicas',
             pricing: 'Precios',
             testimonials: 'Testimonios',
-            contact: 'Contacto',
+            otherServices: 'Other Services',
             login: 'Iniciar Sesion',
             dashboard: 'Dashboard',
             contactBtn: 'Contacto',
@@ -505,6 +516,17 @@ const translations = {
                 company: 'Nombre de tu empresa',
             },
             customSubtitle: 'Cuentanos sobre tus necesidades y crearemos un plan personalizado.',
+        },
+        otherServices: {
+            badge: 'Empresa Hermana',
+            title: 'Other Services',
+            subtitle: 'Conoce EF Services — nuestra empresa hermana que ofrece soluciones logisticas y de negocio complementarias, disenadas para crecer junto a tu operacion.',
+            bullets: [
+                'Soluciones logisticas complementarias',
+                'Consultoria y soporte empresarial',
+                'Herramientas integradas para carriers y conductores',
+            ],
+            cta: 'Visitar EF Services',
         },
         misc: {
             sending: 'Enviando...',
@@ -800,7 +822,7 @@ onBeforeUnmount(() => {
                     <a href="#features" class="nav-link-new">{{ t.nav.features }}</a>
                     <a href="#pricing" class="nav-link-new">{{ t.nav.pricing }}</a>
                     <a href="#testimonials" class="nav-link-new">{{ t.nav.testimonials }}</a>
-                    <a href="#contact" class="nav-link-new">{{ t.nav.contact }}</a>
+                    <a href="http://efservices.biz/" target="_blank" rel="noopener noreferrer" class="nav-link-new">{{ t.nav.otherServices }}</a>
                 </nav>
 
                 <div class="hidden items-center gap-6 lg:flex">
@@ -863,7 +885,7 @@ onBeforeUnmount(() => {
                 <a href="#features" class="block mobile-link" @click="mobileMenuOpen = false">{{ t.nav.features }}</a>
                 <a href="#pricing" class="block mobile-link" @click="mobileMenuOpen = false">{{ t.nav.pricing }}</a>
                 <a href="#testimonials" class="block mobile-link" @click="mobileMenuOpen = false">{{ t.nav.testimonials }}</a>
-                <a href="#contact" class="block mobile-link" @click="mobileMenuOpen = false">{{ t.nav.contact }}</a>
+                <a href="http://efservices.biz/" target="_blank" rel="noopener noreferrer" class="block mobile-link" @click="mobileMenuOpen = false">{{ t.nav.otherServices }}</a>
 
                 <div class="mt-6 space-y-4 border-t border-white/10 pt-6">
                     <Link :href="dashboardHref" class="block mobile-link">
@@ -1377,6 +1399,99 @@ onBeforeUnmount(() => {
                             </a>
                         </div>
                     </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- Other Services Section -->
+        <section id="other-services" class="relative overflow-hidden bg-[#050505] px-8 py-32">
+            <!-- Decorative gradient blob -->
+            <div class="pointer-events-none absolute -left-40 top-0 h-[600px] w-[600px] rounded-full bg-brand/10 blur-[120px]" />
+            <div class="pointer-events-none absolute -right-40 bottom-0 h-[400px] w-[400px] rounded-full bg-brand/5 blur-[100px]" />
+
+            <div class="fade-up relative mx-auto max-w-7xl">
+                <div class="flex flex-col items-center gap-16 lg:flex-row lg:gap-24">
+
+                    <!-- Left: text content -->
+                    <div class="flex-1 text-center lg:text-left">
+                        <span class="mb-4 inline-block rounded-full border border-brand/30 bg-brand/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-brand">
+                            {{ t.otherServices.badge }}
+                        </span>
+
+                        <h2 class="mt-4 text-5xl font-extrabold uppercase tracking-tighter text-white md:text-6xl">
+                            {{ t.otherServices.title }}
+                        </h2>
+
+                        <p class="mx-auto mt-6 max-w-xl text-base leading-relaxed text-gray-400 lg:mx-0">
+                            {{ t.otherServices.subtitle }}
+                        </p>
+
+                        <ul class="mt-8 space-y-3 text-left">
+                            <li
+                                v-for="bullet in t.otherServices.bullets"
+                                :key="bullet"
+                                class="flex items-center gap-3 text-sm text-gray-300"
+                            >
+                                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/20 text-brand">
+                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </span>
+                                {{ bullet }}
+                            </li>
+                        </ul>
+
+                        <a
+                            href="http://efservices.biz/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="btn-brand mt-10 inline-flex items-center gap-3 px-8 py-4 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-2xl transition-transform hover:-translate-y-0.5"
+                        >
+                            {{ t.otherServices.cta }}
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                        </a>
+                    </div>
+
+                    <!-- Right: branded card -->
+                    <div class="flex flex-1 justify-center lg:justify-end">
+                        <div class="relative w-full max-w-sm overflow-hidden border border-white/10 bg-black/40 p-10 backdrop-blur-sm">
+                            <!-- Top accent line -->
+                            <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent" />
+
+                            <div class="mb-6 flex items-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded bg-brand/20">
+                                    <svg class="h-5 w-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-widest text-white">EF Services</p>
+                                    <p class="text-[10px] text-gray-500">efservices.biz</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4 border-t border-white/10 pt-6">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-500 uppercase tracking-widest">Platform</span>
+                                    <span class="font-bold text-white">EF Services</span>
+                                </div>
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-500 uppercase tracking-widest">Focus</span>
+                                    <span class="font-bold text-white">Logistics & Business</span>
+                                </div>
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-500 uppercase tracking-widest">Integration</span>
+                                    <span class="font-bold text-brand">EFCTS Compatible</span>
+                                </div>
+                            </div>
+
+                            <!-- Bottom accent line -->
+                            <div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand/40 to-transparent" />
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </section>

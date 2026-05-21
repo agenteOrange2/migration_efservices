@@ -1303,14 +1303,26 @@ function selectSearchedCompany(c: any) {
 
 // --- Coverage computed ---
 const coverageStats = computed(() => {
-    function calcYears(from: string, to: string) {
-        if (!from) return 0;
-        const f = new Date(
-            from.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$1-$2'),
-        );
-        const t = to
-            ? new Date(to.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$1-$2'))
-            : new Date();
+    function parseDate(s: string): Date | null {
+        if (!s) return null;
+        // MM/DD/YYYY or M/D/YYYY
+        let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (m) {
+            const d = new Date(+m[3], +m[1] - 1, +m[2]);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        // YYYY-MM-DD (ISO format from server before toUsDate conversion)
+        m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (m) {
+            const d = new Date(+m[1], +m[2] - 1, +m[3]);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        return null;
+    }
+    function calcYears(from: string, to: string): number {
+        const f = parseDate(from);
+        if (!f) return 0;
+        const t = to ? (parseDate(to) ?? new Date()) : new Date();
         return Math.max(
             0,
             (t.getTime() - f.getTime()) / (365.25 * 24 * 3600 * 1000),
@@ -1328,13 +1340,13 @@ const coverageStats = computed(() => {
         (s: number, r: any) => s + calcYears(r.start_date, r.end_date),
         0,
     );
-    const total = empYears + unempYears + relYears;
+    const total = (isNaN(empYears) ? 0 : empYears) + (isNaN(unempYears) ? 0 : unempYears) + (isNaN(relYears) ? 0 : relYears);
     const required = 10;
     const pct = Math.min(100, Math.round((total / required) * 100));
     return {
-        employment_years: Math.round(empYears * 10) / 10,
-        unemployment_years: Math.round(unempYears * 10) / 10,
-        related_employment_years: Math.round(relYears * 10) / 10,
+        employment_years: Math.round((isNaN(empYears) ? 0 : empYears) * 10) / 10,
+        unemployment_years: Math.round((isNaN(unempYears) ? 0 : unempYears) * 10) / 10,
+        related_employment_years: Math.round((isNaN(relYears) ? 0 : relYears) * 10) / 10,
         total_years: Math.round(total * 10) / 10,
         required_years: required,
         coverage_percentage: pct,
